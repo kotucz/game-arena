@@ -2,7 +2,15 @@ package cz.kotu.game.gotfive
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +35,7 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
         HiddenPool(game) { tile -> gameViewModel.pickOfferTile(tile) }
 
         Text(text = "Offer:")
-        TileOffer(game)
+        TileOffer(game) { tile -> gameViewModel.pickSortHint(tile) }
 
         Text(text = "Secret:")
         PlayerSecretFive(game)
@@ -77,7 +85,10 @@ fun HiddenPool(
 }
 
 @Composable
-fun TileOffer(game: GameState) {
+fun TileOffer(
+    game: GameState,
+    onTileClick: (Tile) -> Unit,
+) {
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
@@ -88,6 +99,7 @@ fun TileOffer(game: GameState) {
             game.tileOffer.forEach { tile ->
                 TileView(
                     tile = tile,
+                    onClick = { onTileClick(tile) },
                     modifier = Modifier.size(64.dp),
                 )
             }
@@ -104,7 +116,8 @@ fun PlayerSecretFive(game: GameState) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            game.secretTiles.forEach { tile ->
+            val tiles = (game.secretTiles + game.sortTileHints).sorted()
+            tiles.forEach { tile ->
                 TileView(
                     tile = tile,
                     modifier = Modifier.size(64.dp),
@@ -162,8 +175,8 @@ fun TileView(
     } else {
         val luminance =
             baseColor.red * 0.299f +
-                baseColor.green * 0.587f +
-                baseColor.blue * 0.114f
+                    baseColor.green * 0.587f +
+                    baseColor.blue * 0.114f
         Color(luminance, luminance, luminance)
     }
 

@@ -18,6 +18,10 @@ class GameViewModel : ViewModel() {
         gameState = gameState.pickOfferTile(tile)
     }
 
+    fun pickSortHint(tile: Tile) {
+        gameState = gameState.pickSortHint(tile)
+    }
+
     fun toggleNote(tile: Tile) {
         gameState = gameState.toggleNote(tile)
     }

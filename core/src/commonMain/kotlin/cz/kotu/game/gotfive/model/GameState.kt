@@ -4,7 +4,8 @@ data class GameState private constructor(
     val shuffledPool: List<Tile>,
     val tilePool: Set<Tile>,
     val tileOffer: List<Tile>,
-    val secretTiles: List<Tile>,
+    val sortTileHints: Set<Tile>,
+    val secretTiles: Set<Tile>,
     val notes: Set<Tile>,
 ) {
     fun pickOfferTile(tile: Tile): GameState =
@@ -12,6 +13,16 @@ data class GameState private constructor(
             copy(
                 tilePool = tilePool - tile,
                 tileOffer = tileOffer + tile,
+            )
+        } else {
+            this
+        }
+
+    fun pickSortHint(tile: Tile): GameState =
+        if (tile in tileOffer) {
+            copy(
+                tileOffer = tileOffer - tile,
+                sortTileHints = sortTileHints + tile,
             )
         } else {
             this
@@ -35,13 +46,13 @@ data class GameState private constructor(
                         .filter { it.color == color }
                         .random()
                         .also { tilePool -= it }
-                }
-                .sortedBy { it.number }
+                }.toSet()
 
             return GameState(
                 shuffledPool = shuffledPool,
                 tilePool = tilePool,
                 tileOffer = tileOffer,
+                sortTileHints = emptySet(),
                 secretTiles = secretTiles,
                 notes = Tiles.all.toSet(),
             )

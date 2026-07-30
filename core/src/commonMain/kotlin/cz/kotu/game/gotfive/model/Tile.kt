@@ -1,8 +1,10 @@
 package cz.kotu.game.gotfive.model
 
-data class Tile(val number: Int) {
+data class Tile(val number: Int) : Comparable<Tile> {
     val color: Color = Color.entries[number % Color.entries.size]
     val dots: Int = 1 + (number / 5) % 3
+
+    override fun compareTo(other: Tile): Int = number.compareTo(other.number)
 }
 
 enum class Color(
