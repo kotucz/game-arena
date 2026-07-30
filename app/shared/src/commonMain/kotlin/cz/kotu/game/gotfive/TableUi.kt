@@ -26,6 +26,8 @@ import cz.kotu.game.gotfive.model.GameState
 import cz.kotu.game.gotfive.model.Tile
 import cz.kotu.game.gotfive.model.Tiles
 
+private val showSecretTileValues = false
+
 @Composable
 fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
     val game = gameViewModel.gameState
@@ -71,6 +73,7 @@ fun HiddenPool(
                         if (tile in game.tilePool) {
                             TileView(
                                 tile = tile,
+                                showValues = showSecretTileValues,
                                 onClick = { onTileClick(tile) },
                                 modifier = Modifier.size(tileSize),
                             )
@@ -120,6 +123,7 @@ fun PlayerSecretFive(game: GameState) {
             tiles.forEach { tile ->
                 TileView(
                     tile = tile,
+                    showValues = (tile !in game.secretTiles) || showSecretTileValues,
                     modifier = Modifier.size(64.dp),
                 )
             }
@@ -163,6 +167,7 @@ fun TileView(
     tile: Tile,
     modifier: Modifier = Modifier,
     selected: Boolean = true,
+    showValues: Boolean = true,
     onClick: () -> Unit = {},
 ) {
     val baseColor = Color(
@@ -190,23 +195,25 @@ fun TileView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = tile.number.toString(),
-            color = Color.White,
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        if (showValues) {
+            Text(
+                text = tile.number.toString(),
+                color = Color.White,
+                style = MaterialTheme.typography.headlineMedium,
+            )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(tile.dots) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(Color.White),
-                )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(tile.dots) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                    )
+                }
             }
         }
     }
