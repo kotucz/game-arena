@@ -34,6 +34,7 @@ fun App() {
             Button(onClick = { showContent = !showContent }) {
                 Text("Click me!")
             }
+            Table(Modifier.fillMaxWidth().weight(1f))
             AnimatedVisibility(showContent) {
                 val greeting = remember { Greeting().greet() }
                 Column(
