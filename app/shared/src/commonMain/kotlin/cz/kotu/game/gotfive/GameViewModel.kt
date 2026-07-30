@@ -11,14 +11,15 @@ import cz.kotu.game.gotfive.model.Tile
 import kotlin.reflect.KClass
 
 class GameViewModel : ViewModel() {
-    val gameState = GameState()
-
-    var notes by mutableStateOf(gameState.notes)
+    var gameState by mutableStateOf(GameState.create())
         private set
 
+    fun pickOfferTile(tile: Tile) {
+        gameState = gameState.pickOfferTile(tile)
+    }
+
     fun toggleNote(tile: Tile) {
-        gameState.toggleNote(tile)
-        notes = gameState.notes
+        gameState = gameState.toggleNote(tile)
     }
 }
 

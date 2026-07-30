@@ -1,39 +1,128 @@
 package cz.kotu.game.gotfive
 
-import androidx.compose.runtime.Composable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import cz.kotu.game.gotfive.model.GameState
 import cz.kotu.game.gotfive.model.Tile
 import cz.kotu.game.gotfive.model.Tiles
 
 @Composable
 fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
-    val notes = gameViewModel.notes
+    val game = gameViewModel.gameState
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val spacing = 4.dp
-        val tileSize = minOf(
-            (maxWidth - spacing * 11) / 12,
-            (maxHeight - spacing * 4) / 5,
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(text = "Pool:")
+        HiddenPool(game) { tile -> gameViewModel.pickOfferTile(tile) }
+
+        Text(text = "Offer:")
+        TileOffer(game)
+
+        Text(text = "Secret:")
+        PlayerSecretFive(game)
+
+        Text(text = "Notes:")
+        PlayerTileNotes(
+            modifier = Modifier.fillMaxWidth(),
+            notes = game.notes,
+            gameViewModel = gameViewModel,
         )
+    }
+}
+
+@Composable
+fun HiddenPool(
+    game: GameState,
+    modifier: Modifier = Modifier,
+    onTileClick: (Tile) -> Unit,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val spacing = 4.dp
+        val tileSize = (maxWidth - spacing * 11) / 12
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(spacing),
+        ) {
+            repeat(5) { row ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing),
+                ) {
+                    repeat(12) { column ->
+                        val tile = game.shuffledPool.get(column * 5 + row)
+                        if (tile in game.tilePool) {
+                            TileView(
+                                tile = tile,
+                                onClick = { onTileClick(tile) },
+                                modifier = Modifier.size(tileSize),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(tileSize))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TileOffer(game: GameState) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            game.tileOffer.forEach { tile ->
+                TileView(
+                    tile = tile,
+                    modifier = Modifier.size(64.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PlayerSecretFive(game: GameState) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            game.secretTiles.forEach { tile ->
+                TileView(
+                    tile = tile,
+                    modifier = Modifier.size(64.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerTileNotes(
+    modifier: Modifier,
+    notes: Set<Tile>,
+    gameViewModel: GameViewModel,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val spacing = 4.dp
+        val tileSize = (maxWidth - spacing * 11) / 12
 
         Column(
             verticalArrangement = Arrangement.spacedBy(spacing),
