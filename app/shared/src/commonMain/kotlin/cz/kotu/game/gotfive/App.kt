@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
 
 import gotfive.app.shared.generated.resources.Res
@@ -23,6 +24,7 @@ import gotfive.app.shared.generated.resources.compose_multiplatform
 @Preview
 fun App() {
     MaterialTheme {
+        val gameViewModel: GameViewModel = viewModel(factory = GameViewModelFactory)
         var showContent by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
@@ -34,7 +36,7 @@ fun App() {
             Button(onClick = { showContent = !showContent }) {
                 Text("Click me!")
             }
-            Table(Modifier.fillMaxWidth().weight(1f))
+            Table(gameViewModel, Modifier.fillMaxWidth().weight(1f))
             AnimatedVisibility(showContent) {
                 val greeting = remember { Greeting().greet() }
                 Column(

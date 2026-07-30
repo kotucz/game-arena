@@ -1,6 +1,6 @@
 package cz.kotu.game.gotfive.model
 
-class Tile(val number: Int) {
+data class Tile(val number: Int) {
     val color: Color = Color.entries[number % Color.entries.size]
     val dots: Int = 1 + (number / 5) % 3
 }
@@ -16,4 +16,8 @@ enum class Color(
     Blue("#1E88E5", 30, 136, 229),
     Yellow("#FFB300", 255, 179, 0),
     Purple("#8E24AA", 142, 36, 170),
+}
+
+object Tiles {
+    val all: List<Tile> = (0..59).map { Tile(it) }
 }
