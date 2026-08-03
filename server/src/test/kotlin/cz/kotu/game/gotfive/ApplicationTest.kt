@@ -9,12 +9,12 @@ import kotlin.test.*
 class ApplicationTest {
 
     @Test
-    fun testRoot() = testApplication {
+    fun healthCheck() = testApplication {
         application {
             module()
         }
-        val response = client.get("/")
+        val response = client.get("/health")
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals("Hello, Ktor!", response.bodyAsText())
+        assertEquals("OK", response.bodyAsText())
     }
 }

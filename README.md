@@ -34,6 +34,17 @@ options:
     - JS target (slower, supports older browsers): `./gradlew :app:webApp:jsBrowserDevelopmentRun`
 - iOS app: open the [/app/iosApp](./app/iosApp) directory in Xcode and run it from there.
 
+### Running the web app in Docker
+
+Build and start the server with:
+
+```shell
+docker compose up --build
+```
+
+The Wasm browser distribution is built into the image and served at `http://localhost:8080`.
+The server exposes `GET /health` for container or Home Assistant health checks.
+
 ### Running tests
 
 Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
