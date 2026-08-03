@@ -2,6 +2,7 @@ package cz.kotu.game.gotfive
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,11 +17,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import cz.kotu.game.gotfive.model.GameState
 import cz.kotu.game.gotfive.model.Tile
@@ -137,11 +142,52 @@ private fun PlayerTileNotes(
     notes: Set<Tile>,
     gameViewModel: GameViewModel,
 ) {
+    val currentNotes by rememberUpdatedState(notes)
+
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val spacing = 4.dp
         val tileSize = (maxWidth - spacing * 11) / 12
+        val density = LocalDensity.current
+        val tileSizePx = with(density) { tileSize.toPx() }
+        val spacingPx = with(density) { spacing.toPx() }
+
+        fun tileAt(x: Float, y: Float): Tile? {
+            val column = (x / (tileSizePx + spacingPx)).toInt()
+            val row = (y / (tileSizePx + spacingPx)).toInt()
+            val localX = x % (tileSizePx + spacingPx)
+            val localY = y % (tileSizePx + spacingPx)
+
+            return if (
+                column in 0..11 && row in 0..4 &&
+                localX <= tileSizePx && localY <= tileSizePx
+            ) {
+                Tiles.all[column * 5 + row]
+            } else {
+                null
+            }
+        }
 
         Column(
+            modifier = Modifier.pointerInput(tileSize) {
+                var targetState: Boolean? = null
+
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        tileAt(offset.x, offset.y)?.let { tile ->
+                            targetState = tile !in currentNotes
+                            gameViewModel.setNote(tile, targetState == true)
+                        }
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        tileAt(change.position.x, change.position.y)?.let { tile ->
+                            targetState?.let { gameViewModel.setNote(tile, it) }
+                        }
+                    },
+                    onDragEnd = { targetState = null },
+                    onDragCancel = { targetState = null },
+                )
+            },
             verticalArrangement = Arrangement.spacedBy(spacing),
         ) {
             repeat(5) { row ->

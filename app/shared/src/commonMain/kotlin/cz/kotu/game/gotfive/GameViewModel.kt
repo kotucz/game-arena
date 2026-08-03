@@ -25,6 +25,10 @@ class GameViewModel : ViewModel() {
     fun toggleNote(tile: Tile) {
         gameState = gameState.toggleNote(tile)
     }
+
+    fun setNote(tile: Tile, selected: Boolean) {
+        gameState = gameState.setNote(tile, selected)
+    }
 }
 
 object GameViewModelFactory : ViewModelProvider.Factory {

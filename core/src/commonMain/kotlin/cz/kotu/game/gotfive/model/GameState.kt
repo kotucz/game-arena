@@ -32,6 +32,10 @@ data class GameState private constructor(
         notes = if (tile in notes) notes - tile else notes + tile,
     )
 
+    fun setNote(tile: Tile, selected: Boolean): GameState = copy(
+        notes = if (selected) notes + tile else notes - tile,
+    )
+
     companion object {
         fun create(): GameState {
             val shuffledPool = Tiles.all.shuffled()
