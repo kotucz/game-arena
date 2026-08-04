@@ -43,33 +43,42 @@ private val showSecretTileValues = false
 @Composable
 fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
     val game = gameViewModel.gameState
+    // Notes change on every drag event and must not restart the tile transition.
+    val tileState = game.copy(notes = emptySet())
 
     SharedTransitionLayout {
         val sharedScope = this
 
-        AnimatedContent(
-            targetState = game,
-            transitionSpec = {
-                EnterTransition.None togetherWith ExitTransition.None
-            },
-            label = "table state",
-        ) { state ->
-            TableContent(
+        Column(modifier = modifier.fillMaxWidth()) {
+            AnimatedContent(
+                targetState = tileState,
+                transitionSpec = {
+                    EnterTransition.None togetherWith ExitTransition.None
+                },
+                label = "tile sections state",
+            ) { state ->
+                TileSections(
+                    gameViewModel = gameViewModel,
+                    game = state,
+                    sharedScope = sharedScope,
+                    visibilityScope = this,
+                )
+            }
+
+            Text(text = "Notes:")
+            PlayerTileNotes(
+                modifier = Modifier.fillMaxWidth(),
+                notes = game.notes,
                 gameViewModel = gameViewModel,
-                game = state,
-                modifier = modifier,
-                sharedScope = sharedScope,
-                visibilityScope = this,
             )
         }
     }
 }
 
 @Composable
-private fun TableContent(
+private fun TileSections(
     gameViewModel: GameViewModel,
     game: GameState,
-    modifier: Modifier,
     sharedScope: SharedTransitionScope,
     visibilityScope: AnimatedVisibilityScope,
 ) {
@@ -82,7 +91,7 @@ private fun TableContent(
         )
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column {
         Text(text = "Pool:")
         HiddenPool(
             game = game,
@@ -101,12 +110,6 @@ private fun TableContent(
             sharedModifier = ::sharedTileModifier,
         )
 
-        Text(text = "Notes:")
-        PlayerTileNotes(
-            modifier = Modifier.fillMaxWidth(),
-            notes = game.notes,
-            gameViewModel = gameViewModel,
-        )
     }
 }
 
