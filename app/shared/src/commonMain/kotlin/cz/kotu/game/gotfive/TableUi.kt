@@ -1,5 +1,12 @@
 package cz.kotu.game.gotfive
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -37,15 +44,62 @@ private val showSecretTileValues = false
 fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
     val game = gameViewModel.gameState
 
+    SharedTransitionLayout {
+        val sharedScope = this
+
+        AnimatedContent(
+            targetState = game,
+            transitionSpec = {
+                EnterTransition.None togetherWith ExitTransition.None
+            },
+            label = "table state",
+        ) { state ->
+            TableContent(
+                gameViewModel = gameViewModel,
+                game = state,
+                modifier = modifier,
+                sharedScope = sharedScope,
+                visibilityScope = this,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableContent(
+    gameViewModel: GameViewModel,
+    game: GameState,
+    modifier: Modifier,
+    sharedScope: SharedTransitionScope,
+    visibilityScope: AnimatedVisibilityScope,
+) {
+    @Composable
+    fun sharedTileModifier(tile: Tile): Modifier = with(sharedScope) {
+        Modifier.sharedElement(
+//            sharedContentState = rememberSharedContentState("tile-${tile.number}"),
+            sharedContentState = rememberSharedContentState(tile),
+            animatedVisibilityScope = visibilityScope,
+        )
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Text(text = "Pool:")
-        HiddenPool(game) { tile -> gameViewModel.pickOfferTile(tile) }
+        HiddenPool(
+            game = game,
+            sharedModifier = ::sharedTileModifier,
+        ) { tile -> gameViewModel.pickOfferTile(tile) }
 
         Text(text = "Offer:")
-        TileOffer(game) { tile -> gameViewModel.pickSortHint(tile) }
+        TileOffer(
+            game = game,
+            sharedModifier = ::sharedTileModifier,
+        ) { tile -> gameViewModel.pickSortHint(tile) }
 
         Text(text = "Secret:")
-        PlayerSecretFive(game)
+        PlayerSecretFive(
+            game = game,
+            sharedModifier = ::sharedTileModifier,
+        )
 
         Text(text = "Notes:")
         PlayerTileNotes(
@@ -60,6 +114,7 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
 fun HiddenPool(
     game: GameState,
     modifier: Modifier = Modifier,
+    sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
     onTileClick: (Tile) -> Unit,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -80,7 +135,9 @@ fun HiddenPool(
                                 tile = tile,
                                 showValues = showSecretTileValues,
                                 onClick = { onTileClick(tile) },
-                                modifier = Modifier.size(tileSize),
+                                modifier = Modifier
+                                    .size(tileSize)
+                                    .then(sharedModifier(tile)),
                             )
                         } else {
                             Spacer(modifier = Modifier.size(tileSize))
@@ -95,6 +152,7 @@ fun HiddenPool(
 @Composable
 fun TileOffer(
     game: GameState,
+    sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
     onTileClick: (Tile) -> Unit,
 ) {
     Box(
@@ -108,7 +166,9 @@ fun TileOffer(
                 TileView(
                     tile = tile,
                     onClick = { onTileClick(tile) },
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier
+                        .size(64.dp)
+                        .then(sharedModifier(tile)),
                 )
             }
         }
@@ -116,7 +176,10 @@ fun TileOffer(
 }
 
 @Composable
-fun PlayerSecretFive(game: GameState) {
+fun PlayerSecretFive(
+    game: GameState,
+    sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
+) {
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
@@ -129,7 +192,9 @@ fun PlayerSecretFive(game: GameState) {
                 TileView(
                     tile = tile,
                     showValues = (tile !in game.secretTiles) || showSecretTileValues,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier
+                        .size(64.dp)
+                        .then(sharedModifier(tile)),
                 )
             }
         }
