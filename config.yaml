@@ -1,0 +1,10 @@
+name: "GotFive"
+slug: "gotfive"
+version: "1.0.0"
+description: "Got Five game - Kotlin KMP backend + Compose Wasm frontend"
+arch:
+  - amd64
+  - aarch64
+ports:
+  8080/tcp: 8080
+init: false
