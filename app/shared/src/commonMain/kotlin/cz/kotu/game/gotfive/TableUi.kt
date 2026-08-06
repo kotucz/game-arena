@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +66,17 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
                 )
             }
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Button(onClick = gameViewModel::checkSolution) {
+                    Text("Check solution")
+                }
+
+                Text(text = gameViewModel.result, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp))
+
+            }
             Text(text = "Notes:")
             PlayerTileNotes(
                 modifier = Modifier.fillMaxWidth(),
@@ -85,7 +97,6 @@ private fun TileSections(
     @Composable
     fun sharedTileModifier(tile: Tile): Modifier = with(sharedScope) {
         Modifier.sharedElement(
-//            sharedContentState = rememberSharedContentState("tile-${tile.number}"),
             sharedContentState = rememberSharedContentState(tile),
             animatedVisibilityScope = visibilityScope,
         )
@@ -107,6 +118,7 @@ private fun TileSections(
         Text(text = "Secret:")
         PlayerSecretFive(
             game = game,
+            secretVisible = gameViewModel.secretVisible,
             sharedModifier = ::sharedTileModifier,
         )
 
@@ -181,6 +193,7 @@ fun TileOffer(
 @Composable
 fun PlayerSecretFive(
     game: GameState,
+    secretVisible: Boolean,
     sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
 ) {
     Box(
@@ -194,7 +207,7 @@ fun PlayerSecretFive(
             tiles.forEach { tile ->
                 TileView(
                     tile = tile,
-                    showValues = (tile !in game.secretTiles) || showSecretTileValues,
+                    showValues = (tile !in game.secretTiles) || showSecretTileValues || secretVisible,
                     modifier = Modifier
                         .size(64.dp)
                         .then(sharedModifier(tile)),
