@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -276,12 +277,18 @@ private fun PlayerTileNotes(
                     horizontalArrangement = Arrangement.spacedBy(spacing),
                 ) {
                     repeat(12) { column ->
-                        TileView(
-                            tile = Tiles.all[column * 5 + row],
-                            selected = Tiles.all[column * 5 + row] in notes,
-                            onClick = { gameViewModel.toggleNote(Tiles.all[column * 5 + row]) },
-                            modifier = Modifier.size(tileSize),
-                        )
+                        val tile = Tiles.all[column * 5 + row]
+                        val selected = tile in notes
+                        // Recreate the tile's draw modifiers when selection changes.
+                        // This avoids stale background rendering during rapid drag updates.
+                        key(tile.number, selected) {
+                            TileView(
+                                tile = tile,
+                                selected = selected,
+                                onClick = { gameViewModel.toggleNote(tile) },
+                                modifier = Modifier.size(tileSize),
+                            )
+                        }
                     }
                 }
             }
