@@ -6,6 +6,12 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -104,17 +110,45 @@ private fun TileSections(
     }
 
     Column {
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+
+        val animatedColor by infiniteTransition.animateColor(
+            initialValue = Color.LightGray,
+            targetValue = Color.White,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "colorPulse"
+        )
+
         Text(text = "Pool:")
         HiddenPool(
             game = game,
+            modifier = if (game.phase is GameState.Phase.PickFromPool) Modifier.background(animatedColor) else Modifier,
             sharedModifier = ::sharedTileModifier,
         ) { tile -> gameViewModel.pickOfferTile(tile) }
 
         Text(text = "Offer:")
         TileOffer(
             game = game,
+            modifier = if (game.phase is GameState.Phase.PickFromOffer) Modifier.background(animatedColor) else Modifier,
             sharedModifier = ::sharedTileModifier,
         ) { tile -> gameViewModel.pickSortHint(tile) }
+
+        Text("Phase: ")
+        Row {
+            val phase = game.phase
+            when (phase) {
+                is GameState.Phase.PickFromPool -> {
+                    Text("Pick new tile color from the pool")
+                }
+
+                is GameState.Phase.PickFromOffer -> {
+                    Text("Pick new tile from offer for number sort or dots compare")
+                }
+            }
+        }
 
         Text(text = "Secret:")
         PlayerSecretFive(
@@ -168,11 +202,12 @@ fun HiddenPool(
 @Composable
 fun TileOffer(
     game: GameState,
+    modifier: Modifier = Modifier,
     sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
     onTileClick: (Tile) -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
         Row(

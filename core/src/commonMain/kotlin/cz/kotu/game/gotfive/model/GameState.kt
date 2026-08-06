@@ -1,6 +1,7 @@
 package cz.kotu.game.gotfive.model
 
 data class GameState private constructor(
+    val phase: Phase,
     val shuffledPool: List<Tile>,
     val tilePool: Set<Tile>,
     val tileOffer: List<Tile>,
@@ -8,9 +9,15 @@ data class GameState private constructor(
     val secretTiles: Set<Tile>,
     val notes: Set<Tile>,
 ) {
+    sealed class Phase {
+        object PickFromPool : Phase()
+        object PickFromOffer : Phase()
+    }
+
     fun pickOfferTile(tile: Tile): GameState =
-        if (tile in tilePool) {
+        if (phase is Phase.PickFromPool && tile in tilePool) {
             copy(
+                phase = Phase.PickFromOffer,
                 tilePool = tilePool - tile,
                 tileOffer = tileOffer + tile,
             )
@@ -21,6 +28,7 @@ data class GameState private constructor(
     fun pickSortHint(tile: Tile): GameState =
         if (tile in tileOffer) {
             copy(
+                phase = Phase.PickFromPool,
                 tileOffer = tileOffer - tile,
                 sortTileHints = sortTileHints + tile,
             )
@@ -53,6 +61,7 @@ data class GameState private constructor(
                 }.toSet()
 
             return GameState(
+                phase = Phase.PickFromPool,
                 shuffledPool = shuffledPool,
                 tilePool = tilePool,
                 tileOffer = tileOffer,
