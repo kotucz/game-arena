@@ -6,12 +6,14 @@ data class GameState private constructor(
     val tilePool: Set<Tile>,
     val tileOffer: List<Tile>,
     val sortTileHints: Set<Tile>,
+    val dotHints: Map<Tile, List<Tile>>,
     val secretTiles: Set<Tile>,
     val notes: Set<Tile>,
 ) {
     sealed class Phase {
         object PickFromPool : Phase()
         object PickFromOffer : Phase()
+        data class ChooseHint(val tile: Tile) : Phase()
     }
 
     fun pickOfferTile(tile: Tile): GameState =
@@ -25,12 +27,33 @@ data class GameState private constructor(
             this
         }
 
+    fun pickHintTile(tile: Tile): GameState =
+        if (tile in tileOffer) {
+            copy(
+                phase = Phase.ChooseHint(tile),
+            )
+        } else {
+            this
+        }
+
     fun pickSortHint(tile: Tile): GameState =
         if (tile in tileOffer) {
             copy(
                 phase = Phase.PickFromPool,
                 tileOffer = tileOffer - tile,
                 sortTileHints = sortTileHints + tile,
+            )
+        } else {
+            this
+        }
+
+    fun pickDotsHintSecretTile(secretTile: Tile): GameState =
+        if (phase is Phase.ChooseHint) {
+            val tile = phase.tile
+            copy(
+                phase = Phase.PickFromPool,
+                tileOffer = tileOffer - tile,
+                dotHints = dotHints.withDotsHint(tile, secretTile),
             )
         } else {
             this
@@ -66,9 +89,15 @@ data class GameState private constructor(
                 tilePool = tilePool,
                 tileOffer = tileOffer,
                 sortTileHints = emptySet(),
+                dotHints = emptyMap(),
                 secretTiles = secretTiles,
                 notes = Tiles.all.toSet(),
             )
         }
     }
 }
+
+private fun Map<Tile, List<Tile>>.withDotsHint(
+    tile: Tile,
+    secretTile: Tile
+): Map<Tile, List<Tile>> = this + (secretTile to (getOrElse(secretTile) { emptyList() } + tile))

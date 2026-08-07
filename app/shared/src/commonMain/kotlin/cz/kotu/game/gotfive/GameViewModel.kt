@@ -23,8 +23,16 @@ class GameViewModel : ViewModel() {
         gameState = gameState.pickOfferTile(tile)
     }
 
+    fun pickHintTile(tile: Tile) {
+        gameState = gameState.pickHintTile(tile)
+    }
+
     fun pickSortHint(tile: Tile) {
         gameState = gameState.pickSortHint(tile)
+    }
+
+    fun pickDotsHintSecretTile(secretTile: Tile) {
+        gameState = gameState.pickDotsHintSecretTile(secretTile)
     }
 
     fun toggleNote(tile: Tile) {

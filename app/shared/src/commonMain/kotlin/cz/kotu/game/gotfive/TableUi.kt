@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -79,9 +80,11 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
                     Text("Check solution")
                 }
 
-                Text(text = gameViewModel.result, modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp))
+                Text(
+                    text = gameViewModel.result, modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                )
 
             }
             Text(text = "Notes:")
@@ -134,10 +137,17 @@ private fun TileSections(
             game = game,
             modifier = if (game.phase is GameState.Phase.PickFromOffer) Modifier.background(animatedColor) else Modifier,
             sharedModifier = ::sharedTileModifier,
-        ) { tile -> gameViewModel.pickSortHint(tile) }
+        ) { tile -> gameViewModel.pickHintTile(tile) }
 
         Text("Phase: ")
-        Row {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .then(
+                    if (game.phase is GameState.Phase.ChooseHint) Modifier.background(animatedColor) else Modifier
+                ),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val phase = game.phase
             when (phase) {
                 is GameState.Phase.PickFromPool -> {
@@ -147,12 +157,25 @@ private fun TileSections(
                 is GameState.Phase.PickFromOffer -> {
                     Text("Pick new tile from offer for number sort or dots compare")
                 }
+
+                is GameState.Phase.ChooseHint -> {
+                    Button(onClick = { gameViewModel.pickSortHint(phase.tile) }) {
+                        Text(text = "Sort tile ${phase.tile.number}")
+                    }
+                    Text(
+                        " or pick secret tile to compare dots ${
+                            (1..phase.tile.dots).joinToString(separator = "") { "•" }
+                        } or choose another hint tile from offer."
+                    )
+                }
             }
         }
 
-        Text(text = "Secret:")
+        Text(text = "Secret tiles - you need to find the values - sorted in ascending order left to right")
         PlayerSecretFive(
             game = game,
+            modifier = if (game.phase is GameState.Phase.ChooseHint) Modifier.background(animatedColor) else Modifier,
+            gameViewModel = gameViewModel,
             secretVisible = gameViewModel.secretVisible,
             sharedModifier = ::sharedTileModifier,
         )
@@ -184,6 +207,7 @@ fun HiddenPool(
                             TileView(
                                 tile = tile,
                                 showValues = showSecretTileValues,
+                                clickable = game.phase is GameState.Phase.PickFromPool,
                                 onClick = { onTileClick(tile) },
                                 modifier = Modifier
                                     .size(tileSize)
@@ -214,8 +238,11 @@ fun TileOffer(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             game.tileOffer.forEach { tile ->
+                val gamePhase = game.phase
                 TileView(
                     tile = tile,
+                    outline = if (gamePhase is GameState.Phase.ChooseHint && gamePhase.tile == tile) Color.Black else Color.Transparent,
+                    clickable = gamePhase is GameState.Phase.PickFromOffer || gamePhase is GameState.Phase.ChooseHint,
                     onClick = { onTileClick(tile) },
                     modifier = Modifier
                         .size(64.dp)
@@ -229,11 +256,13 @@ fun TileOffer(
 @Composable
 fun PlayerSecretFive(
     game: GameState,
+    modifier: Modifier = Modifier,
+    gameViewModel: GameViewModel,
     secretVisible: Boolean,
     sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
 ) {
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -241,13 +270,45 @@ fun PlayerSecretFive(
         ) {
             val tiles = (game.secretTiles + game.sortTileHints).sorted()
             tiles.forEach { tile ->
-                TileView(
-                    tile = tile,
-                    showValues = (tile !in game.secretTiles) || showSecretTileValues || secretVisible,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .then(sharedModifier(tile)),
-                )
+                if (tile in game.secretTiles) {
+                    // secret tile
+                    Column {
+                        TileView(
+                            tile = tile,
+                            showValues = showSecretTileValues || secretVisible,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .then(sharedModifier(tile)),
+                            outline = Color.Black,
+                            clickable = game.phase is GameState.Phase.ChooseHint,
+                            onClick = { gameViewModel.pickDotsHintSecretTile(tile) },
+                        )
+                        game.dotHints[tile]?.forEach { dotHintTile ->
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val match = dotHintTile.dots == tile.dots
+                                TileView(
+                                    tile = dotHintTile,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .then(sharedModifier(dotHintTile)),
+                                    outline = if (match) Color.Green else Color.Red,
+                                )
+                                Text(if (match) "✅" else "❌")
+                            }
+                        }
+                    }
+                } else {
+                    // sorted hint tile
+                    TileView(
+                        tile = tile,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .then(sharedModifier(tile)),
+                    )
+                }
             }
         }
     }
@@ -320,6 +381,7 @@ private fun PlayerTileNotes(
                             TileView(
                                 tile = tile,
                                 selected = selected,
+                                clickable = true,
                                 onClick = { gameViewModel.toggleNote(tile) },
                                 modifier = Modifier.size(tileSize),
                             )
@@ -337,6 +399,8 @@ fun TileView(
     modifier: Modifier = Modifier,
     selected: Boolean = true,
     showValues: Boolean = true,
+    outline: Color? = null,
+    clickable: Boolean = false,
     onClick: () -> Unit = {},
 ) {
     val baseColor = Color(
@@ -358,7 +422,8 @@ fun TileView(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(tileColor)
-            .clickable(onClick = onClick)
+            .border(2.dp, outline ?: Color.Transparent, RoundedCornerShape(16.dp))
+            .clickable(enabled = clickable, onClick = onClick)
             .then(if (selected) Modifier else Modifier.alpha(0.35f))
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
