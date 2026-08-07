@@ -276,6 +276,7 @@ fun PlayerSecretFive(
                         TileView(
                             tile = tile,
                             showValues = showSecretTileValues || secretVisible,
+                            hiddenText = if (showSecretTileValues || secretVisible) null else "?",
                             modifier = Modifier
                                 .size(64.dp)
                                 .then(sharedModifier(tile)),
@@ -399,6 +400,7 @@ fun TileView(
     modifier: Modifier = Modifier,
     selected: Boolean = true,
     showValues: Boolean = true,
+    hiddenText: String? = null,
     outline: Color? = null,
     clickable: Boolean = false,
     onClick: () -> Unit = {},
@@ -462,6 +464,15 @@ fun TileView(
                         )
                     }
                 }
+            } else if (hiddenText != null) {
+                Text(
+                    text = hiddenText,
+                    color = Color.Black,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = MaterialTheme.typography.headlineMedium.fontSize * contentScale,
+                        lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * contentScale,
+                    ),
+                )
             }
         }
     }
