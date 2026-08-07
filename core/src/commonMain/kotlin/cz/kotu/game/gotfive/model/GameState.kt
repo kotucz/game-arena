@@ -28,7 +28,7 @@ data class GameState private constructor(
         }
 
     fun pickHintTile(tile: Tile): GameState =
-        if (tile in tileOffer) {
+        if ((phase is Phase.PickFromOffer || phase is Phase.ChooseHint) && tile in tileOffer) {
             copy(
                 phase = Phase.ChooseHint(tile),
             )
@@ -37,7 +37,7 @@ data class GameState private constructor(
         }
 
     fun pickSortHint(tile: Tile): GameState =
-        if (tile in tileOffer) {
+        if (phase is Phase.ChooseHint && phase.tile == tile && tile in tileOffer) {
             copy(
                 phase = Phase.PickFromPool,
                 tileOffer = tileOffer - tile,
@@ -48,7 +48,10 @@ data class GameState private constructor(
         }
 
     fun pickDotsHintSecretTile(secretTile: Tile): GameState =
-        if (phase is Phase.ChooseHint) {
+        if (phase is Phase.ChooseHint &&
+            phase.tile in tileOffer &&
+            secretTile in secretTiles
+        ) {
             val tile = phase.tile
             copy(
                 phase = Phase.PickFromPool,
