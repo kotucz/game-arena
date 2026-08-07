@@ -418,35 +418,49 @@ fun TileView(
         Color(luminance, luminance, luminance)
     }
 
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(tileColor)
             .border(2.dp, outline ?: Color.Transparent, RoundedCornerShape(16.dp))
             .clickable(enabled = clickable, onClick = onClick)
-            .then(if (selected) Modifier else Modifier.alpha(0.35f))
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .then(if (selected) Modifier else Modifier.alpha(0.35f)),
+        contentAlignment = Alignment.Center,
     ) {
-        if (showValues) {
-            Text(
-                text = tile.number.toString(),
-                color = Color.White,
-                style = MaterialTheme.typography.headlineMedium,
-            )
+        // TileView is used at several sizes (the pool, notes, secret tiles, and hints).
+        // Scale all content from the available width so small tiles remain readable.
+        val contentScale = (maxWidth / 64.dp).coerceIn(0.45f, 1f)
+        val contentPadding = 4.dp * contentScale
+        val dotSize = 8.dp * contentScale
+        val dotSpacing = 4.dp * contentScale
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                repeat(tile.dots) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
+        Column(
+            modifier = Modifier.padding(contentPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            if (showValues) {
+                Text(
+                    text = tile.number.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = MaterialTheme.typography.headlineMedium.fontSize * contentScale,
+                        lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * contentScale,
                     )
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(dotSpacing),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    repeat(tile.dots) {
+                        Box(
+                            modifier = Modifier
+                                .size(dotSize)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                        )
+                    }
                 }
             }
         }
