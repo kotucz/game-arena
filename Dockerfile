@@ -8,6 +8,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Make the Gradle wrapper executable and convert CRLF line endings from Windows checkouts.
+RUN sed -i 's/\r$//' gradlew \
+    && chmod +x gradlew
+
 RUN ./gradlew --no-daemon :app:webApp:wasmJsBrowserDistribution :server:installDist
 
 FROM eclipse-temurin:21-jre
