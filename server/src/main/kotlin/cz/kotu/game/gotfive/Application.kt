@@ -24,8 +24,12 @@ fun Application.module() {
             call.respondText("OK")
         }
 
-        staticFiles("/", webRoot) {
-            default("index.html")
+        get("/") {
+            call.respondFile(File(webRoot, "index.html"))
         }
+
+        // Do not fall back to index.html for missing assets. In particular, a
+        // stale browser requesting an old Wasm hash must receive a 404, not HTML.
+        staticFiles("/", webRoot)
     }
 }
