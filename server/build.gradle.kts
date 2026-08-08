@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.ksp)
 }
 
 group = "cz.kotu.game.gotfive"
@@ -14,6 +15,9 @@ dependencies {
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
+    implementation(libs.room.runtime)
+    implementation(libs.sqlite.bundled)
+    ksp(libs.room.compiler)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }

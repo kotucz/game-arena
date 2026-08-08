@@ -22,6 +22,8 @@ COPY --from=build /src/app/webApp/build/dist/wasmJs/productionExecutable /opt/go
 
 ENV WEB_ROOT=/opt/gotfive/web
 ENV PORT=8080
+ENV DATABASE_PATH=/data/gotfive.db
+VOLUME ["/data"]
 EXPOSE 8080
 
 ENTRYPOINT ["/opt/gotfive/server/bin/server"]

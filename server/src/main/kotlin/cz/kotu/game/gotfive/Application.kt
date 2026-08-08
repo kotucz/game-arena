@@ -15,6 +15,7 @@ fun main() {
 }
 
 fun Application.module() {
+    val database = createDatabase()
     val webRoot = File(
         System.getenv("WEB_ROOT") ?: "app/webApp/build/dist/wasmJs/productionExecutable",
     )
@@ -31,5 +32,9 @@ fun Application.module() {
         // Do not fall back to index.html for missing assets. In particular, a
         // stale browser requesting an old Wasm hash must receive a 404, not HTML.
         staticFiles("/", webRoot)
+    }
+
+    environment.monitor.subscribe(ApplicationStopped) {
+        database.close()
     }
 }
