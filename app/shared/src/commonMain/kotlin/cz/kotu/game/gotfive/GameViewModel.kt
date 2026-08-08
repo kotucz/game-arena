@@ -14,7 +14,7 @@ class GameViewModel : ViewModel() {
     var gameState by mutableStateOf(GameState.create())
         private set
 
-    var result by mutableStateOf("Confirm solution in notes when ready:")
+    var result by mutableStateOf("Confirm solution in notes when ready")
         private set
     var secretVisible by mutableStateOf(false)
         private set
@@ -48,7 +48,7 @@ class GameViewModel : ViewModel() {
         if (notes.size != 5) {
             result = "Solution must contain 5 tiles 5️⃣:"
         } else if (notes.map { it.color }.toSet().size != 5) {
-            result = "Solution must contain one tile of each color 🎨:"
+            result = "Solution must contain one tile of each color 🎨"
         } else if (notes == gameState.secretTiles) {
             result = "Correct solution. Good job 🎉"
             secretVisible = true

@@ -17,15 +17,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -44,6 +48,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import cz.kotu.game.gotfive.model.GameState
 import cz.kotu.game.gotfive.model.Tile
 import cz.kotu.game.gotfive.model.Tiles
@@ -71,9 +76,7 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
         val sharedScope = this
 
         Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             AnimatedContent(
@@ -91,26 +94,26 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
                 )
             }
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(onClick = gameViewModel::checkSolution) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = gameViewModel::checkSolution,
+                ) {
                     Text("Check solution")
                 }
 
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(resultContainer)
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(resultContainer)
                         .border(1.dp, resultContent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
                         text = gameViewModel.result,
+                        modifier = Modifier.padding(horizontal = 12.dp),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = if (gameViewModel.secretVisible) FontWeight.Bold else FontWeight.Normal,
                         color = resultContent,
@@ -119,9 +122,14 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "Notes", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Notes",
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                )
                 Text(
                     text = "Tap or drag across tiles to mark your solution.",
+                    modifier = Modifier.padding(horizontal = 12.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -150,78 +158,90 @@ private fun TileSections(
         )
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    BoxWithConstraints {
+        val sharedTileSize = ((maxWidth - 16.dp) / 9).coerceIn(24.dp, 64.dp)
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val infiniteTransition = rememberInfiniteTransition(label = "pulse")
 
         val animatedColor by infiniteTransition.animateColor(
-            initialValue = Color.LightGray,
-            targetValue = Color.White,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "colorPulse"
+            initialValue = Color.LightGray, targetValue = Color.White, animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1000, easing = LinearEasing), repeatMode = RepeatMode.Reverse,
+            ), label = "colorPulse"
         )
 
-        Text(text = "Pool", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Pool",
+            modifier = Modifier.padding(horizontal = 12.dp),
+            style = MaterialTheme.typography.titleMedium,
+        )
         HiddenPool(
             game = game,
             modifier = if (game.phase is GameState.Phase.PickFromPool) Modifier.background(animatedColor) else Modifier,
             sharedModifier = ::sharedTileModifier,
         ) { tile -> gameViewModel.pickOfferTile(tile) }
 
-        Text(text = "Offer", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Offer",
+            modifier = Modifier.padding(horizontal = 12.dp),
+            style = MaterialTheme.typography.titleMedium,
+        )
         TileOffer(
             game = game,
+            tileSize = sharedTileSize,
             modifier = if (game.phase is GameState.Phase.PickFromOffer) Modifier.background(animatedColor) else Modifier,
             sharedModifier = ::sharedTileModifier,
         ) { tile -> gameViewModel.pickHintTile(tile) }
 
-        Text("Next move", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Next move",
+            modifier = Modifier.padding(horizontal = 12.dp),
+            style = MaterialTheme.typography.titleMedium,
+        )
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-                .then(
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)).then(
                     if (game.phase is GameState.Phase.ChooseHint) {
                         Modifier.background(animatedColor)
                     } else {
                         Modifier
                     }
-                )
-                .padding(8.dp),
+                ).padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val phase = game.phase
             when (phase) {
                 is GameState.Phase.PickFromPool -> {
-                    Text("Pick new tile color from the pool")
+                    Text(
+                        "Pick new tile color from the pool",
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
                 }
 
                 is GameState.Phase.PickFromOffer -> {
-                    Text("Pick new tile from offer for number sort or dots compare")
+                    Text(
+                        "Pick new tile from offer for number sort or dots compare",
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
                 }
 
                 is GameState.Phase.ChooseHint -> {
-                    Text(
-                        text = "Choose how to use tile ${phase.tile.number}",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
                     Button(onClick = { gameViewModel.pickSortHint(phase.tile) }) {
                         Text(text = "Use ${phase.tile.number} for sorting")
                     }
                     Text(
+                        text = "or",
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
                         "Pick a secret tile to compare dots: ${
                             (1..phase.tile.dots).joinToString(separator = "") { "•" }
-                        }, or choose another offer tile.",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                        }",
+                        modifier = Modifier.fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
@@ -232,21 +252,28 @@ private fun TileSections(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = "Secret tiles", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "Secret tiles",
+                modifier = Modifier.padding(horizontal = 12.dp),
+                style = MaterialTheme.typography.titleMedium,
+            )
             Text(
                 text = "Find the values in ascending order from left to right.",
+                modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         PlayerSecretFive(
             game = game,
+            tileSize = sharedTileSize,
             modifier = if (game.phase is GameState.Phase.ChooseHint) Modifier.background(animatedColor) else Modifier,
             gameViewModel = gameViewModel,
             secretVisible = gameViewModel.secretVisible,
             sharedModifier = ::sharedTileModifier,
         )
 
+        }
     }
 }
 
@@ -259,7 +286,7 @@ fun HiddenPool(
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val spacing = 4.dp
-        val tileSize = (maxWidth - spacing * 11) / 12
+        val tileSize = ((maxWidth - spacing * 11) / 12).coerceAtLeast(16.dp)
 
         Column(
             verticalArrangement = Arrangement.spacedBy(spacing),
@@ -276,9 +303,7 @@ fun HiddenPool(
                                 showValues = showSecretTileValues,
                                 clickable = game.phase is GameState.Phase.PickFromPool,
                                 onClick = { onTileClick(tile) },
-                                modifier = Modifier
-                                    .size(tileSize)
-                                    .then(sharedModifier(tile)),
+                                modifier = Modifier.size(tileSize).then(sharedModifier(tile)),
                             )
                         } else {
                             Spacer(modifier = Modifier.size(tileSize))
@@ -293,6 +318,7 @@ fun HiddenPool(
 @Composable
 fun TileOffer(
     game: GameState,
+    tileSize: Dp,
     modifier: Modifier = Modifier,
     sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
     onTileClick: (Tile) -> Unit,
@@ -301,8 +327,9 @@ fun TileOffer(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
+        val spacing = 4.dp
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing),
         ) {
             game.tileOffer.forEach { tile ->
                 val gamePhase = game.phase
@@ -311,9 +338,7 @@ fun TileOffer(
                     outline = if (gamePhase is GameState.Phase.ChooseHint && gamePhase.tile == tile) Color.Black else Color.Transparent,
                     clickable = gamePhase is GameState.Phase.PickFromOffer || gamePhase is GameState.Phase.ChooseHint,
                     onClick = { onTileClick(tile) },
-                    modifier = Modifier
-                        .size(64.dp)
-                        .then(sharedModifier(tile)),
+                    modifier = Modifier.size(tileSize).then(sharedModifier(tile)),
                 )
             }
         }
@@ -323,16 +348,21 @@ fun TileOffer(
 @Composable
 fun PlayerSecretFive(
     game: GameState,
+    tileSize: Dp,
     modifier: Modifier = Modifier,
     gameViewModel: GameViewModel,
     secretVisible: Boolean,
     sharedModifier: @Composable (Tile) -> Modifier = { Modifier },
 ) {
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         contentAlignment = Alignment.Center,
     ) {
+        val hintTileSize = (tileSize * 0.66f).coerceIn(16.dp, 42.dp)
         Row(
+            modifier = Modifier
+                .wrapContentWidth(Alignment.CenterHorizontally)
+                .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             val tiles = (game.secretTiles + game.sortTileHints).sorted()
@@ -344,9 +374,7 @@ fun PlayerSecretFive(
                             tile = tile,
                             showValues = showSecretTileValues || secretVisible,
                             hiddenText = if (showSecretTileValues || secretVisible) null else "?",
-                            modifier = Modifier
-                                .size(64.dp)
-                                .then(sharedModifier(tile)),
+                            modifier = Modifier.size(tileSize).then(sharedModifier(tile)),
                             outline = Color.Black,
                             clickable = game.phase is GameState.Phase.ChooseHint,
                             onClick = { gameViewModel.pickDotsHintSecretTile(tile) },
@@ -359,9 +387,7 @@ fun PlayerSecretFive(
                                 val match = dotHintTile.dots == tile.dots
                                 TileView(
                                     tile = dotHintTile,
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .then(sharedModifier(dotHintTile)),
+                                    modifier = Modifier.size(hintTileSize).then(sharedModifier(dotHintTile)),
                                     outline = if (match) Color.Green else Color.Red,
                                 )
                                 Text(if (match) "✅" else "❌")
@@ -372,9 +398,7 @@ fun PlayerSecretFive(
                     // sorted hint tile
                     TileView(
                         tile = tile,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .then(sharedModifier(tile)),
+                        modifier = Modifier.size(hintTileSize).then(sharedModifier(tile)),
                     )
                 }
             }
@@ -392,7 +416,7 @@ private fun PlayerTileNotes(
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val spacing = 4.dp
-        val tileSize = (maxWidth - spacing * 11) / 12
+        val tileSize = ((maxWidth - spacing * 11) / 12).coerceAtLeast(16.dp)
         val density = LocalDensity.current
         val tileSizePx = with(density) { tileSize.toPx() }
         val spacingPx = with(density) { spacing.toPx() }
@@ -403,10 +427,7 @@ private fun PlayerTileNotes(
             val localX = x % (tileSizePx + spacingPx)
             val localY = y % (tileSizePx + spacingPx)
 
-            return if (
-                column in 0..11 && row in 0..4 &&
-                localX <= tileSizePx && localY <= tileSizePx
-            ) {
+            return if (column in 0..11 && row in 0..4 && localX <= tileSizePx && localY <= tileSizePx) {
                 Tiles.all[column * 5 + row]
             } else {
                 null
@@ -480,66 +501,64 @@ fun TileView(
     val tileColor = if (selected) {
         baseColor
     } else {
-        val luminance =
-            baseColor.red * 0.299f +
-                    baseColor.green * 0.587f +
-                    baseColor.blue * 0.114f
+        val luminance = baseColor.red * 0.299f + baseColor.green * 0.587f + baseColor.blue * 0.114f
         Color(luminance, luminance, luminance)
     }
 
     BoxWithConstraints(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(tileColor)
-            .border(2.dp, outline ?: Color.Transparent, RoundedCornerShape(16.dp))
-            .clickable(enabled = clickable, onClick = onClick)
-            .then(if (selected) Modifier else Modifier.alpha(0.35f)),
+        modifier = modifier.then(if (selected) Modifier else Modifier.alpha(0.35f)),
         contentAlignment = Alignment.Center,
     ) {
         // TileView is used at several sizes (the pool, notes, secret tiles, and hints).
         // Scale all content from the available width so small tiles remain readable.
         val contentScale = (maxWidth / 64.dp).coerceIn(0.45f, 1f)
-        val contentPadding = 4.dp * contentScale
         val dotSize = 8.dp * contentScale
         val dotSpacing = 4.dp * contentScale
+        val tileShape = RoundedCornerShape(16.dp * contentScale)
 
-        Column(
-            modifier = Modifier.padding(contentPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(tileShape)
+                .background(tileColor)
+                .border(2.dp, outline ?: Color.Transparent, tileShape)
+                .clickable(enabled = clickable, onClick = onClick),
+            contentAlignment = Alignment.Center,
         ) {
-            if (showValues) {
-                Text(
-                    text = tile.number.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontSize = MaterialTheme.typography.headlineMedium.fontSize * contentScale,
-                        lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * contentScale,
-                    )
-                )
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(dotSpacing),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    repeat(tile.dots) {
-                        Box(
-                            modifier = Modifier
-                                .size(dotSize)
-                                .clip(CircleShape)
-                                .background(Color.White),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                if (showValues) {
+                    Text(
+                        text = tile.number.toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = MaterialTheme.typography.headlineMedium.fontSize * contentScale,
+                            lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * contentScale,
                         )
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(dotSpacing),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        repeat(tile.dots) {
+                            Box(
+                                modifier = Modifier.size(dotSize).clip(CircleShape).background(Color.White),
+                            )
+                        }
                     }
+                } else if (hiddenText != null) {
+                    Text(
+                        text = hiddenText,
+                        color = Color.Black,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = MaterialTheme.typography.headlineMedium.fontSize * contentScale,
+                            lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * contentScale,
+                        ),
+                    )
                 }
-            } else if (hiddenText != null) {
-                Text(
-                    text = hiddenText,
-                    color = Color.Black,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontSize = MaterialTheme.typography.headlineMedium.fontSize * contentScale,
-                        lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * contentScale,
-                    ),
-                )
             }
         }
     }
