@@ -7,6 +7,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 
 expect fun createAuthHttpClient(): HttpClient
+expect fun authBaseUrl(): String
 
 class AuthClient(private val httpClient: HttpClient = createAuthHttpClient()) {
     suspend fun register(username: String, email: String, password: String): Result<String> = submit(
@@ -25,16 +26,20 @@ class AuthClient(private val httpClient: HttpClient = createAuthHttpClient()) {
     )
 
     suspend fun currentUser(): Result<String> = runCatching {
-        val response = httpClient.get("/api/me")
+        val response = httpClient.get(endpoint("/api/me"))
         val message = response.bodyAsText()
         if (response.status.value !in 200..299) error(message.ifBlank { "Not authenticated" })
         message
     }
 
     private suspend fun submit(path: String, parameters: Parameters): Result<String> = runCatching {
-        val response = httpClient.submitForm(path, parameters)
+        val response = httpClient.submitForm(endpoint(path), parameters)
         val message = response.bodyAsText()
         if (response.status.value !in 200..299) error(message.ifBlank { "Request failed" })
         message
+    }.onFailure { error ->
+        println("Authentication request failed: ${error.stackTraceToString()}")
     }
+
+    private fun endpoint(path: String): String = authBaseUrl().trimEnd('/') + path
 }
