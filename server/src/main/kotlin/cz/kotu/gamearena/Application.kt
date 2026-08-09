@@ -9,11 +9,9 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.Netty
 import io.ktor.server.request.receiveParameters
-import io.ktor.server.request.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
 import io.ktor.server.response.respondText
-import io.ktor.server.response.header
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -106,26 +104,19 @@ private suspend fun createSession(call: ApplicationCall, database: AppDatabase, 
             expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
         )
     )
-    call.response.header(
-        io.ktor.http.HttpHeaders.SetCookie,
+    call.response.cookies.append(
         Cookie(
             name = SessionTokens.cookieName,
             value = token,
             maxAge = SessionTokens.lifetimeSeconds.toInt(),
             httpOnly = true,
-            secure = false,
             path = "/",
-        ).toString()
+        ),
     )
 }
 
 private suspend fun currentSession(call: ApplicationCall, database: AppDatabase): Session? {
-    val token = call.request.header(io.ktor.http.HttpHeaders.Cookie)
-        ?.split(';')
-        ?.map { it.trim() }
-        ?.firstOrNull { it.startsWith("${SessionTokens.cookieName}=") }
-        ?.substringAfter('=')
-        ?: return null
+    val token = call.request.cookies[SessionTokens.cookieName] ?: return null
     val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token)) ?: return null
     if (session.expiresAt <= Instant.now().epochSecond) {
         database.sessionDao().deleteByTokenHash(session.tokenHash)

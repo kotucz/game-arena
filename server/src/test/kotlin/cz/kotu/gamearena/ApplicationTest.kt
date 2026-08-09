@@ -29,5 +29,6 @@ class ApplicationTest {
         }
 
         assertEquals(HttpStatusCode.Created, registration.status)
+        assertTrue(registration.headers[HttpHeaders.SetCookie]?.startsWith("gamearena_session=") == true)
     }
 }
