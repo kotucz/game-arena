@@ -9,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -19,7 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Preview
 fun App() {
     MaterialTheme {
-        val gameViewModel: GameViewModel = viewModel(factory = GameViewModelFactory)
+        val authenticated = remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -28,11 +30,12 @@ fun App() {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Table(
-                gameViewModel, Modifier
-                    .width(960.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
+            if (authenticated.value) {
+                val gameViewModel: GameViewModel = viewModel(factory = GameViewModelFactory)
+                Table(gameViewModel, Modifier.width(960.dp).align(Alignment.CenterHorizontally))
+            } else {
+                AuthScreen { authenticated.value = true }
+            }
         }
     }
 }
