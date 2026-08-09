@@ -2,6 +2,7 @@ package cz.kotu.game.gotfive
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.submitForm
+import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 
@@ -22,6 +23,13 @@ class AuthClient(private val httpClient: HttpClient = createAuthHttpClient()) {
             append("password", password)
         }
     )
+
+    suspend fun currentUser(): Result<String> = runCatching {
+        val response = httpClient.get("/api/me")
+        val message = response.bodyAsText()
+        if (response.status.value !in 200..299) error(message.ifBlank { "Not authenticated" })
+        message
+    }
 
     private suspend fun submit(path: String, parameters: Parameters): Result<String> = runCatching {
         val response = httpClient.submitForm(path, parameters)

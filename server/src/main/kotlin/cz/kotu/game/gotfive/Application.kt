@@ -1,19 +1,24 @@
 package cz.kotu.game.gotfive
 
+import io.ktor.http.Cookie
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.Netty
 import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
 import io.ktor.server.response.respondText
+import io.ktor.server.response.header
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import java.io.File
+import java.time.Instant
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -44,6 +49,7 @@ fun Application.module() {
                 call.respond(HttpStatusCode.Conflict, "Username is already registered")
             } else {
                 database.userDao().insert(User(username, PasswordHasher.hash(password), email))
+                createSession(call, database, username)
                 call.respond(HttpStatusCode.Created, "Registration successful")
             }
         }
@@ -56,7 +62,17 @@ fun Application.module() {
             if (user == null || !PasswordHasher.matches(password, user.passwordHash)) {
                 call.respond(HttpStatusCode.Unauthorized, "Invalid username or password")
             } else {
+                createSession(call, database, user.username)
                 call.respondText("Login successful")
+            }
+        }
+
+        get("/api/me") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                call.respondText(session.username)
             }
         }
 
@@ -79,4 +95,41 @@ private fun validateRegistration(username: String, email: String, password: Stri
     !email.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) -> "Enter a valid email address"
     password.length < 8 -> "Password must be at least 8 characters"
     else -> null
+}
+
+private suspend fun createSession(call: ApplicationCall, database: AppDatabase, username: String) {
+    val token = SessionTokens.create()
+    database.sessionDao().insert(
+        Session(
+            tokenHash = SessionTokens.hash(token),
+            username = username,
+            expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
+        )
+    )
+    call.response.header(
+        io.ktor.http.HttpHeaders.SetCookie,
+        Cookie(
+            name = SessionTokens.cookieName,
+            value = token,
+            maxAge = SessionTokens.lifetimeSeconds.toInt(),
+            httpOnly = true,
+            secure = false,
+            path = "/",
+        ).toString()
+    )
+}
+
+private suspend fun currentSession(call: ApplicationCall, database: AppDatabase): Session? {
+    val token = call.request.header(io.ktor.http.HttpHeaders.Cookie)
+        ?.split(';')
+        ?.map { it.trim() }
+        ?.firstOrNull { it.startsWith("${SessionTokens.cookieName}=") }
+        ?.substringAfter('=')
+        ?: return null
+    val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token)) ?: return null
+    if (session.expiresAt <= Instant.now().epochSecond) {
+        database.sessionDao().deleteByTokenHash(session.tokenHash)
+        return null
+    }
+    return session
 }

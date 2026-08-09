@@ -10,6 +10,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +33,10 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     var submitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val authClient = remember { AuthClient() }
+
+    LaunchedEffect(Unit) {
+        authClient.currentUser().onSuccess { onAuthenticated() }
+    }
 
     Column(
         modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().padding(24.dp),

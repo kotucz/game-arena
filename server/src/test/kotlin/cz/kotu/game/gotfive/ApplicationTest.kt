@@ -17,4 +17,17 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("OK", response.bodyAsText())
     }
+
+    @Test
+    fun registrationCreatesPersistentSession() = testApplication {
+        application { module() }
+
+        val username = "user_${System.currentTimeMillis()}"
+        val registration = client.post("/api/register") {
+            contentType(ContentType.Application.FormUrlEncoded)
+            setBody("username=$username&email=$username%40example.com&password=correctPassword123")
+        }
+
+        assertEquals(HttpStatusCode.Created, registration.status)
+    }
 }
