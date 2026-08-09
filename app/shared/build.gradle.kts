@@ -31,7 +31,7 @@ kotlin {
     }
 
     android {
-        namespace = "cz.kotu.game.gotfive.app.shared"
+        namespace = "cz.kotu.gamearena.app.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 

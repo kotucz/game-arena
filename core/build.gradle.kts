@@ -22,7 +22,7 @@ kotlin {
     }
 
     android {
-        namespace = "cz.kotu.game.gotfive.core"
+        namespace = "cz.kotu.gamearena.core"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 

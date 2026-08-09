@@ -1,7 +1,7 @@
-name: "GotFive"
-slug: "gotfive"
+name: "Game Arena"
+slug: "gamearena"
 version: "1.0.2"
-description: "Got Five game - Kotlin KMP backend + Compose Wasm frontend"
+description: "Game Arena - Kotlin KMP backend + Compose Wasm frontend"
 arch:
   - amd64
   - aarch64

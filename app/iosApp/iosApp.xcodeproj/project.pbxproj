@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		54F9A7AC0E8A581CE8B4392D /* GotFive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GotFive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		54F9A7AC0E8A581CE8B4392D /* GameArena.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GameArena.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		231A7D454D25416C2167B068 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				54F9A7AC0E8A581CE8B4392D /* GotFive.app */,
+				54F9A7AC0E8A581CE8B4392D /* GameArena.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = 54F9A7AC0E8A581CE8B4392D /* GotFive.app */;
+			productReference = 54F9A7AC0E8A581CE8B4392D /* GameArena.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

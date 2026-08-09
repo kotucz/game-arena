@@ -16,14 +16,14 @@ RUN ./gradlew --no-daemon :app:webApp:wasmJsBrowserDistribution :server:installD
 
 FROM eclipse-temurin:21-jre
 
-WORKDIR /opt/gotfive
-COPY --from=build /src/server/build/install/server /opt/gotfive/server
-COPY --from=build /src/app/webApp/build/dist/wasmJs/productionExecutable /opt/gotfive/web
+WORKDIR /opt/gamearena
+COPY --from=build /src/server/build/install/server /opt/gamearena/server
+COPY --from=build /src/app/webApp/build/dist/wasmJs/productionExecutable /opt/gamearena/web
 
-ENV WEB_ROOT=/opt/gotfive/web
+ENV WEB_ROOT=/opt/gamearena/web
 ENV PORT=8080
-ENV DATABASE_PATH=/data/gotfive.db
+ENV DATABASE_PATH=/data/gamearena.db
 VOLUME ["/data"]
 EXPOSE 8080
 
-ENTRYPOINT ["/opt/gotfive/server/bin/server"]
+ENTRYPOINT ["/opt/gamearena/server/bin/server"]

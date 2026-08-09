@@ -4,10 +4,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-group = "cz.kotu.game.gotfive"
+group = "cz.kotu.gamearena"
 version = "1.0.0"
 application {
-    mainClass = "cz.kotu.game.gotfive.ApplicationKt"
+    mainClass = "cz.kotu.gamearena.ApplicationKt"
 }
 
 dependencies {

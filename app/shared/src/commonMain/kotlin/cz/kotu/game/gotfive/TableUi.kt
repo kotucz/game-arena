@@ -50,9 +50,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import gotfive.app.shared.generated.resources.Res
-import gotfive.app.shared.generated.resources.ic_check
-import gotfive.app.shared.generated.resources.ic_close
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.ic_check
+import gamearena.app.shared.generated.resources.ic_close
 import org.jetbrains.compose.resources.painterResource
 import cz.kotu.game.gotfive.model.GameState
 import cz.kotu.game.gotfive.model.Tile

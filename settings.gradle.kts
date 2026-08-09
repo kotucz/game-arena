@@ -1,4 +1,4 @@
-rootProject.name = "GotFive"
+rootProject.name = "GameArena"
 
 pluginManagement {
     repositories {

@@ -1,10 +1,10 @@
 services:
-  gotfive:
+  gamearena:
     build: .
     ports:
       - "8080:8080"
     volumes:
-      - gotfive-data:/data
+      - gamearena-data:/data
     restart: unless-stopped
 volumes:
-  gotfive-data:
+  gamearena-data:

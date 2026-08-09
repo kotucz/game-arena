@@ -17,11 +17,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "cz.kotu.game.gotfive.MainKt"
+        mainClass = "cz.kotu.gamearena.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "cz.kotu.game.gotfive"
+            packageName = "cz.kotu.gamearena"
             packageVersion = "1.0.0"
         }
     }
