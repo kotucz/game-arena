@@ -37,7 +37,12 @@ class ContactsGameFacadeImpl(
         val contactsAreUnsolved = playerContact !in gameState.solved && otherContact !in gameState.solved
         val contactsMatch = playerContact.number == otherContact.number
 
-        if (!playerOwnsContact || !anotherPlayerOwnsContact || !contactsAreUnsolved || !contactsMatch) {
+        if (!playerOwnsContact || !anotherPlayerOwnsContact || !contactsAreUnsolved) {
+            return
+        }
+
+        if (!contactsMatch) {
+            _gameState.value = gameState.withFaultFor(otherContact)
             return
         }
 

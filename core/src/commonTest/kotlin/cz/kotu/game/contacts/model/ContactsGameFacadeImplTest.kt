@@ -56,6 +56,11 @@ class ContactsGameFacadeImplTest {
         facade.action(alice, connectAction(aliceContact, bobOtherContact))
 
         assertEquals(emptySet(), facade.gameState.value.solved)
+        assertEquals(1, facade.gameState.value.faults)
+        assertEquals(
+            bobOtherContact.number.toString(),
+            facade.gameState.value.racks[1].hints[bobOtherContact],
+        )
     }
 
     @Test

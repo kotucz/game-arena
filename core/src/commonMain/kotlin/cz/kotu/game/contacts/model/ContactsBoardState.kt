@@ -7,6 +7,8 @@ data class ContactsBoardState internal constructor(
     val racks: List<Rack>,
 
     val solved: Set<Contact>,
+
+    val faults: Int = 0,
 ) {
     data class Player(
         val username: String,
@@ -22,6 +24,7 @@ data class ContactsBoardState internal constructor(
     data class Rack(
         val owner: Player,
         val contacts: List<Contact>,
+        val hints: Map<Contact, String> = emptyMap(),
     )
 
     companion object {
@@ -68,6 +71,21 @@ data class ContactsBoardState internal constructor(
     fun withSolvedContacts(vararg contacts: Contact): ContactsBoardState {
         return this.copy(
             solved = solved + contacts.toSet(),
+        )
+    }
+
+    fun withFaultFor(contact: Contact): ContactsBoardState {
+        val rackIndex = racks.indexOfFirst { contact in it.contacts }
+        if (rackIndex < 0) return this
+
+        val rack = racks[rackIndex]
+        val updatedRack = rack.copy(
+            hints = rack.hints + (contact to contact.number.toString()),
+        )
+
+        return copy(
+            racks = racks.toMutableList().also { it[rackIndex] = updatedRack },
+            faults = faults + 1,
         )
     }
 
