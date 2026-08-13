@@ -5,9 +5,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class ContactsGameFacadeImpl(
-    players: List<ContactsBoardState.Player>,
+    private val _gameState: MutableStateFlow<ContactsBoardState>,
 ) : ContactsGameFacade {
-    private val _gameState = MutableStateFlow(ContactsBoardState.create(players))
+    constructor(players: List<ContactsBoardState.Player>) : this(
+        MutableStateFlow(ContactsBoardState.create(players)),
+    )
+
+    internal constructor(initialState: ContactsBoardState) : this(MutableStateFlow(initialState))
 
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
 
@@ -23,6 +27,19 @@ class ContactsGameFacadeImpl(
         otherContact: ContactsBoardState.Contact,
     ) {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
+
+        val playerOwnsContact = gameState.racks.any { rack ->
+            rack.owner == player && playerContact in rack.contacts
+        }
+        val anotherPlayerOwnsContact = gameState.racks.any { rack ->
+            rack.owner != player && otherContact in rack.contacts
+        }
+        val contactsAreUnsolved = playerContact !in gameState.solved && otherContact !in gameState.solved
+        val contactsMatch = playerContact.number == otherContact.number
+
+        if (!playerOwnsContact || !anotherPlayerOwnsContact || !contactsAreUnsolved || !contactsMatch) {
+            return
+        }
 
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }

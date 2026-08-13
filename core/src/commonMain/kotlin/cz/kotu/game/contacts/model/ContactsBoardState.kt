@@ -1,7 +1,8 @@
 package cz.kotu.game.contacts.model
 
+// internal constructor for testing
 @ConsistentCopyVisibility
-data class ContactsBoardState private constructor(
+data class ContactsBoardState internal constructor(
     val pool: List<Contact>,
     val racks: List<Rack>,
 
