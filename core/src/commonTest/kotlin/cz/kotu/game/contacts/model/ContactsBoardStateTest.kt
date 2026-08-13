@@ -24,6 +24,9 @@ class ContactsBoardStateTest {
 
         assertEquals(players, state.racks.map { it.owner })
         assertEquals(listOf(12, 12, 12, 12), state.racks.map { it.contacts.size })
+        state.racks.forEach { rack ->
+            assertEquals(rack.contacts.sorted(), rack.contacts)
+        }
         assertEquals(
             state.pool.map { it.id }.toSet(),
             state.racks.flatMap { it.contacts }.map { it.id }.toSet(),

@@ -13,7 +13,10 @@ data class ContactsBoardState private constructor(
 
     data class Contact(
         val id: Int,
-        val number: Int)
+        val number: Int,
+    ) : Comparable<Contact> {
+        override fun compareTo(other: Contact): Int = number.compareTo(other.number)
+    }
 
     data class Rack(
         val owner: Player,
@@ -49,7 +52,7 @@ data class ContactsBoardState private constructor(
                 val player = players[index % players.size]
                 Rack(
                     owner = player,
-                    contacts = contacts.toList(),
+                    contacts = contacts.sorted(),
                 )
             }
 
