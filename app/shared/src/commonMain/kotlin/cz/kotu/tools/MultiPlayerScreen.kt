@@ -1,7 +1,13 @@
 package cz.kotu.tools
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
 
@@ -11,7 +17,9 @@ fun MultiPlayerScreen() {
 
     Row {
         viewModel.players.forEach { player ->
-            ContactsPlayerScreen(viewModel.gameFacade, player)
+            Box(modifier = Modifier.wrapContentWidth().border(1.dp, Color.Black)) {
+                ContactsPlayerScreen(viewModel.gameFacade, player)
+            }
         }
     }
 }
