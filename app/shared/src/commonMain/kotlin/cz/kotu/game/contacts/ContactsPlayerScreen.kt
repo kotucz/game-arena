@@ -18,10 +18,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,9 +39,13 @@ fun ContactsPlayerScreen(
 ) {
     var playerContact by remember { mutableStateOf<ContactsBoardState.Contact?>(null) }
     var otherContact by remember { mutableStateOf<ContactsBoardState.Contact?>(null) }
+    val gameState by gameFacade.gameState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        val gameState: ContactsBoardState = gameFacade.gameState.value
+        LaunchedEffect(gameState.solved) {
+            if (playerContact in gameState.solved) playerContact = null
+            if (otherContact in gameState.solved) otherContact = null
+        }
 
         Column(
             modifier = Modifier
@@ -49,11 +55,14 @@ fun ContactsPlayerScreen(
         ) {
             Text(text = "Player: " + player.username)
 
+            SolvedContactsPool(gameState)
+            
             gameState.racks.filter { it.owner != player }.forEach { rack ->
                 RackView(
                     rack = rack,
                     isOwner = false,
                     selectedContact = otherContact,
+                    solvedContacts = gameState.solved,
                     onContactClick = { otherContact = if (otherContact == it) null else it },
                 )
             }
@@ -63,6 +72,7 @@ fun ContactsPlayerScreen(
                     rack = rack,
                     isOwner = true,
                     selectedContact = playerContact,
+                    solvedContacts = gameState.solved,
                     onContactClick = { playerContact = if (playerContact == it) null else it },
                 )
             }
@@ -97,11 +107,55 @@ fun ContactsPlayerScreen(
     }
 }
 
+/* Sorted contacts pool with solved tiles highlighted */
+@Composable
+private fun SolvedContactsPool(gameState: ContactsBoardState) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(text = "Contacts Pool")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // Group contacts by number and sort by number
+            gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (number, contacts) ->
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    contacts.forEach { contact ->
+                        Box(
+                            modifier = Modifier
+                                .height(60.dp)
+                                .aspectRatio(1f / 1.618f)
+                                .background(
+                                    if (gameState.solved.contains(contact)) Color(0xFF4CAF50) else Color(
+                                        0xFFBDBDBD
+                                    ),
+                                    RoundedCornerShape(6.dp),
+                                )
+                                .padding(6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = contact.number.toString(),
+                                color = if (gameState.solved.contains(contact)) Color.White else Color.Black,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun RackView(
     rack: ContactsBoardState.Rack,
     isOwner: Boolean,
     selectedContact: ContactsBoardState.Contact?,
+    solvedContacts: Set<ContactsBoardState.Contact>,
     onContactClick: (ContactsBoardState.Contact) -> Unit,
 ) {
     Column {
@@ -119,11 +173,18 @@ private fun RackView(
                         .height(80.dp)
                         .aspectRatio(1f / 1.618f)
                         .background(
-                            if (contact == selectedContact) Color(0xFF1976D2) else Color(0xFF4A4A4A),
+                            when {
+                                contact in solvedContacts -> Color(0xFF808080)
+                                contact == selectedContact -> Color(0xFF1976D2)
+                                else -> Color(0xFF4A4A4A)
+                            },
                             RoundedCornerShape(8.dp),
                         )
                         .padding(8.dp)
-                        .clickable { onContactClick(contact) },
+                        .clickable(
+                            enabled = contact !in solvedContacts,
+                            onClick = { onContactClick(contact) },
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
