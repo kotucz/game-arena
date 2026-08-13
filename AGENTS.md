@@ -27,4 +27,12 @@ state to find suitable inputs.
 After each user prompt, include a brief note about the credits or token usage
 consumed when that information is available. If usage is significant, include
 enough detail to help review and optimize the work. If exact credit usage is
-not exposed by the runtime, say so instead of estimating it.
+not exposed by the runtime, report a clearly labelled rough token estimate
+instead; do not present it as an exact credit estimate.
+
+Before starting unusually large or expensive work—such as broad repository
+changes, lengthy investigation, many test/build cycles, or extensive tool
+usage—give a short pre-work warning with the expected scope and rough token
+cost. If the estimate is especially high or the work is not clearly urgent,
+pause for user confirmation before proceeding. Normal small edits do not need
+a pre-work warning.
