@@ -188,7 +188,11 @@ private fun RackView(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = contact.number.toString(),
+                        text = if (isOwner || contact in solvedContacts) {
+                            contact.number.toString()
+                        } else {
+                            "?"
+                        },
                         color = Color.White,
                         textAlign = TextAlign.Center,
                     )
