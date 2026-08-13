@@ -4,14 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,8 +27,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 
@@ -112,36 +114,45 @@ fun ContactsPlayerScreen(
 private fun SolvedContactsPool(gameState: ContactsBoardState) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(text = "Contacts Pool")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            // Group contacts by number and sort by number
-            gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (number, contacts) ->
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    contacts.forEach { contact ->
-                        Box(
-                            modifier = Modifier
-                                .height(60.dp)
-                                .aspectRatio(1f / 1.618f)
-                                .background(
-                                    if (gameState.solved.contains(contact)) Color(0xFF4CAF50) else Color(
-                                        0xFFBDBDBD
-                                    ),
-                                    RoundedCornerShape(6.dp),
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val spacing = 4.dp
+            val poolTileWidth = (((maxWidth - spacing * 11) / 12) * 0.75f).coerceAtMost(40.dp)
+            val poolFontSize = (18f * (poolTileWidth / 30.dp).coerceIn(0.55f, 1f)).sp
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                // Group contacts by number and sort by number
+                gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (_, contacts) ->
+                    Column(
+                        modifier = Modifier.width(poolTileWidth),
+                        verticalArrangement = Arrangement.spacedBy(spacing),
+                    ) {
+                        contacts.forEach { contact ->
+                            Box(
+                                modifier = Modifier
+                                    .width(poolTileWidth)
+                                    .aspectRatio(1f / 1.618f)
+                                    .background(
+                                        if (gameState.solved.contains(contact)) Color(0xFF4CAF50) else Color(
+                                            0xFFBDBDBD
+                                        ),
+                                        RoundedCornerShape(6.dp),
+                                    )
+                                    .padding(6.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = contact.number.toString(),
+                                    color = if (gameState.solved.contains(contact)) Color.White else Color.Black,
+                                    fontSize = poolFontSize,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
                                 )
-                                .padding(6.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = contact.number.toString(),
-                                color = if (gameState.solved.contains(contact)) Color.White else Color.Black,
-                                textAlign = TextAlign.Center,
-                            )
+                            }
                         }
                     }
                 }
@@ -161,41 +172,53 @@ private fun RackView(
     Column {
         Text(text = "Owner: " + rack.owner.username)
 
-        Row(
-            modifier = Modifier
-                .wrapContentWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            rack.contacts.forEach { contact ->
-                Box(
-                    modifier = Modifier
-                        .height(80.dp)
-                        .aspectRatio(1f / 1.618f)
-                        .background(
-                            when {
-                                contact in solvedContacts -> Color(0xFF808080)
-                                contact == selectedContact -> Color(0xFF1976D2)
-                                else -> Color(0xFF4A4A4A)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val spacing = 8.dp
+            val tileWidth = ((maxWidth - spacing * 11) / 12).coerceAtMost(64.dp)
+            val numberFontSize = (24f * (tileWidth / 50.dp).coerceIn(0.55f, 1f)).sp
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                rack.contacts.forEach { contact ->
+                    Box(
+                        modifier = Modifier
+                            .width(tileWidth)
+                            .aspectRatio(1f / 1.618f)
+                            .background(
+                                when {
+                                    contact in solvedContacts -> Color(0xFF808080)
+                                    contact == selectedContact -> Color(0xFF1976D2)
+                                    else -> Color(0xFF4A4A4A)
+                                },
+                                RoundedCornerShape(8.dp),
+                            )
+                            .padding(8.dp)
+                            .clickable(
+                                enabled = contact !in solvedContacts,
+                                onClick = { onContactClick(contact) },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (isOwner || contact in solvedContacts) {
+                                contact.number.toString()
+                            } else {
+                                "?"
                             },
-                            RoundedCornerShape(8.dp),
+                            color = Color.White,
+                            fontSize = numberFontSize,
+                            fontWeight = if (isOwner || contact in solvedContacts) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            },
+                            textAlign = TextAlign.Center,
                         )
-                        .padding(8.dp)
-                        .clickable(
-                            enabled = contact !in solvedContacts,
-                            onClick = { onContactClick(contact) },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = if (isOwner || contact in solvedContacts) {
-                            contact.number.toString()
-                        } else {
-                            "?"
-                        },
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                    )
+                    }
                 }
             }
         }
