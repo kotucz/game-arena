@@ -63,4 +63,11 @@ data class ContactsBoardState private constructor(
             )
         }
     }
+
+    fun withSolvedContacts(vararg contacts: Contact): ContactsBoardState {
+        return this.copy(
+            solved = solved + contacts.toSet(),
+        )
+    }
+
 }

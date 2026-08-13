@@ -3,7 +3,7 @@ package cz.kotu.tools
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,9 +15,13 @@ import cz.kotu.game.contacts.ContactsPlayerScreen
 fun MultiPlayerScreen() {
     val viewModel: MultiPlayerViewModel = viewModel(factory = MultiPlayerViewModelFactory)
 
-    Row {
+    Row(modifier = Modifier.fillMaxSize()) {
         viewModel.players.forEach { player ->
-            Box(modifier = Modifier.wrapContentWidth().border(1.dp, Color.Black)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .border(1.dp, Color.Black),
+            ) {
                 ContactsPlayerScreen(viewModel.gameFacade, player)
             }
         }
