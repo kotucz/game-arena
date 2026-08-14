@@ -49,8 +49,8 @@ fun ContactsPlayerScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         LaunchedEffect(gameState.solved) {
-            if (playerContact in gameState.solved) playerContact = null
-            if (otherContact in gameState.solved) otherContact = null
+            if (playerContact?.let(gameState::isSolved) == true) playerContact = null
+            if (otherContact?.let(gameState::isSolved) == true) otherContact = null
         }
 
         Column(
@@ -72,20 +72,20 @@ fun ContactsPlayerScreen(
 
             gameState.racks.filter { it.owner != player }.forEach { rack ->
                 RackView(
+                    gameState = gameState,
                     rack = rack,
                     isOwner = false,
                     selectedContact = otherContact,
-                    solvedContacts = gameState.solved,
                     onContactClick = { otherContact = if (otherContact == it) null else it },
                 )
             }
 
             gameState.racks.filter { it.owner == player }.forEach { rack ->
                 RackView(
+                    gameState = gameState,
                     rack = rack,
                     isOwner = true,
                     selectedContact = playerContact,
-                    solvedContacts = gameState.solved,
                     onContactClick = { playerContact = if (playerContact == it) null else it },
                 )
             }
@@ -103,12 +103,10 @@ fun ContactsPlayerScreen(
                 onClick = {
                     val selectedPlayerContact = playerContact ?: return@Button
                     val selectedOtherContact = otherContact ?: return@Button
-                    gameFacade.action(
+                    gameFacade.connect(
                         player,
-                        ContactsGameFacade.Action.Connect(
-                            playerContact = selectedPlayerContact,
-                            otherContact = selectedOtherContact,
-                        ),
+                        selectedPlayerContact,
+                        selectedOtherContact,
                     )
                     playerContact = null
                     otherContact = null
@@ -148,7 +146,7 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                                     .width(poolTileWidth)
                                     .aspectRatio(1f / phi)
                                     .background(
-                                        if (gameState.solved.contains(contact)) Color(0xFF4CAF50) else Color(
+                                        if (gameState.isSolved(contact)) Color(0xFF4CAF50) else Color(
                                             0xFFBDBDBD
                                         ),
                                         RoundedCornerShape(6.dp),
@@ -158,7 +156,7 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                             ) {
                                 Text(
                                     text = contact.number.toString(),
-                                    color = if (gameState.solved.contains(contact)) Color.White else Color.Black,
+                                    color = if (gameState.isSolved(contact)) Color.White else Color.Black,
                                     fontSize = poolFontSize,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
@@ -174,10 +172,10 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
 
 @Composable
 private fun RackView(
+    gameState: ContactsBoardState,
     rack: ContactsBoardState.Rack,
     isOwner: Boolean,
     selectedContact: ContactsBoardState.Contact?,
-    solvedContacts: Set<ContactsBoardState.Contact>,
     onContactClick: (ContactsBoardState.Contact) -> Unit,
 ) {
     Column {
@@ -194,7 +192,7 @@ private fun RackView(
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(spacing),
             ) {
-                rack.contacts.forEach { contact ->
+                gameState.contacts(rack).forEach { contact ->
                     Column(
                         modifier = Modifier.width(tileWidth),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -206,7 +204,7 @@ private fun RackView(
                                 .aspectRatio(1f / phi)
                                 .background(
                                     when {
-                                        contact in solvedContacts -> Color(0xFF808080)
+                                        gameState.isSolved(contact) -> Color(0xFF808080)
                                         contact == selectedContact -> Color(0xFF1976D2)
                                         else -> Color(0xFF4A4A4A)
                                     },
@@ -214,20 +212,20 @@ private fun RackView(
                                 )
                                 .padding(8.dp)
                                 .clickable(
-                                    enabled = contact !in solvedContacts,
+                                    enabled = !gameState.isSolved(contact),
                                     onClick = { onContactClick(contact) },
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = if (isOwner || contact in solvedContacts) {
+                                text = if (isOwner || gameState.isSolved(contact)) {
                                     contact.number.toString()
                                 } else {
                                     "?"
                                 },
                                 color = Color.White,
                                 fontSize = numberFontSize,
-                                fontWeight = if (isOwner || contact in solvedContacts) {
+                                fontWeight = if (isOwner || gameState.isSolved(contact)) {
                                     FontWeight.Bold
                                 } else {
                                     FontWeight.Normal
@@ -242,7 +240,7 @@ private fun RackView(
                                 .height(tileWidth / phi),
                             contentAlignment = Alignment.Center,
                         ) {
-                            rack.hints[contact]?.let { hint ->
+                            rack.hint(contact)?.let { hint ->
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()

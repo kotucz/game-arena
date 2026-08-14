@@ -5,12 +5,17 @@ import kotlinx.coroutines.flow.StateFlow
 interface ContactsGameFacade {
     val gameState: StateFlow<ContactsBoardState>
 
-    fun action(player: ContactsBoardState.Player, action: Action)
+    fun connect(
+        player: ContactsBoardState.Player,
+        playerContact: ContactsBoardState.Contact,
+        otherContact: ContactsBoardState.Contact,
+    )
 
+    // Transport DTOs. A network adapter maps these to the typed facade methods.
     sealed class Action {
         data class Connect(
-            val playerContact: ContactsBoardState.Contact,
-            val otherContact: ContactsBoardState.Contact
+            val playerContact: ContactsBoardState.ContactId,
+            val otherContact: ContactsBoardState.ContactId,
         ) : Action()
     }
 }

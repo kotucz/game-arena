@@ -1,12 +1,14 @@
 package cz.kotu.game.contacts.model
 
+import kotlin.jvm.JvmInline
+
 // internal constructor for testing
 @ConsistentCopyVisibility
 data class ContactsBoardState internal constructor(
     val pool: List<Contact>,
     val racks: List<Rack>,
 
-    val solved: Set<Contact>,
+    val solved: Set<ContactId>,
 
     val faults: Int = 0,
 ) {
@@ -14,8 +16,15 @@ data class ContactsBoardState internal constructor(
         val username: String,
     )
 
+    @JvmInline
+    value class ContactId(
+        val value: Int,
+    ) : Comparable<ContactId> {
+        override fun compareTo(other: ContactId): Int = value.compareTo(other.value)
+    }
+
     data class Contact(
-        val id: Int,
+        val id: ContactId,
         val number: Int,
     ) : Comparable<Contact> {
         override fun compareTo(other: Contact): Int = number.compareTo(other.number)
@@ -23,9 +32,13 @@ data class ContactsBoardState internal constructor(
 
     data class Rack(
         val owner: Player,
-        val contacts: List<Contact>,
-        val hints: Map<Contact, String> = emptyMap(),
-    )
+        val contactIds: List<ContactId>,
+        val hints: Map<ContactId, String> = emptyMap(),
+    ) {
+        fun hint(contact: Contact): String? {
+            return hints[contact.id]
+        }
+    }
 
     companion object {
         fun create(players: List<Player>): ContactsBoardState {
@@ -38,25 +51,26 @@ data class ContactsBoardState internal constructor(
             for (num in 1 .. 12) {
                 // 4 instances per number
                 for (i in 1 .. 4) {
-                    pool.add(Contact(id = contId, num))
+                    pool.add(Contact(id = ContactId(contId), number = num))
                     contId++
                 }
             }
 
 
-            val rackContacts: List<MutableList<Contact>> = (1..numRacks).map { mutableListOf() }
+            val rackContacts: List<MutableList<ContactId>> = (1..numRacks).map { mutableListOf() }
 
             // distribute all contacts from pool among racks
 
             pool.shuffled().forEachIndexed { index, randContact ->
-                rackContacts[index % numRacks].add(randContact)
+                rackContacts[index % numRacks].add(randContact.id)
             }
 
+            val contactsById = pool.associateBy { it.id }
             val racks = rackContacts.mapIndexed { index, contacts ->
                 val player = players[index % players.size]
                 Rack(
                     owner = player,
-                    contacts = contacts.sorted(),
+                    contactIds = contacts.sortedBy { contactsById.getValue(it).number },
                 )
             }
 
@@ -68,19 +82,51 @@ data class ContactsBoardState internal constructor(
         }
     }
 
+    fun contact(contactId: ContactId): Contact? {
+        return pool.firstOrNull { it.id == contactId }
+    }
+
+    fun requireContact(contactId: ContactId): Contact {
+        return requireNotNull(contact(contactId)) { "Unknown contact id: $contactId" }
+    }
+
+    fun contacts(rack: Rack): List<Contact> {
+        return rack.contactIds.map(::requireContact)
+    }
+
+    fun isSolved(contactId: ContactId): Boolean {
+        return contactId in solved
+    }
+
+    fun isSolved(contact: Contact): Boolean {
+        return isSolved(contact.id)
+    }
+
+    fun isOwnedBy(player: Player, contact: Contact): Boolean {
+        return racks.any { it.owner == player && contact.id in it.contactIds }
+    }
+
+    fun isOwnedByAnotherPlayer(player: Player, contact: Contact): Boolean {
+        return racks.any { it.owner != player && contact.id in it.contactIds }
+    }
+
+    fun contactsMatch(first: Contact, second: Contact): Boolean {
+        return first.number == second.number
+    }
+
     fun withSolvedContacts(vararg contacts: Contact): ContactsBoardState {
         return this.copy(
-            solved = solved + contacts.toSet(),
+            solved = solved + contacts.map { it.id },
         )
     }
 
     fun withFaultFor(contact: Contact): ContactsBoardState {
-        val rackIndex = racks.indexOfFirst { contact in it.contacts }
+        val rackIndex = racks.indexOfFirst { contact.id in it.contactIds }
         if (rackIndex < 0) return this
 
         val rack = racks[rackIndex]
         val updatedRack = rack.copy(
-            hints = rack.hints + (contact to contact.number.toString()),
+            hints = rack.hints + (contact.id to contact.number.toString()),
         )
 
         return copy(

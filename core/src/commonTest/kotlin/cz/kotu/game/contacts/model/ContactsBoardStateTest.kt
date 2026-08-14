@@ -16,20 +16,21 @@ class ContactsBoardStateTest {
         val state = ContactsBoardState.create(players)
 
         assertEquals(48, state.pool.size)
-        assertEquals((1..48).toSet(), state.pool.map { it.id }.toSet())
+        val expectedContactIds = (1..48).map { ContactsBoardState.ContactId(it) }.toSet()
+        assertEquals(expectedContactIds, state.pool.map { it.id }.toSet())
         assertEquals(
             (1..12).associateWith { 4 },
             state.pool.groupingBy { it.number }.eachCount(),
         )
 
         assertEquals(players, state.racks.map { it.owner })
-        assertEquals(listOf(12, 12, 12, 12), state.racks.map { it.contacts.size })
+        assertEquals(listOf(12, 12, 12, 12), state.racks.map { it.contactIds.size })
         state.racks.forEach { rack ->
-            assertEquals(rack.contacts.sorted(), rack.contacts)
+            assertEquals(state.contacts(rack).sorted(), state.contacts(rack))
         }
         assertEquals(
-            state.pool.map { it.id }.toSet(),
-            state.racks.flatMap { it.contacts }.map { it.id }.toSet(),
+            expectedContactIds,
+            state.racks.flatMap { it.contactIds }.toSet(),
         )
         assertEquals(emptySet(), state.solved)
     }

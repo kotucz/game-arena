@@ -15,33 +15,22 @@ class ContactsGameFacadeImpl(
 
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
 
-    override fun action(player: ContactsBoardState.Player, action: ContactsGameFacade.Action) {
-        when (action) {
-            is ContactsGameFacade.Action.Connect -> connect(player, action.playerContact, action.otherContact)
-        }
-    }
-
-    private fun connect(
+    override fun connect(
         player: ContactsBoardState.Player,
         playerContact: ContactsBoardState.Contact,
         otherContact: ContactsBoardState.Contact,
     ) {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
-        val playerOwnsContact = gameState.racks.any { rack ->
-            rack.owner == player && playerContact in rack.contacts
-        }
-        val anotherPlayerOwnsContact = gameState.racks.any { rack ->
-            rack.owner != player && otherContact in rack.contacts
-        }
-        val contactsAreUnsolved = playerContact !in gameState.solved && otherContact !in gameState.solved
-        val contactsMatch = playerContact.number == otherContact.number
+        val playerOwnsContact = gameState.isOwnedBy(player, playerContact)
+        val anotherPlayerOwnsContact = gameState.isOwnedByAnotherPlayer(player, otherContact)
+        val contactsAreUnsolved = !gameState.isSolved(playerContact) && !gameState.isSolved(otherContact)
 
         if (!playerOwnsContact || !anotherPlayerOwnsContact || !contactsAreUnsolved) {
             return
         }
 
-        if (!contactsMatch) {
+        if (!gameState.contactsMatch(playerContact, otherContact)) {
             _gameState.value = gameState.withFaultFor(otherContact)
             return
         }

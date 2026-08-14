@@ -1,38 +1,31 @@
 # Agent guidance
 
-## Project overview
+`GameArena` is a Kotlin Multiplatform project. Platform-independent game rules
+live in `core`; Compose Multiplatform UI lives in `app/shared` and depends on
+`core`.
 
-- This is the `GameArena` Kotlin Multiplatform project, targeting Android, (iOS), JVM/Desktop, JS/Wasm web, and a Ktor server.
-- `core` contains platform-independent game models and rules. `app/shared` contains Compose Multiplatform UI and depends on `core`.
-- The Contacts game model is under `core/.../game/contacts/model`; its UI is under `app/shared/.../game/contacts`.
-- `ContactsGameFacade` is the boundary for game actions. Keep rule validation and game-state changes in the core/facade layer, not in Compose screens.
-- `ContactsPlayerScreen` owns temporary UI selection state locally; selections are sent through a facade action only after confirmation.
+## Contacts
+
+- Keep validation and state changes in `core` behind `ContactsGameFacade` and
+  board-state helpers, not in Compose screens. UI may keep temporary selection
+  state and submits it only after confirmation.
+- `ContactsBoardState.pool` is the sole store of full `Contact` values. All other
+  persisted state stores `ContactId`; name ID collections explicitly (for
+  example, `contactIds`).
+- Prefer resolved `Contact` values in UI and typed facade methods. Resolve IDs
+  through board-state helpers such as `contact`, `requireContact`, and
+  `contacts`; use query helpers instead of inspecting collections directly.
+- `ContactsGameFacade.Action` is an ID-based network transport DTO, not the
+  in-process UI API. Network adapters resolve its IDs and invoke typed facade
+  methods; add typed methods for new commands rather than a generic dispatcher.
 
 ## Deterministic tests
 
-Prefer dependency injection for testable game logic. Keep the normal production
-factory/default initialization, but allow tests to provide a deterministic
-initial state through an internal constructor or factory. Tests should build
-small explicit fixtures instead of inspecting or searching randomized game
-state to find suitable inputs.
+Preserve production defaults, but allow tests to inject deterministic initial
+state. Use small explicit fixtures rather than searching randomized state.
 
 ## Verification
 
-- Core logic/tests: `gradlew.bat :core:jvmTest`
-- Shared Compose compilation: `gradlew.bat :app:shared:compileKotlinJvm`
-- Run the narrowest relevant Gradle task after changes; existing unrelated compiler warnings may remain.
-
-## Usage reporting
-
-After each user prompt, include a brief note about the credits or token usage
-consumed when that information is available. If usage is significant, include
-enough detail to help review and optimize the work. If exact credit usage is
-not exposed by the runtime, report a clearly labelled rough token estimate
-instead; do not present it as an exact credit estimate.
-
-Before starting unusually large or expensive work—such as broad repository
-changes, lengthy investigation, many test/build cycles, or extensive tool
-usage—give a short pre-work warning with the expected scope and rough token
-cost. If the estimate is especially high or the work is not clearly urgent,
-pause for user confirmation before proceeding. Normal small edits do not need
-a pre-work warning.
+- Run the narrowest relevant task:
+  - Core: `gradlew.bat :core:jvmTest`
+  - Shared UI: `gradlew.bat :app:shared:compileKotlinJvm`
