@@ -1,8 +1,10 @@
 package cz.kotu.game.contacts.model
 
+import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 
 // internal constructor for testing
+@Serializable
 @ConsistentCopyVisibility
 data class ContactsBoardState internal constructor(
     val pool: List<Contact>,
@@ -12,17 +14,20 @@ data class ContactsBoardState internal constructor(
 
     val faults: Int = 0,
 ) {
+    @Serializable
     data class Player(
         val username: String,
     )
 
     @JvmInline
+    @Serializable
     value class ContactId(
         val value: Int,
     ) : Comparable<ContactId> {
         override fun compareTo(other: ContactId): Int = value.compareTo(other.value)
     }
 
+    @Serializable
     data class Contact(
         val id: ContactId,
         val number: Int,
@@ -30,6 +35,7 @@ data class ContactsBoardState internal constructor(
         override fun compareTo(other: Contact): Int = number.compareTo(other.number)
     }
 
+    @Serializable
     data class Rack(
         val owner: Player,
         val contactIds: List<ContactId>,
