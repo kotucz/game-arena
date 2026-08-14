@@ -45,6 +45,32 @@ class ApplicationTest {
     }
 
     @Test
+    fun listsRunningGamesForAuthenticatedUser() = testApplication {
+        application { module() }
+
+        val response = client.get("/api/games") {
+            header("X-Debug-Username", "test-user")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.startsWith("["))
+        assertTrue(body.contains("\"id\":"))
+        assertTrue(body.contains("\"type\":\"contacts\""))
+        assertTrue(body.contains("\"players\":[\"alice\",\"bob\"]"))
+        assertTrue(body.contains("\"createdAt\":"))
+    }
+
+    @Test
+    fun listingGamesRequiresAuthentication() = testApplication {
+        application { module() }
+
+        val response = client.get("/api/games")
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
     fun gameSpecificActionRouteReturnsNotFoundForUnknownGame() = testApplication {
         application { module() }
 

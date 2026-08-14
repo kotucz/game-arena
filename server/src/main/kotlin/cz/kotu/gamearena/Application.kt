@@ -1,6 +1,7 @@
 package cz.kotu.gamearena
 
 import io.ktor.http.Cookie
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -19,6 +20,9 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
+import cz.kotu.gamearena.model.RunningGame
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.time.Instant
 
@@ -81,6 +85,19 @@ fun Application.module() {
             }
         }
 
+        get("/api/games") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                val games = Json.encodeToString(
+                    ListSerializer(RunningGame.serializer()),
+                    gamesManager.runningGames(),
+                )
+                call.respondText(games, ContentType.Application.Json)
+            }
+        }
+
         sse("/api/contacts/events") {
             val session = currentSession(call, database)
             if (session == null) {
@@ -109,7 +126,7 @@ fun Application.module() {
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
             } else {
-                val game = gamesManager.game(call.parameters["gameId"].orEmpty())
+                val game = gamesManager.contactsGame(call.parameters["gameId"].orEmpty())
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {
@@ -123,7 +140,7 @@ fun Application.module() {
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
             } else {
-                val game = gamesManager.game(call.parameters["gameId"].orEmpty())
+                val game = gamesManager.contactsGame(call.parameters["gameId"].orEmpty())
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {

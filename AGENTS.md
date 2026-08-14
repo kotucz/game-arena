@@ -4,6 +4,27 @@
 live in `core`; Compose Multiplatform UI lives in `app/shared` and depends on
 `core`.
 
+## Games manager
+
+- `GamesManager` owns the in-memory registry of `ManagedGame` instances keyed by
+  string IDs. Persistence is not part of the current implementation.
+- Shared game metadata is represented by `GameMetadata`: ID, stable string game
+  type, player usernames, and creation time.
+- New game kinds should provide their own typed runtime entry while exposing
+  the common metadata needed by the manager and game-list endpoint.
+- Use typed lookups such as `contactsGame(id)` for game-specific routes. Do not
+  cast or inspect generic managed-game entries in `Application.module()`.
+- The current Contacts game type discriminator is the stable string `"contacts"`.
+
+## Shared network contracts
+
+- `RunningGame` is the shared `@Serializable` client/server contract for the
+  running-games endpoint. It lives in
+  `core/src/commonMain/kotlin/cz/kotu/gamearena/model/GamesNetworkProtocol.kt`.
+- `RunningGame` contains `id`, `type`, `players`, and ISO-8601 `createdAt`.
+- Network response DTOs that are consumed by both clients and server belong in
+  `core`; do not duplicate them as server-local contracts.
+
 ## Contacts
 
 - Keep validation and state changes in `core` behind `ContactsGameFacade` and
@@ -15,17 +36,20 @@ live in `core`; Compose Multiplatform UI lives in `app/shared` and depends on
 - Prefer resolved `Contact` values in UI and typed facade methods. Resolve IDs
   through board-state helpers such as `contact`, `requireContact`, and
   `contacts`; use query helpers instead of inspecting collections directly.
-- `ContactsGameFacade.Action` is an ID-based network transport DTO, not the
+- `ContactsNetworkAction` is an ID-based network transport DTO, not the
   in-process UI API. Network adapters resolve its IDs and invoke typed facade
   methods; add typed methods for new commands rather than a generic dispatcher.
 
 ## Deterministic tests
 
 Preserve production defaults, but allow tests to inject deterministic initial
-state. Use small explicit fixtures rather than searching randomized state.
+state, game ID generators, and clocks. Use small explicit fixtures rather than
+searching randomized state; use explicit `ManagedGame` fixtures for future game
+types.
 
 ## Verification
 
 - Run the narrowest relevant task:
   - Core: `gradlew.bat :core:jvmTest`
   - Shared UI: `gradlew.bat :app:shared:compileKotlinJvm`
+  - Server: `gradlew.bat :server:test`
