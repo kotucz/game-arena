@@ -15,6 +15,8 @@ dependencies {
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
+    implementation(libs.ktor.server.sse)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.room.runtime)
     implementation(libs.sqlite.bundled)
     ksp(libs.room.compiler)

@@ -6,15 +6,37 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
+import cz.kotu.game.contacts.model.NetworkContactsGameFacade
+import cz.kotu.gamearena.authBaseUrl
+import cz.kotu.gamearena.createAuthHttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlin.reflect.KClass
 
-class MultiPlayerViewModel : ViewModel() {
+class MultiPlayerViewModel(remote: Boolean = false) : ViewModel() {
     val players = listOf(
         ContactsBoardState.Player("alice"),
         ContactsBoardState.Player("bob"),
     )
 
-    val gameFacade: ContactsGameFacade = ContactsGameFacadeImpl(players)
+    private val localFacade = ContactsGameFacadeImpl(players)
+    private val networkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val gameFacade: ContactsGameFacade = if (remote) {
+        NetworkContactsGameFacade(
+            httpClient = createAuthHttpClient(),
+            endpoint = authBaseUrl().trimEnd('/') + "/api/contacts",
+            initialState = localFacade.gameState.value,
+            scope = networkScope,
+        )
+    } else {
+        localFacade
+    }
+
+    override fun onCleared() {
+        networkScope.cancel()
+    }
 }
 
 object MultiPlayerViewModelFactory : ViewModelProvider.Factory {

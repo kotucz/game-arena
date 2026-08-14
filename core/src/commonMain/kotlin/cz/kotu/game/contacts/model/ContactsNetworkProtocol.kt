@@ -1,0 +1,16 @@
+package cz.kotu.game.contacts.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+/** JSON DTOs used by the Contacts HTTP transport. */
+@Serializable
+sealed class ContactsNetworkAction {
+    @Serializable
+    @SerialName("connect")
+    data class Connect(
+        val playerContact: ContactsBoardState.ContactId,
+        val otherContact: ContactsBoardState.ContactId,
+    ) : ContactsNetworkAction()
+}
+

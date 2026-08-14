@@ -5,18 +5,24 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStopped
+import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.Netty
 import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import io.ktor.server.sse.SSE
+import io.ktor.server.sse.sse
 import java.io.File
 import java.time.Instant
+import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -26,6 +32,11 @@ fun main() {
 
 fun Application.module() {
     val database = createDatabase()
+    val contactsFacade = ContactsGameFacadeImpl(
+        listOf(ContactsBoardState.Player("alice"), ContactsBoardState.Player("bob")),
+    )
+    val contactsServer = ServerContactsGameFacade(contactsFacade)
+    install(SSE)
     val webRoot = File(
         System.getenv("WEB_ROOT") ?: "app/webApp/build/dist/wasmJs/productionExecutable",
     )
@@ -74,6 +85,29 @@ fun Application.module() {
             }
         }
 
+        sse("/api/contacts/events") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                contactsServer.handleEvents(this, session.username)
+            }
+        }
+
+        post("/api/contacts/actions") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                val error = contactsServer.handleAction(call.receiveText(), session.username)
+                if (error == null) {
+                    call.respond(HttpStatusCode.Accepted)
+                } else {
+                    call.respond(HttpStatusCode.BadRequest, error)
+                }
+            }
+        }
+
         get("/") {
             call.respondFile(File(webRoot, "index.html"))
         }
@@ -115,7 +149,7 @@ private suspend fun createSession(call: ApplicationCall, database: AppDatabase, 
     )
 }
 
-private suspend fun currentSession(call: ApplicationCall, database: AppDatabase): Session? {
+internal suspend fun currentSession(call: ApplicationCall, database: AppDatabase): Session? {
     val token = call.request.cookies[SessionTokens.cookieName] ?: return null
     val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token)) ?: return null
     if (session.expiresAt <= Instant.now().epochSecond) {
