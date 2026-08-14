@@ -35,7 +35,7 @@ fun main() {
 fun Application.module() {
     val database = createDatabase()
     val gamesManager = GamesManager()
-    val initialGame = gamesManager.createContactsGame()
+    gamesManager.createContactsGame()
     install(SSE)
     val webRoot = File(
         System.getenv("WEB_ROOT") ?: "app/webApp/build/dist/wasmJs/productionExecutable",
@@ -95,29 +95,6 @@ fun Application.module() {
                     gamesManager.runningGames(),
                 )
                 call.respondText(games, ContentType.Application.Json)
-            }
-        }
-
-        sse("/api/contacts/events") {
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
-                initialGame.contacts.handleEvents(this, session.username)
-            }
-        }
-
-        post("/api/contacts/actions") {
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
-                val error = initialGame.contacts.handleAction(call.receiveText(), session.username)
-                if (error == null) {
-                    call.respond(HttpStatusCode.Accepted)
-                } else {
-                    call.respond(HttpStatusCode.BadRequest, error)
-                }
             }
         }
 

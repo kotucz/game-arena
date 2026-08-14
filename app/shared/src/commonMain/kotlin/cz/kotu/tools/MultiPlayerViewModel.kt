@@ -20,6 +20,7 @@ typealias DebugHttpClientFactory = (String) -> HttpClient
 
 class MultiPlayerViewModel(
     val remote: Boolean = false,
+    private val gameId: String = "initial",
     private val debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient() },
 ) : ViewModel() {
     val players = listOf(
@@ -33,7 +34,8 @@ class MultiPlayerViewModel(
     fun gameFacadeForPlayer(username:String): ContactsGameFacade = if (remote) {
         NetworkContactsGameFacade(
             httpClient = debugHttpClientFactory(username),
-            endpoint = authBaseUrl().trimEnd('/') + "/api/contacts",
+            endpoint = authBaseUrl().trimEnd('/') + "/api",
+            gameId = gameId,
             initialState = localFacade.gameState.value,
             scope = networkScope,
         )
@@ -48,6 +50,7 @@ class MultiPlayerViewModel(
 
 class MultiPlayerViewModelFactory(
     private val debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient() },
+    private val gameId: String = "initial",
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(
@@ -55,7 +58,10 @@ class MultiPlayerViewModelFactory(
         extras: CreationExtras,
     ): T {
         if (modelClass == MultiPlayerViewModel::class) {
-            return MultiPlayerViewModel(debugHttpClientFactory = debugHttpClientFactory) as T
+            return MultiPlayerViewModel(
+                gameId = gameId,
+                debugHttpClientFactory = debugHttpClientFactory,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.simpleName}")
     }
