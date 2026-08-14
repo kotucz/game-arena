@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.GameViewModelFactory
@@ -24,7 +28,8 @@ import cz.kotu.game.gotfive.Table
 @Preview
 fun App() {
     MaterialTheme {
-        val authenticated = remember { mutableStateOf(false) }
+        var authenticated by remember { mutableStateOf(false) }
+        var showGotFive by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -33,12 +38,22 @@ fun App() {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (authenticated.value) {
-                val gameViewModel: GameViewModel = viewModel(factory = GameViewModelFactory)
-                Table(gameViewModel, Modifier.width(960.dp).align(Alignment.CenterHorizontally))
+            if (authenticated) {
+                if (showGotFive) {
+                    GotFiveScreen(onBack = { showGotFive = false })
+                } else {
+                    GamesScreen(onStartGotFive = { showGotFive = true })
+                }
             } else {
-                AuthScreen { authenticated.value = true }
+                AuthScreen { authenticated = true }
             }
         }
     }
+}
+
+@Composable
+private fun GotFiveScreen(onBack: () -> Unit) {
+    val gameViewModel: GameViewModel = viewModel(factory = GameViewModelFactory)
+    TextButton(onClick = onBack) { Text("Back to games") }
+    Table(gameViewModel, Modifier.width(960.dp))
 }
