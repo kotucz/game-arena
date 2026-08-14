@@ -2,6 +2,7 @@ package cz.kotu.gamearena
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import cz.kotu.tools.DebugHttpClientFactory
 import cz.kotu.tools.MultiPlayerScreen
 
 fun main() = application {
@@ -9,6 +10,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "Game Arena - Multiplayer Debug",
     ) {
-        MultiPlayerScreen()
+        val debugHttpClientFactory: DebugHttpClientFactory = ::createDebugAuthHttpClient
+        MultiPlayerScreen(debugHttpClientFactory)
     }
 }

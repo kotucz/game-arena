@@ -13,9 +13,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import io.ktor.client.HttpClient
 import kotlin.reflect.KClass
 
-class MultiPlayerViewModel(remote: Boolean = false) : ViewModel() {
+typealias DebugHttpClientFactory = (String) -> HttpClient
+
+class MultiPlayerViewModel(
+    val remote: Boolean = false,
+    private val debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient() },
+) : ViewModel() {
     val players = listOf(
         ContactsBoardState.Player("alice"),
         ContactsBoardState.Player("bob"),
@@ -23,9 +29,10 @@ class MultiPlayerViewModel(remote: Boolean = false) : ViewModel() {
 
     private val localFacade = ContactsGameFacadeImpl(players)
     private val networkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val gameFacade: ContactsGameFacade = if (remote) {
+
+    fun gameFacadeForPlayer(username:String): ContactsGameFacade = if (remote) {
         NetworkContactsGameFacade(
-            httpClient = createAuthHttpClient(),
+            httpClient = debugHttpClientFactory(username),
             endpoint = authBaseUrl().trimEnd('/') + "/api/contacts",
             initialState = localFacade.gameState.value,
             scope = networkScope,
@@ -39,14 +46,16 @@ class MultiPlayerViewModel(remote: Boolean = false) : ViewModel() {
     }
 }
 
-object MultiPlayerViewModelFactory : ViewModelProvider.Factory {
+class MultiPlayerViewModelFactory(
+    private val debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient() },
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(
         modelClass: KClass<T>,
         extras: CreationExtras,
     ): T {
         if (modelClass == MultiPlayerViewModel::class) {
-            return MultiPlayerViewModel() as T
+            return MultiPlayerViewModel(debugHttpClientFactory = debugHttpClientFactory) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.simpleName}")
     }
