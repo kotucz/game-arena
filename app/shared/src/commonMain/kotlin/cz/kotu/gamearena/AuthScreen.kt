@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -70,7 +73,9 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                contentType = if (mode == AuthMode.Register) ContentType.NewUsername else ContentType.Username
+            },
         )
         if (mode == AuthMode.Register) {
             OutlinedTextField(
@@ -78,7 +83,9 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentType = ContentType.EmailAddress
+                },
             )
         }
         OutlinedTextField(
@@ -86,7 +93,10 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { submit() }),
-            visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                contentType = if (mode == AuthMode.Register) ContentType.NewPassword else ContentType.Password
+            },
         )
         Button(
             enabled = !submitting,
