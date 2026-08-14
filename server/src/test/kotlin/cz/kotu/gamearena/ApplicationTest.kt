@@ -31,4 +31,16 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.Created, registration.status)
         assertTrue(registration.headers[HttpHeaders.SetCookie]?.startsWith("gamearena_session=") == true)
     }
+
+    @Test
+    fun debugUsernameAuthenticatesWithoutSessionCookie() = testApplication {
+        application { module() }
+
+        val response = client.get("/api/me") {
+            header("X-Debug-Username", "test-user")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("test-user", response.bodyAsText())
+    }
 }

@@ -150,6 +150,18 @@ private suspend fun createSession(call: ApplicationCall, database: AppDatabase, 
 }
 
 internal suspend fun currentSession(call: ApplicationCall, database: AppDatabase): Session? {
+    // Development clients can bypass the persistent session cookie by sending
+    // a username explicitly. The fake session is only used for the duration
+    // of this request; the username is the only value consumed by the game.
+    val debugUsername = call.request.headers[DEBUG_USERNAME_HEADER]?.trim()
+    if (!debugUsername.isNullOrEmpty()) {
+        return Session(
+            tokenHash = "debug:$debugUsername",
+            username = debugUsername,
+            expiresAt = Long.MAX_VALUE,
+        )
+    }
+
     val token = call.request.cookies[SessionTokens.cookieName] ?: return null
     val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token)) ?: return null
     if (session.expiresAt <= Instant.now().epochSecond) {
@@ -158,3 +170,5 @@ internal suspend fun currentSession(call: ApplicationCall, database: AppDatabase
     }
     return session
 }
+
+private const val DEBUG_USERNAME_HEADER = "X-Debug-Username"
