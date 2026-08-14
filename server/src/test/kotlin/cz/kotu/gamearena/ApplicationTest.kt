@@ -43,4 +43,18 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("test-user", response.bodyAsText())
     }
+
+    @Test
+    fun gameSpecificActionRouteReturnsNotFoundForUnknownGame() = testApplication {
+        application { module() }
+
+        val response = client.post("/api/games/missing/contacts/actions") {
+            header("X-Debug-Username", "test-user")
+            contentType(ContentType.Application.Json)
+            setBody("{}")
+        }
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals("Game not found", response.bodyAsText())
+    }
 }

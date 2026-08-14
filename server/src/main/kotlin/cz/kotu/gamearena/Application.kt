@@ -21,8 +21,6 @@ import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
 import java.io.File
 import java.time.Instant
-import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -32,10 +30,8 @@ fun main() {
 
 fun Application.module() {
     val database = createDatabase()
-    val contactsFacade = ContactsGameFacadeImpl(
-        listOf(ContactsBoardState.Player("alice"), ContactsBoardState.Player("bob")),
-    )
-    val contactsServer = ServerContactsGameFacade(contactsFacade)
+    val gamesManager = GamesManager()
+    val initialGame = gamesManager.createContactsGame()
     install(SSE)
     val webRoot = File(
         System.getenv("WEB_ROOT") ?: "app/webApp/build/dist/wasmJs/productionExecutable",
@@ -90,7 +86,7 @@ fun Application.module() {
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
             } else {
-                contactsServer.handleEvents(this, session.username)
+                initialGame.contacts.handleEvents(this, session.username)
             }
         }
 
@@ -99,11 +95,44 @@ fun Application.module() {
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
             } else {
-                val error = contactsServer.handleAction(call.receiveText(), session.username)
+                val error = initialGame.contacts.handleAction(call.receiveText(), session.username)
                 if (error == null) {
                     call.respond(HttpStatusCode.Accepted)
                 } else {
                     call.respond(HttpStatusCode.BadRequest, error)
+                }
+            }
+        }
+
+        sse("/api/games/{gameId}/contacts/events") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                val game = gamesManager.game(call.parameters["gameId"].orEmpty())
+                if (game == null) {
+                    call.respond(HttpStatusCode.NotFound, "Game not found")
+                } else {
+                    game.contacts.handleEvents(this, session.username)
+                }
+            }
+        }
+
+        post("/api/games/{gameId}/contacts/actions") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                val game = gamesManager.game(call.parameters["gameId"].orEmpty())
+                if (game == null) {
+                    call.respond(HttpStatusCode.NotFound, "Game not found")
+                } else {
+                    val error = game.contacts.handleAction(call.receiveText(), session.username)
+                    if (error == null) {
+                        call.respond(HttpStatusCode.Accepted)
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, error)
+                    }
                 }
             }
         }
