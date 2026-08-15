@@ -27,11 +27,11 @@ import androidx.navigation.navArgument
 import androidx.savedstate.read
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.gotfive.GameViewModel
-import cz.kotu.game.gotfive.GameViewModelFactory
 import cz.kotu.game.gotfive.Table
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
+import io.ktor.client.HttpClient
 
 internal const val AUTH_ROUTE = "auth"
 internal const val GAMES_ROUTE = "games"
@@ -44,6 +44,7 @@ internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 @Preview
 fun App() {
     MaterialTheme {
+        val appComponent = remember { AppComponent::class.create() }
         val navController = rememberNavController()
         var username by remember { mutableStateOf<String?>(null) }
         var authenticationChecked by remember { mutableStateOf(false) }
@@ -51,7 +52,7 @@ fun App() {
         // Authentication is app state, not auth-screen state. A deep link can
         // open the game route without ever composing AuthScreen.
         LaunchedEffect(Unit) {
-            AuthClient().currentUser()
+            appComponent.authClient.currentUser()
                 .onSuccess {
                     it.trim().takeIf(String::isNotEmpty)?.let { restoredUsername ->
                         username = restoredUsername
@@ -70,7 +71,7 @@ fun App() {
             NavHost(navController, startDestination = AUTH_ROUTE) {
                 composable(AUTH_ROUTE) {
                     if (username == null) {
-                        AuthScreen { authenticatedUsername ->
+                        AuthScreen(appComponent.authClient) { authenticatedUsername ->
                             username = authenticatedUsername
                             navController.navigate(GAMES_ROUTE) {
                                 popUpTo(AUTH_ROUTE) { inclusive = true }
@@ -97,6 +98,7 @@ fun App() {
                             Text("Authentication required")
                         } else {
                             GamesScreen(
+                                gamesClient = appComponent.gamesClient,
                                 username = authenticatedUsername,
                                 onStartGotFive = {
                                     navController.navigate(GOT_FIVE_ROUTE)
@@ -110,7 +112,10 @@ fun App() {
                 }
 
                 composable(GOT_FIVE_ROUTE) {
-                    GotFiveScreen(onBack = { navController.popBackStack() })
+                    GotFiveScreen(
+                        appComponent = appComponent,
+                        onBack = { navController.popBackStack() },
+                    )
                 }
 
                 composable(
@@ -132,6 +137,7 @@ fun App() {
                             ContactsGameScreen(
                                 gameId = gameId,
                                 username = authenticatedUsername,
+                                httpClient = appComponent.httpClient,
                                 onBack = { navController.popBackStack() },
                             )
                         }
@@ -147,13 +153,14 @@ fun App() {
 private fun ContactsGameScreen(
     gameId: String,
     username: String,
+    httpClient: HttpClient,
     onBack: () -> Unit,
 ) {
     val networkScope = rememberCoroutineScope()
     val player = ContactsBoardState.Player(username)
     val gameFacade = remember(gameId) {
         NetworkContactsGameFacade(
-            httpClient = createAuthHttpClient(),
+            httpClient = httpClient,
             endpoint = authBaseUrl().trimEnd('/') + "/api",
             gameId = gameId,
             initialState = ContactsBoardState.empty(),
@@ -165,8 +172,11 @@ private fun ContactsGameScreen(
 }
 
 @Composable
-private fun GotFiveScreen(onBack: () -> Unit) {
-    val gameViewModel: GameViewModel = viewModel(factory = GameViewModelFactory)
+private fun GotFiveScreen(
+    appComponent: AppComponent,
+    onBack: () -> Unit,
+) {
+    val gameViewModel: GameViewModel = viewModel { appComponent.gameViewModelFactory() }
     TextButton(onClick = onBack) { Text("Back to games") }
     Table(gameViewModel, Modifier.width(960.dp))
 }

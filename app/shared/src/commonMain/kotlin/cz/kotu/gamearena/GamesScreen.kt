@@ -29,11 +29,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun GamesScreen(
+    gamesClient: GamesClient,
     username: String,
     onStartGotFive: () -> Unit,
     onGameClick: (RunningGame) -> Unit,
 ) {
-    val gamesClient = remember { GamesClient() }
     val scope = rememberCoroutineScope()
     var games by remember { mutableStateOf<List<RunningGame>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }

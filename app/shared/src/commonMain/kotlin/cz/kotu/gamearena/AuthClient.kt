@@ -5,11 +5,14 @@ import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
+import me.tatarka.inject.annotations.Inject
 
 expect fun createAuthHttpClient(): HttpClient
 expect fun authBaseUrl(): String
 
-class AuthClient(private val httpClient: HttpClient = createAuthHttpClient()) {
+@AppScope
+@Inject
+class AuthClient(private val httpClient: HttpClient) {
     suspend fun register(username: String, email: String, password: String): Result<String> = submit(
         "/api/register", Parameters.build {
             append("username", username)

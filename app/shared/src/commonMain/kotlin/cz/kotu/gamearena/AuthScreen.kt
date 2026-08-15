@@ -31,7 +31,10 @@ import kotlinx.coroutines.launch
 private enum class AuthMode { Login, Register }
 
 @Composable
-fun AuthScreen(onAuthenticated: (String) -> Unit) {
+fun AuthScreen(
+    authClient: AuthClient,
+    onAuthenticated: (String) -> Unit,
+) {
     var mode by remember { mutableStateOf(AuthMode.Login) }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -39,7 +42,6 @@ fun AuthScreen(onAuthenticated: (String) -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var submitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val authClient = remember { AuthClient() }
     val focusManager = LocalFocusManager.current
 
     val submit = {

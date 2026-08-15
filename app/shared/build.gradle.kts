@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.google.devtools.ksp.gradle.KspAATask
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -7,9 +8,16 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
+    sourceSets {
+        commonMain {
+            kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+        }
+    }
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -70,6 +78,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.ktor.client.core)
+            implementation(libs.kotlin.inject.runtime.kmp)
             implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
@@ -89,5 +98,12 @@ kotlin {
 }
 
 dependencies {
+    add("kspCommonMainMetadata", "me.tatarka.inject:kotlin-inject-compiler-ksp:${libs.versions.kotlinInject.get()}")
     androidRuntimeClasspath(libs.compose.uiTooling)
+}
+
+tasks.withType<KspAATask>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
 }

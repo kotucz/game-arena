@@ -11,8 +11,11 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import kotlinx.serialization.json.Json
+import me.tatarka.inject.annotations.Inject
 
-class GamesClient(private val httpClient: HttpClient = createAuthHttpClient()) {
+@AppScope
+@Inject
+class GamesClient(private val httpClient: HttpClient) {
     suspend fun runningGames(): Result<List<RunningGame>> = runCatching {
         val response = httpClient.get(endpoint("/api/games"))
         val body = response.bodyAsText()

@@ -11,14 +11,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
+import cz.kotu.gamearena.AppComponent
+import cz.kotu.gamearena.create
 import cz.kotu.gamearena.createAuthHttpClient
 
 @Composable
 fun MultiPlayerScreen(
     debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient() },
 ) {
+    val appComponent = remember { AppComponent::class.create() }
     val viewModel: MultiPlayerViewModel = viewModel(
-        factory = MultiPlayerViewModelFactory(debugHttpClientFactory),
+        initializer = {
+            appComponent.multiPlayerViewModelFactory("initial", debugHttpClientFactory)
+        },
     )
 
     Row(modifier = Modifier.fillMaxSize()) {
