@@ -40,7 +40,8 @@ fun Application.module() {
     gamesManager.createContactsGame()
     install(SSE)
     val webRoot = File(
-        System.getenv("WEB_ROOT") ?: "app/webApp/build/dist/wasmJs/productionExecutable",
+        // relative url with ./gradlew :server:run
+        System.getenv("WEB_ROOT") ?: "../app/webApp/build/dist/wasmJs/productionExecutable",
     )
 
     routing {

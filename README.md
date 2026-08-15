@@ -34,6 +34,18 @@ options:
     - JS target (slower, supports older browsers): `./gradlew :app:webApp:jsBrowserDevelopmentRun`
 - iOS app: open the [/app/iosApp](./app/iosApp) directory in Xcode and run it from there.
 
+When running the production Wasm web app through the server, build the browser
+distribution before starting the server:
+
+```shell
+./gradlew :app:webApp:wasmJsBrowserDistribution
+./gradlew :server:run
+```
+
+Open `http://localhost:8080/` and hard-refresh the page after rebuilding if the
+browser has cached an older bundle. Web navigation uses hash URLs such as
+`http://localhost:8080/#game/<gameId>`.
+
 ### Running the web app in Docker
 
 Build and start the server with:
