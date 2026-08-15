@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,20 @@ fun App() {
     MaterialTheme {
         val navController = rememberNavController()
         var username by remember { mutableStateOf<String?>(null) }
+        var authenticationChecked by remember { mutableStateOf(false) }
+
+        // Authentication is app state, not auth-screen state. A deep link can
+        // open the game route without ever composing AuthScreen.
+        LaunchedEffect(Unit) {
+            AuthClient().currentUser()
+                .onSuccess {
+                    it.trim().takeIf(String::isNotEmpty)?.let { restoredUsername ->
+                        username = restoredUsername
+                    }
+                }
+            authenticationChecked = true
+        }
+
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -54,28 +69,43 @@ fun App() {
         ) {
             NavHost(navController, startDestination = AUTH_ROUTE) {
                 composable(AUTH_ROUTE) {
-                    AuthScreen { authenticatedUsername ->
-                        username = authenticatedUsername
-                        navController.navigate(GAMES_ROUTE) {
-                            popUpTo(AUTH_ROUTE) { inclusive = true }
+                    if (username == null) {
+                        AuthScreen { authenticatedUsername ->
+                            username = authenticatedUsername
+                            navController.navigate(GAMES_ROUTE) {
+                                popUpTo(AUTH_ROUTE) { inclusive = true }
+                            }
+                        }
+                    } else {
+                        // Session restoration may complete while this is still
+                        // the current destination. Deep-link navigation can
+                        // replace it independently.
+                        LaunchedEffect(username) {
+                            navController.navigate(GAMES_ROUTE) {
+                                popUpTo(AUTH_ROUTE) { inclusive = true }
+                            }
                         }
                     }
                 }
 
                 composable(GAMES_ROUTE) {
-                    val authenticatedUsername = username
-                    if (authenticatedUsername == null) {
-                        Text("Authentication required")
+                    if (!authenticationChecked) {
+                        Text("Restoring session…")
                     } else {
-                    GamesScreen(
-                        username = authenticatedUsername,
-                        onStartGotFive = {
-                            navController.navigate(GOT_FIVE_ROUTE)
-                        },
-                        onGameClick = { game ->
-                            navController.navigate("game/${game.id}")
-                        },
-                    )
+                        val authenticatedUsername = username
+                        if (authenticatedUsername == null) {
+                            Text("Authentication required")
+                        } else {
+                            GamesScreen(
+                                username = authenticatedUsername,
+                                onStartGotFive = {
+                                    navController.navigate(GOT_FIVE_ROUTE)
+                                },
+                                onGameClick = { game ->
+                                    navController.navigate("game/${game.id}")
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -92,15 +122,19 @@ fun App() {
                     val gameId = entry.arguments?.read {
                         getString(CONTACTS_GAME_ID_ARGUMENT)
                     }
-                    val authenticatedUsername = username
-                    if (gameId == null || authenticatedUsername == null) {
-                        Text("Authentication required")
+                    if (!authenticationChecked) {
+                        Text("Restoring session…")
                     } else {
-                        ContactsGameScreen(
-                            gameId = gameId,
-                            username = authenticatedUsername,
-                            onBack = { navController.popBackStack() },
-                        )
+                        val authenticatedUsername = username
+                        if (gameId == null || authenticatedUsername == null) {
+                            Text("Authentication required")
+                        } else {
+                            ContactsGameScreen(
+                                gameId = gameId,
+                                username = authenticatedUsername,
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
                     }
                 }
             }

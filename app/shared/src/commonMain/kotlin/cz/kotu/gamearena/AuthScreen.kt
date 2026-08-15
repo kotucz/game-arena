@@ -15,7 +15,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,10 +56,6 @@ fun AuthScreen(onAuthenticated: (String) -> Unit) {
                 result.fold({ onAuthenticated(username.trim()) }, { message = it.message ?: "Request failed" })
             }
         }
-    }
-
-    LaunchedEffect(Unit) {
-        authClient.currentUser().onSuccess(onAuthenticated)
     }
 
     Column(
