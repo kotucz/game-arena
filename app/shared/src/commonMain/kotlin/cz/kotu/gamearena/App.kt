@@ -9,8 +9,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -18,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.savedstate.read
@@ -29,19 +31,12 @@ import cz.kotu.game.gotfive.Table
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
-import kotlinx.serialization.Serializable
 
-@Serializable
-data object AuthenticationRoute
-
-@Serializable
-data class GamesRoute(val username: String)
-
-@Serializable
-data class GotFiveRoute(val username: String)
-
-private const val CONTACTS_GAME_ROUTE = "game/{gameId}"
-private const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
+internal const val AUTH_ROUTE = "auth"
+internal const val GAMES_ROUTE = "games"
+internal const val GOT_FIVE_ROUTE = "got-five"
+internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
+internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
 private data class ContactsGameNavigationState(
     val username: String,
@@ -55,6 +50,7 @@ fun App() {
         val navController = rememberNavController()
         val networkScope = rememberCoroutineScope()
         val contactsGames = remember { mutableMapOf<String, ContactsGameNavigationState>() }
+        var username by remember { mutableStateOf<String?>(null) }
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -62,33 +58,38 @@ fun App() {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            NavHost(navController, startDestination = AuthenticationRoute) {
-                composable<AuthenticationRoute> {
-                    AuthScreen { username ->
-                        navController.navigate(GamesRoute(username)) {
-                            popUpTo<AuthenticationRoute> { inclusive = true }
+            NavHost(navController, startDestination = AUTH_ROUTE) {
+                composable(AUTH_ROUTE) {
+                    AuthScreen { authenticatedUsername ->
+                        username = authenticatedUsername
+                        navController.navigate(GAMES_ROUTE) {
+                            popUpTo(AUTH_ROUTE) { inclusive = true }
                         }
                     }
                 }
 
-                composable<GamesRoute> { entry ->
-                    val route = entry.toRoute<GamesRoute>()
+                composable(GAMES_ROUTE) {
+                    val authenticatedUsername = username
+                    if (authenticatedUsername == null) {
+                        Text("Authentication required")
+                    } else {
                     GamesScreen(
-                        username = route.username,
+                        username = authenticatedUsername,
                         onStartGotFive = {
-                            navController.navigate(GotFiveRoute(route.username))
+                            navController.navigate(GOT_FIVE_ROUTE)
                         },
                         onGameClick = { game ->
                             contactsGames[game.id] = ContactsGameNavigationState(
-                                username = route.username,
+                                username = authenticatedUsername,
                                 players = game.players,
                             )
                             navController.navigate("game/${game.id}")
                         },
                     )
+                    }
                 }
 
-                composable<GotFiveRoute> {
+                composable(GOT_FIVE_ROUTE) {
                     GotFiveScreen(onBack = { navController.popBackStack() })
                 }
 
@@ -115,6 +116,7 @@ fun App() {
                     }
                 }
             }
+            BrowserNavigationEffect(navController)
         }
     }
 }
