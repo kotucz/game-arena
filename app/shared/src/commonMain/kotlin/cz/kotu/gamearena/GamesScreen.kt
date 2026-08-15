@@ -27,11 +27,16 @@ import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.launch
 
 @Composable
-fun GamesScreen(onStartGotFive: () -> Unit, onGameClick: (RunningGame) -> Unit) {
+fun GamesScreen(
+    username: String,
+    onStartGotFive: () -> Unit,
+    onGameClick: (RunningGame) -> Unit,
+) {
     val gamesClient = remember { GamesClient() }
     val scope = rememberCoroutineScope()
     var games by remember { mutableStateOf<List<RunningGame>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var creatingGame by remember { mutableStateOf(false) }
 
     fun loadGames() {
         scope.launch {
@@ -61,6 +66,26 @@ fun GamesScreen(onStartGotFive: () -> Unit, onGameClick: (RunningGame) -> Unit) 
 
         Button(onClick = onStartGotFive, modifier = Modifier.fillMaxWidth()) {
             Text("Start Got Five")
+        }
+
+        HorizontalDivider()
+
+        Button(
+            onClick = {
+                scope.launch {
+                    creatingGame = true
+                    error = null
+                    gamesClient.createGame(type = "contacts", players = listOf(username)).fold(
+                        onSuccess = onGameClick,
+                        onFailure = { error = it.message ?: "Could not create game" },
+                    )
+                    creatingGame = false
+                }
+            },
+            enabled = !creatingGame,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (creatingGame) "Creating game…" else "Create Contacts game")
         }
 
         HorizontalDivider()

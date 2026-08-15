@@ -66,6 +66,7 @@ fun App() {
                     )
                 } else {
                     GamesScreen(
+                        username = username!!,
                         onStartGotFive = { showGotFive = true },
                         onGameClick = { selectedGame = it },
                     )
