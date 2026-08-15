@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,7 +27,7 @@ import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.launch
 
 @Composable
-fun GamesScreen(onStartGotFive: () -> Unit) {
+fun GamesScreen(onStartGotFive: () -> Unit, onGameClick: (RunningGame) -> Unit) {
     val gamesClient = remember { GamesClient() }
     val scope = rememberCoroutineScope()
     var games by remember { mutableStateOf<List<RunningGame>?>(null) }
@@ -46,7 +49,11 @@ fun GamesScreen(onStartGotFive: () -> Unit) {
     }
 
     Column(
-        modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(24.dp),
+        modifier = Modifier
+            .widthIn(max = 720.dp)
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Running games")
@@ -65,14 +72,14 @@ fun GamesScreen(onStartGotFive: () -> Unit) {
                 Button(onClick = ::loadGames) { Text("Try again") }
             }
             games!!.isEmpty() -> Text("There are no running multiplayer games.")
-            else -> games!!.forEach { game -> RunningGameCard(game) }
+            else -> games!!.forEach { game -> RunningGameCard(game, onClick = { onGameClick(game) }) }
         }
     }
 }
 
 @Composable
-private fun RunningGameCard(game: RunningGame) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun RunningGameCard(game: RunningGame, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

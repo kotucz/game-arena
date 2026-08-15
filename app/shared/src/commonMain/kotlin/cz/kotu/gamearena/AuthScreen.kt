@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 private enum class AuthMode { Login, Register }
 
 @Composable
-fun AuthScreen(onAuthenticated: () -> Unit) {
+fun AuthScreen(onAuthenticated: (String) -> Unit) {
     var mode by remember { mutableStateOf(AuthMode.Login) }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -54,13 +54,13 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                     authClient.register(username, email, password)
                 }
                 submitting = false
-                result.fold({ onAuthenticated() }, { message = it.message ?: "Request failed" })
+                result.fold({ onAuthenticated(username.trim()) }, { message = it.message ?: "Request failed" })
             }
         }
     }
 
     LaunchedEffect(Unit) {
-        authClient.currentUser().onSuccess { onAuthenticated() }
+        authClient.currentUser().onSuccess(onAuthenticated)
     }
 
     Column(
