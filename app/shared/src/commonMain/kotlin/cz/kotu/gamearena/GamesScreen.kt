@@ -14,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +38,7 @@ fun GamesScreen(
     var games by remember { mutableStateOf<List<RunningGame>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var creatingGame by remember { mutableStateOf(false) }
+    var playersText by remember { mutableStateOf(username) }
 
     fun loadGames() {
         scope.launch {
@@ -70,12 +72,26 @@ fun GamesScreen(
 
         HorizontalDivider()
 
+        TextField(
+            value = playersText,
+            onValueChange = { playersText = it },
+            label = { Text("Players (one username per line)") },
+            placeholder = { Text("Enter player usernames\none per line") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 10,
+        )
+
         Button(
             onClick = {
                 scope.launch {
                     creatingGame = true
                     error = null
-                    gamesClient.createGame(type = "contacts", players = listOf(username)).fold(
+                    val players = playersText.lines()
+                        .map { it.trim() }
+                        .filter { it.isNotBlank() }
+                        .ifEmpty { listOf(username) }
+                    gamesClient.createGame(type = "contacts", players = players).fold(
                         onSuccess = onGameClick,
                         onFailure = { error = it.message ?: "Could not create game" },
                     )
