@@ -4,6 +4,12 @@ import kotlinx.serialization.Serializable
 
 /** JSON DTOs shared by clients and the game server. */
 @Serializable
+data class CreateGameRequest(
+    val type: String,
+    val players: List<String>,
+)
+
+@Serializable
 data class RunningGame(
     val id: String,
     val type: String,

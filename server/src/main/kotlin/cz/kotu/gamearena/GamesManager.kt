@@ -14,8 +14,7 @@ class GamesManager(
     private val games = ConcurrentHashMap<String, ManagedGame>()
 
     @Synchronized
-    fun createContactsGame(): ContactsGame {
-        val players = listOf("alice", "bob")
+    fun createContactsGame(players: List<String> = listOf("alice", "bob")): ContactsGame {
         val game = ContactsGame(
             metadata = newMetadata(type = "contacts", players = players),
             contacts = ServerContactsGameFacade(
@@ -40,13 +39,15 @@ class GamesManager(
     fun contactsGame(id: String): ContactsGame? = games[id] as? ContactsGame
 
     fun runningGames(): List<RunningGame> = games.values.map { game ->
-        RunningGame(
-            id = game.metadata.id,
-            type = game.metadata.type,
-            players = game.metadata.players,
-            createdAt = game.metadata.createdAt.toString(),
-        )
+        game.metadata.toRunningGame()
     }
+
+    private fun GameMetadata.toRunningGame() = RunningGame(
+        id = id,
+        type = type,
+        players = players,
+        createdAt = createdAt.toString(),
+    )
 
     private fun newMetadata(type: String, players: List<String>): GameMetadata {
         var id: String

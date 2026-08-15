@@ -71,6 +71,35 @@ class ApplicationTest {
     }
 
     @Test
+    fun createsContactsGameForAuthenticatedUser() = testApplication {
+        application { module() }
+
+        val response = client.post("/api/games") {
+            header("X-Debug-Username", "test-user")
+            contentType(ContentType.Application.Json)
+            setBody("{\"type\":\"contacts\",\"players\":[\"alice\",\"bob\"]}")
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(ContentType.Application.Json, response.contentType())
+        assertTrue(response.bodyAsText().contains("\"type\":\"contacts\""))
+        assertTrue(response.bodyAsText().contains("\"players\":[\"alice\",\"bob\"]"))
+    }
+
+    @Test
+    fun creatingUnsupportedGameTypeReturnsBadRequest() = testApplication {
+        application { module() }
+
+        val response = client.post("/api/games") {
+            header("X-Debug-Username", "test-user")
+            contentType(ContentType.Application.Json)
+            setBody("{\"type\":\"future-game\",\"players\":[\"alice\"]}")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
     fun gameSpecificActionRouteReturnsNotFoundForUnknownGame() = testApplication {
         application { module() }
 

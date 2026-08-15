@@ -21,6 +21,8 @@ import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
 import cz.kotu.gamearena.model.RunningGame
+import cz.kotu.gamearena.model.CreateGameRequest
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -95,6 +97,45 @@ fun Application.module() {
                     gamesManager.runningGames(),
                 )
                 call.respondText(games, ContentType.Application.Json)
+            }
+        }
+
+        post("/api/games") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                val request = try {
+                    Json.decodeFromString(CreateGameRequest.serializer(), call.receiveText())
+                } catch (_: SerializationException) {
+                    null
+                }
+
+                if (request == null) {
+                    call.respond(HttpStatusCode.BadRequest, "Invalid game request")
+                } else {
+                    val players = request.players.map(String::trim)
+                    when {
+                        request.type != "contacts" ->
+                            call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
+                        players.isEmpty() || players.any(String::isEmpty) ->
+                            call.respond(HttpStatusCode.BadRequest, "At least one player is required")
+                        else -> {
+                            val game = gamesManager.createContactsGame(players)
+                            val response = RunningGame(
+                                id = game.metadata.id,
+                                type = game.metadata.type,
+                                players = game.metadata.players,
+                                createdAt = game.metadata.createdAt.toString(),
+                            )
+                            call.respondText(
+                                Json.encodeToString(RunningGame.serializer(), response),
+                                ContentType.Application.Json,
+                                HttpStatusCode.Created,
+                            )
+                        }
+                    }
+                }
             }
         }
 
