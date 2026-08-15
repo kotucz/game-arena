@@ -10,9 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,18 +38,12 @@ internal const val GOT_FIVE_ROUTE = "got-five"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
 internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
-private data class ContactsGameNavigationState(
-    val username: String,
-    val players: List<String>,
-)
 
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
         val navController = rememberNavController()
-        val networkScope = rememberCoroutineScope()
-        val contactsGames = remember { mutableMapOf<String, ContactsGameNavigationState>() }
         var username by remember { mutableStateOf<String?>(null) }
         Column(
             modifier = Modifier
@@ -79,10 +73,6 @@ fun App() {
                             navController.navigate(GOT_FIVE_ROUTE)
                         },
                         onGameClick = { game ->
-                            contactsGames[game.id] = ContactsGameNavigationState(
-                                username = authenticatedUsername,
-                                players = game.players,
-                            )
                             navController.navigate("game/${game.id}")
                         },
                     )
@@ -102,15 +92,13 @@ fun App() {
                     val gameId = entry.arguments?.read {
                         getString(CONTACTS_GAME_ID_ARGUMENT)
                     }
-                    val game = gameId?.let(contactsGames::get)
-                    if (gameId == null || game == null) {
-                        Text("Game is not available")
+                    val authenticatedUsername = username
+                    if (gameId == null || authenticatedUsername == null) {
+                        Text("Authentication required")
                     } else {
                         ContactsGameScreen(
                             gameId = gameId,
-                            username = game.username,
-                            players = game.players,
-                            networkScope = networkScope,
+                            username = authenticatedUsername,
                             onBack = { navController.popBackStack() },
                         )
                     }
@@ -125,18 +113,16 @@ fun App() {
 private fun ContactsGameScreen(
     gameId: String,
     username: String,
-    players: List<String>,
-    networkScope: kotlinx.coroutines.CoroutineScope,
     onBack: () -> Unit,
 ) {
+    val networkScope = rememberCoroutineScope()
     val player = ContactsBoardState.Player(username)
-    val boardPlayers = players.map(ContactsBoardState::Player)
     val gameFacade = remember(gameId) {
         NetworkContactsGameFacade(
             httpClient = createAuthHttpClient(),
             endpoint = authBaseUrl().trimEnd('/') + "/api",
             gameId = gameId,
-            initialState = ContactsBoardState.create(boardPlayers),
+            initialState = ContactsBoardState.empty(),
             scope = networkScope,
         )
     }

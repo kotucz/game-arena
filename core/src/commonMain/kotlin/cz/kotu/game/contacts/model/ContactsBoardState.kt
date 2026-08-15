@@ -47,6 +47,12 @@ data class ContactsBoardState internal constructor(
     }
 
     companion object {
+        fun empty(): ContactsBoardState = ContactsBoardState(
+            pool = emptyList(),
+            racks = emptyList(),
+            solved = emptySet(),
+        )
+
         fun create(players: List<Player>): ContactsBoardState {
             val numRacks = 4
 

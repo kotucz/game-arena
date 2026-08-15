@@ -5,6 +5,16 @@ import kotlin.test.assertEquals
 
 class ContactsBoardStateTest {
     @Test
+    fun emptyCreatesAPlaceholderStateWithoutPlayers() {
+        val state = ContactsBoardState.empty()
+
+        assertEquals(emptyList(), state.pool)
+        assertEquals(emptyList(), state.racks)
+        assertEquals(emptySet(), state.solved)
+        assertEquals(0, state.faults)
+    }
+
+    @Test
     fun createBuildsAndDistributesTheFullContactPool() {
         val players = listOf(
             ContactsBoardState.Player("alice"),

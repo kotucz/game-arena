@@ -176,6 +176,22 @@ fun Application.module() {
             call.respondFile(File(webRoot, "index.html"))
         }
 
+        // The Wasm client uses browser history for these SPA routes. Serve the
+        // application shell on refresh so the client-side navigation can take
+        // over after the page has loaded.
+        get("/auth") {
+            call.respondFile(File(webRoot, "index.html"))
+        }
+        get("/games") {
+            call.respondFile(File(webRoot, "index.html"))
+        }
+        get("/got-five") {
+            call.respondFile(File(webRoot, "index.html"))
+        }
+        get("/game/{gameId}") {
+            call.respondFile(File(webRoot, "index.html"))
+        }
+
         // Do not fall back to index.html for missing assets. In particular, a
         // stale browser requesting an old Wasm hash must receive a 404, not HTML.
         staticFiles("/", webRoot)
