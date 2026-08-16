@@ -11,4 +11,9 @@ interface ContactsGameFacade {
         otherContact: ContactsBoardState.Contact,
     )
 
+    fun multiConnect(
+        player: ContactsBoardState.Player,
+        playerContacts: Set<ContactsBoardState.Contact>,
+        otherContacts: Set<ContactsBoardState.Contact>,
+    )
 }

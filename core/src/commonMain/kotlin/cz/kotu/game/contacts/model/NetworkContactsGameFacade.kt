@@ -56,6 +56,31 @@ class NetworkContactsGameFacade(
         }
     }
 
+    override fun multiConnect(
+        player: ContactsBoardState.Player,
+        playerContacts: Set<ContactsBoardState.Contact>,
+        otherContacts: Set<ContactsBoardState.Contact>,
+    ) {
+        scope.launch {
+            runCatching {
+                httpClient.post(actionsEndpoint) {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        json.encodeToString(
+                            ContactsNetworkAction.serializer(),
+                            ContactsNetworkAction.MultiConnect(
+                                playerContacts.map { it.id }.toSet(),
+                                otherContacts.map { it.id }.toSet()
+                            )
+                        )
+                    )
+                }.also { response ->
+                    if (response.status.value !in 200..299) error("Action failed: ${response.status}")
+                }
+            }.onFailure(onError)
+        }
+    }
+
     private suspend fun runSession() {
         try {
             httpClient.sse(eventsEndpoint) {

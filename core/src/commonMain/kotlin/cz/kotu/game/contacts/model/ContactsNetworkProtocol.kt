@@ -3,6 +3,7 @@ package cz.kotu.game.contacts.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+
 /** JSON DTOs used by the Contacts HTTP transport. */
 @Serializable
 sealed class ContactsNetworkAction {
@@ -12,5 +13,10 @@ sealed class ContactsNetworkAction {
         val playerContact: ContactsBoardState.ContactId,
         val otherContact: ContactsBoardState.ContactId,
     ) : ContactsNetworkAction()
+    @Serializable
+    @SerialName("multiConnect")
+    data class MultiConnect(
+        val playerContacts: Set<ContactsBoardState.ContactId>,
+        val otherContacts: Set<ContactsBoardState.ContactId>,
+    ) : ContactsNetworkAction()
 }
-

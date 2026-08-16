@@ -13,11 +13,29 @@ data class ContactsBoardState internal constructor(
     val solved: Set<ContactId>,
 
     val faults: Int = 0,
+
+    val allowedActionTypes: Set<ActionType> = setOf(ActionType.StandardConnect),
 ) {
     @Serializable
     data class Player(
         val username: String,
     )
+
+    @Serializable
+    enum class ActionType(
+        val playerContactsCount: Int,
+        val otherContactsCount: Int,
+    ) {
+        StandardConnect(1, 1),
+        DoubleConnect(1, 2),
+        TripleConnect(1, 3),
+        MyDoubleConnect(2, 1),
+        AddHint(1, 0);
+
+        fun matches(playerContactsCount: Int, otherContactsCount: Int): Boolean {
+            return this.playerContactsCount == playerContactsCount && this.otherContactsCount == otherContactsCount
+        }
+    }
 
     @JvmInline
     @Serializable
@@ -51,6 +69,7 @@ data class ContactsBoardState internal constructor(
             pool = emptyList(),
             racks = emptyList(),
             solved = emptySet(),
+            allowedActionTypes = emptySet(),
         )
 
         fun create(players: List<Player>): ContactsBoardState {
@@ -90,6 +109,7 @@ data class ContactsBoardState internal constructor(
                 pool = pool,
                 racks = racks,
                 solved = setOf(),
+                allowedActionTypes = ActionType.entries.toSet()
             )
         }
     }

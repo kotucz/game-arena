@@ -37,4 +37,12 @@ class ContactsGameFacadeImpl(
 
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }
+
+    override fun multiConnect(
+        player: ContactsBoardState.Player,
+        playerContacts: Set<ContactsBoardState.Contact>,
+        otherContacts: Set<ContactsBoardState.Contact>,
+    ) {
+        // TODO: Implement multiConnect
+    }
 }

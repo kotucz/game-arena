@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 
@@ -43,14 +44,21 @@ fun ContactsPlayerScreen(
     gameFacade: ContactsGameFacade,
     player: ContactsBoardState.Player,
 ) {
-    var playerContact by remember { mutableStateOf<ContactsBoardState.Contact?>(null) }
-    var otherContact by remember { mutableStateOf<ContactsBoardState.Contact?>(null) }
+    var actionSelectionState by remember { mutableStateOf<ActionSelectionState>(ActionSelectionState.None) }
     val gameState by gameFacade.gameState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         LaunchedEffect(gameState.solved) {
-            if (playerContact?.let(gameState::isSolved) == true) playerContact = null
-            if (otherContact?.let(gameState::isSolved) == true) otherContact = null
+            val state = actionSelectionState
+            val newPlayerContacts = state.playerContacts.filter { !gameState.isSolved(it) }.toSet()
+            val newOtherContacts = state.otherContacts.filter { !gameState.isSolved(it) }.toSet()
+            if (newPlayerContacts != state.playerContacts || newOtherContacts != state.otherContacts) {
+                actionSelectionState = if (newPlayerContacts.isEmpty() && newOtherContacts.isEmpty()) {
+                    ActionSelectionState.None
+                } else {
+                    ActionSelectionState.MultiConnect(playerContacts = newPlayerContacts, otherContacts = newOtherContacts)
+                }
+            }
         }
 
         Column(
@@ -75,8 +83,12 @@ fun ContactsPlayerScreen(
                     gameState = gameState,
                     rack = rack,
                     isOwner = false,
-                    selectedContact = otherContact,
-                    onContactClick = { otherContact = if (otherContact == it) null else it },
+                    selectedContacts = actionSelectionState.otherContacts,
+                    onContactClick = { contact ->
+                        val state = actionSelectionState
+                        val newOtherContacts = if (contact in state.otherContacts) state.otherContacts - contact else state.otherContacts + contact
+                        actionSelectionState = ActionSelectionState.MultiConnect(playerContacts = state.playerContacts, otherContacts = newOtherContacts)
+                    },
                 )
             }
 
@@ -85,8 +97,12 @@ fun ContactsPlayerScreen(
                     gameState = gameState,
                     rack = rack,
                     isOwner = true,
-                    selectedContact = playerContact,
-                    onContactClick = { playerContact = if (playerContact == it) null else it },
+                    selectedContacts = actionSelectionState.playerContacts,
+                    onContactClick = { contact ->
+                        val state = actionSelectionState
+                        val newPlayerContacts = if (contact in state.playerContacts) state.playerContacts - contact else state.playerContacts + contact
+                        actionSelectionState = ActionSelectionState.MultiConnect(playerContacts = newPlayerContacts, otherContacts = state.otherContacts)
+                    },
                 )
             }
         }
@@ -98,18 +114,22 @@ fun ContactsPlayerScreen(
                 .padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
+            val playerContacts = actionSelectionState.playerContacts
+            val otherContacts = actionSelectionState.otherContacts
+            
+            val validAction = gameState.allowedActionTypes.firstOrNull {
+                it.matches(playerContacts.size, otherContacts.size)
+            }
+            
             Button(
-                enabled = playerContact != null && otherContact != null,
+                enabled = validAction != null,
                 onClick = {
-                    val selectedPlayerContact = playerContact ?: return@Button
-                    val selectedOtherContact = otherContact ?: return@Button
-                    gameFacade.connect(
+                    gameFacade.multiConnect(
                         player,
-                        selectedPlayerContact,
-                        selectedOtherContact,
+                        playerContacts,
+                        otherContacts,
                     )
-                    playerContact = null
-                    otherContact = null
+                    actionSelectionState = ActionSelectionState.None
                 },
             ) {
                 Text("Confirm selection")
@@ -175,7 +195,7 @@ private fun RackView(
     gameState: ContactsBoardState,
     rack: ContactsBoardState.Rack,
     isOwner: Boolean,
-    selectedContact: ContactsBoardState.Contact?,
+    selectedContacts: Set<ContactsBoardState.Contact>,
     onContactClick: (ContactsBoardState.Contact) -> Unit,
 ) {
     Column {
@@ -205,7 +225,7 @@ private fun RackView(
                                 .background(
                                     when {
                                         gameState.isSolved(contact) -> Color(0xFF808080)
-                                        contact == selectedContact -> Color(0xFF1976D2)
+                                        contact in selectedContacts -> Color(0xFF1976D2)
                                         else -> Color(0xFF4A4A4A)
                                     },
                                     RoundedCornerShape(8.dp),
