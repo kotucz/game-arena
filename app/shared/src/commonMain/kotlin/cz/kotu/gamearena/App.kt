@@ -26,6 +26,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.savedstate.read
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
 import cz.kotu.game.contacts.ContactsPlayerScreen
@@ -135,9 +136,9 @@ fun App() {
                             Text("Authentication required")
                         } else {
                             ContactsGameScreen(
+                                appComponent = appComponent,
                                 gameId = gameId,
                                 username = authenticatedUsername,
-                                httpClient = appComponent.httpClient,
                                 onBack = { navController.popBackStack() },
                             )
                         }
@@ -151,24 +152,16 @@ fun App() {
 
 @Composable
 private fun ContactsGameScreen(
+    appComponent: AppComponent,
     gameId: String,
     username: String,
-    httpClient: HttpClient,
     onBack: () -> Unit,
 ) {
-    val networkScope = rememberCoroutineScope()
-    val player = ContactsBoardState.Player(username)
-    val gameFacade = remember(gameId) {
-        NetworkContactsGameFacade(
-            httpClient = httpClient,
-            endpoint = authBaseUrl().trimEnd('/') + "/api",
-            gameId = gameId,
-            initialState = ContactsBoardState.empty(),
-            scope = networkScope,
-        )
+    val gameViewModel: ContactsGameViewModel = viewModel {
+        appComponent.contactsGameViewModelFactory(gameId, username)
     }
     TextButton(onClick = onBack) { Text("Back to games") }
-    ContactsPlayerScreen(gameFacade = gameFacade, player = player)
+    ContactsPlayerScreen(gameFacade = gameViewModel.gameFacade, player = gameViewModel.player)
 }
 
 @Composable

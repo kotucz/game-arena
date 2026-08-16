@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ContactsGameViewModel
 import io.ktor.client.HttpClient
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.tools.MultiPlayerViewModel
@@ -18,6 +19,7 @@ abstract class AppComponent {
     abstract val gamesClient: GamesClient
     abstract val gameViewModelFactory: () -> GameViewModel
     abstract val multiPlayerViewModelFactory: (String, (String) -> HttpClient) -> MultiPlayerViewModel
+    abstract val contactsGameViewModelFactory: (String, String) -> ContactsGameViewModel
 
     @Provides
     @AppScope
