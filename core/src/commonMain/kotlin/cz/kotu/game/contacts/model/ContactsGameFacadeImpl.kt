@@ -59,6 +59,9 @@ class ContactsGameFacadeImpl(
         }
 
         when (actionType) {
+            ContactsBoardState.ActionType.AddHint -> {
+                _gameState.value = gameState.withHintFor(playerContacts.single())
+            }
             ContactsBoardState.ActionType.StandardConnect -> connect(
                 player,
                 playerContact = playerContacts.single(),

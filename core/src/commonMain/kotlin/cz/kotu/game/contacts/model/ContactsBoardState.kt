@@ -32,11 +32,12 @@ data class ContactsBoardState internal constructor(
         val playerContactsCount: Int,
         val otherContactsCount: Int,
     ) {
+        AddHint(1, 0),
         StandardConnect(1, 1),
         DoubleConnect(1, 2),
         TripleConnect(1, 3),
         MyDoubleConnect(2, 1),
-        AddHint(1, 0);
+        ;
 
         fun matches(playerContactsCount: Int, otherContactsCount: Int): Boolean {
             return this.playerContactsCount == playerContactsCount && this.otherContactsCount == otherContactsCount
@@ -159,6 +160,7 @@ data class ContactsBoardState internal constructor(
     }
 
     fun withFaultFor(contact: Contact): ContactsBoardState {
+        // TODO use withHintFor
         val rackIndex = racks.indexOfFirst { contact.id in it.contactIds }
         if (rackIndex < 0) return this
 
@@ -170,6 +172,20 @@ data class ContactsBoardState internal constructor(
         return copy(
             racks = racks.toMutableList().also { it[rackIndex] = updatedRack },
             faults = faults + 1,
+        )
+    }
+
+    fun withHintFor(contact: Contact): ContactsBoardState {
+        val rackIndex = racks.indexOfFirst { contact.id in it.contactIds }
+        if (rackIndex < 0) return this
+
+        val rack = racks[rackIndex]
+        val updatedRack = rack.copy(
+            hints = rack.hints + (contact.id to contact.number.toString()),
+        )
+
+        return copy(
+            racks = racks.toMutableList().also { it[rackIndex] = updatedRack },
         )
     }
 
