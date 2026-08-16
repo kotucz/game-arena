@@ -14,7 +14,13 @@ data class ContactsBoardState internal constructor(
 
     val faults: Int = 0,
 
-    val allowedActionTypes: Set<ActionType> = setOf(ActionType.StandardConnect),
+    val allowedActionTypes: Set<ActionType> = setOf(
+        ActionType.StandardConnect,
+        ActionType.DoubleConnect,
+        ActionType.TripleConnect,
+        ActionType.MyDoubleConnect,
+        ActionType.AddHint,
+    ),
 ) {
     @Serializable
     data class Player(
@@ -79,9 +85,9 @@ data class ContactsBoardState internal constructor(
 
             var contId = 1
 
-            for (num in 1 .. 12) {
+            for (num in 1..12) {
                 // 4 instances per number
-                for (i in 1 .. 4) {
+                for (i in 1..4) {
                     pool.add(Contact(id = ContactId(contId), number = num))
                     contId++
                 }

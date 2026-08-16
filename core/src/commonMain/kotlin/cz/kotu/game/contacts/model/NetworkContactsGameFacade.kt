@@ -56,8 +56,9 @@ class NetworkContactsGameFacade(
         }
     }
 
-    override fun multiConnect(
+    override fun action(
         player: ContactsBoardState.Player,
+        actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
     ) {
@@ -68,7 +69,8 @@ class NetworkContactsGameFacade(
                     setBody(
                         json.encodeToString(
                             ContactsNetworkAction.serializer(),
-                            ContactsNetworkAction.MultiConnect(
+                            ContactsNetworkAction.Action(
+                                actionType = actionType,
                                 playerContacts.map { it.id }.toSet(),
                                 otherContacts.map { it.id }.toSet()
                             )

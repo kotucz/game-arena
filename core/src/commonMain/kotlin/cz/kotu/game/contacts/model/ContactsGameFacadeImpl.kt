@@ -15,6 +15,7 @@ class ContactsGameFacadeImpl(
 
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
 
+    // TODO called via action
     override fun connect(
         player: ContactsBoardState.Player,
         playerContact: ContactsBoardState.Contact,
@@ -38,11 +39,33 @@ class ContactsGameFacadeImpl(
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }
 
-    override fun multiConnect(
+    override fun action(
         player: ContactsBoardState.Player,
+        actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
     ) {
-        // TODO: Implement multiConnect
+        val gameState = this@ContactsGameFacadeImpl.gameState.value
+
+        // TODO should be in single rack?
+        val playerOwnsContacts = playerContacts.all { gameState.isOwnedBy(player, it) }
+        val anotherPlayerOwnsContacts = otherContacts.all { gameState.isOwnedByAnotherPlayer(player, it) }
+        val contactsAreUnsolved =
+            playerContacts.all { !gameState.isSolved(it) } &&
+                    otherContacts.all { !gameState.isSolved(it) }
+
+        if (!playerOwnsContacts || !anotherPlayerOwnsContacts || !contactsAreUnsolved) {
+            return
+        }
+
+        when (actionType) {
+            ContactsBoardState.ActionType.StandardConnect -> connect(
+                player,
+                playerContact = playerContacts.single(),
+                otherContact = otherContacts.single(),
+            )
+            // TODO
+            else -> {}
+        }
     }
 }

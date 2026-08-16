@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +47,10 @@ fun ContactsPlayerScreen(
     player: ContactsBoardState.Player,
 ) {
     var actionSelectionState by remember { mutableStateOf<ActionSelectionState>(ActionSelectionState.None) }
-    val gameState by gameFacade.gameState.collectAsState()
+    val gameState: ContactsBoardState by gameFacade.gameState.collectAsState()
+    var selectedActionType by remember(gameState.allowedActionTypes) { 
+        mutableStateOf(gameState.allowedActionTypes.firstOrNull()) 
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LaunchedEffect(gameState.solved) {
@@ -107,25 +112,45 @@ fun ContactsPlayerScreen(
             }
         }
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFFE8E8E8))
                 .padding(16.dp),
-            contentAlignment = Alignment.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val playerContacts = actionSelectionState.playerContacts
             val otherContacts = actionSelectionState.otherContacts
-            
-            val validAction = gameState.allowedActionTypes.firstOrNull {
-                it.matches(playerContacts.size, otherContacts.size)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                gameState.allowedActionTypes.forEach { actionType ->
+                    val isSelected = actionType == selectedActionType
+                    Button(
+                        onClick = { selectedActionType = actionType },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
+                            contentColor = if (isSelected) Color.White else Color.Black
+                        )
+                    ) {
+                        Text(actionType.name)
+                    }
+                }
             }
+
+            val validAction = selectedActionType?.matches(playerContacts.size, otherContacts.size) == true
             
             Button(
-                enabled = validAction != null,
+                enabled = validAction,
                 onClick = {
-                    gameFacade.multiConnect(
+                    gameFacade.action(
                         player,
+                        selectedActionType!!,
                         playerContacts,
                         otherContacts,
                     )

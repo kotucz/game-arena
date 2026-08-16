@@ -14,8 +14,9 @@ sealed class ContactsNetworkAction {
         val otherContact: ContactsBoardState.ContactId,
     ) : ContactsNetworkAction()
     @Serializable
-    @SerialName("multiConnect")
-    data class MultiConnect(
+    @SerialName("action")
+    data class Action(
+        val actionType: ContactsBoardState.ActionType,
         val playerContacts: Set<ContactsBoardState.ContactId>,
         val otherContacts: Set<ContactsBoardState.ContactId>,
     ) : ContactsNetworkAction()
