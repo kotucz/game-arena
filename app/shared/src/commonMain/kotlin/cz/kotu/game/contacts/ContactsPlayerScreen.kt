@@ -48,27 +48,31 @@ fun ContactsPlayerScreen(
     player: ContactsBoardState.Player,
 ) {
     var actionSelectionState by remember { mutableStateOf<ActionSelectionState>(ActionSelectionState.None) }
-    var selectedResolutionContact by remember { mutableStateOf<ContactsBoardState.Contact?>(null) }
     val gameState: ContactsBoardState by gameFacade.gameState.collectAsState()
-    var selectedActionType by remember(gameState.allowedActionTypes) { 
-        mutableStateOf(gameState.allowedActionTypes.firstOrNull()) 
-    }
     val resolution = gameState.resolveMultiConnect
-    val isResolutionTarget = resolution?.targetPlayer == player
+    val availableActionTypes = when {
+        resolution == null -> gameState.allowedActionTypes
+        resolution.targetPlayer == player -> setOf(ContactsBoardState.ActionType.ResolveMultiConnect)
+        else -> emptySet()
+    }
+    var selectedActionType by remember(availableActionTypes) {
+        mutableStateOf(availableActionTypes.firstOrNull())
+    }
     val resolutionTargetContacts = resolution?.targetContacts
         ?.mapNotNull(gameState::contact)
         ?.toSet()
+    val resolutionClickableContacts = when {
+        resolution == null -> null
+        selectedActionType == ContactsBoardState.ActionType.ResolveMultiConnect -> resolutionTargetContacts.orEmpty()
+        else -> emptySet()
+    }
 
     LaunchedEffect(resolution) {
         actionSelectionState = ActionSelectionState.None
-        selectedResolutionContact = null
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LaunchedEffect(gameState.solved) {
-            if (selectedResolutionContact?.let(gameState::isSolved) == true) {
-                selectedResolutionContact = null
-            }
             val state = actionSelectionState
             val newPlayerContacts = state.playerContacts.filter { !gameState.isSolved(it) }.toSet()
             val newOtherContacts = state.otherContacts.filter { !gameState.isSolved(it) }.toSet()
@@ -103,21 +107,20 @@ fun ContactsPlayerScreen(
                     gameState = gameState,
                     rack = rack,
                     isOwner = false,
-                    selectedContacts = if (isResolutionTarget) {
-                        setOfNotNull(selectedResolutionContact)
-                    } else {
-                        actionSelectionState.otherContacts
-                    },
-                    clickableContacts = if (resolution == null) null else if (isResolutionTarget) resolutionTargetContacts.orEmpty() else emptySet(),
-                    highlightedContacts = if (isResolutionTarget) resolutionTargetContacts.orEmpty() else emptySet(),
+                    selectedContacts = actionSelectionState.otherContacts,
+                    clickableContacts = resolutionClickableContacts,
+                    highlightedContacts = resolutionTargetContacts.orEmpty(),
                     onContactClick = { contact ->
-                        if (resolution != null) {
-                            selectedResolutionContact = if (selectedResolutionContact == contact) null else contact
+                        val state = actionSelectionState
+                        val newOtherContacts = if (contact in state.otherContacts) {
+                            state.otherContacts - contact
                         } else {
-                            val state = actionSelectionState
-                            val newOtherContacts = if (contact in state.otherContacts) state.otherContacts - contact else state.otherContacts + contact
-                            actionSelectionState = ActionSelectionState.MultiConnect(playerContacts = state.playerContacts, otherContacts = newOtherContacts)
+                            state.otherContacts + contact
                         }
+                        actionSelectionState = ActionSelectionState.MultiConnect(
+                            playerContacts = state.playerContacts,
+                            otherContacts = newOtherContacts,
+                        )
                     },
                 )
             }
@@ -127,21 +130,20 @@ fun ContactsPlayerScreen(
                     gameState = gameState,
                     rack = rack,
                     isOwner = true,
-                    selectedContacts = if (isResolutionTarget) {
-                        setOfNotNull(selectedResolutionContact)
-                    } else {
-                        actionSelectionState.playerContacts
-                    },
-                    clickableContacts = if (resolution == null) null else if (isResolutionTarget) resolutionTargetContacts.orEmpty() else emptySet(),
-                    highlightedContacts = if (isResolutionTarget) resolutionTargetContacts.orEmpty() else emptySet(),
+                    selectedContacts = actionSelectionState.playerContacts,
+                    clickableContacts = resolutionClickableContacts,
+                    highlightedContacts = resolutionTargetContacts.orEmpty(),
                     onContactClick = { contact ->
-                        if (resolution != null) {
-                            selectedResolutionContact = if (selectedResolutionContact == contact) null else contact
+                        val state = actionSelectionState
+                        val newPlayerContacts = if (contact in state.playerContacts) {
+                            state.playerContacts - contact
                         } else {
-                            val state = actionSelectionState
-                            val newPlayerContacts = if (contact in state.playerContacts) state.playerContacts - contact else state.playerContacts + contact
-                            actionSelectionState = ActionSelectionState.MultiConnect(playerContacts = newPlayerContacts, otherContacts = state.otherContacts)
+                            state.playerContacts + contact
                         }
+                        actionSelectionState = ActionSelectionState.MultiConnect(
+                            playerContacts = newPlayerContacts,
+                            otherContacts = state.otherContacts,
+                        )
                     },
                 )
             }
@@ -155,70 +157,52 @@ fun ContactsPlayerScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (resolution != null) {
-                if (isResolutionTarget) {
-                    Text("Resolve multi-connect")
-                    Text("Original contact: ${gameState.contact(resolution.originalContact)?.number ?: "?"}")
+            val playerContacts = actionSelectionState.playerContacts
+            val otherContacts = actionSelectionState.otherContacts
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                availableActionTypes.forEach { actionType ->
+                    val isSelected = actionType == selectedActionType
                     Button(
-                        enabled = selectedResolutionContact != null,
-                        onClick = {
-                            selectedResolutionContact?.let { targetContact ->
-                                gameFacade.action(
-                                    player = player,
-                                    actionType = ContactsBoardState.ActionType.ResolveMultiConnect,
-                                    playerContacts = setOf(targetContact),
-                                    otherContacts = emptySet(),
-                                )
-                                selectedResolutionContact = null
-                            }
-                        },
+                        onClick = { selectedActionType = actionType },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
+                            contentColor = if (isSelected) Color.White else Color.Black
+                        )
                     ) {
-                        Text("Confirm selection")
+                        Text(actionType.name)
                     }
+                }
+            }
+
+            if (resolution != null) {
+                if (resolution.targetPlayer == player) {
+                    Text("Original contact: ${gameState.contact(resolution.originalContact)?.number ?: "?"}")
                 } else {
                     Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
                 }
-            } else {
-                val playerContacts = actionSelectionState.playerContacts
-                val otherContacts = actionSelectionState.otherContacts
+            }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    gameState.allowedActionTypes.forEach { actionType ->
-                        val isSelected = actionType == selectedActionType
-                        Button(
-                            onClick = { selectedActionType = actionType },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
-                                contentColor = if (isSelected) Color.White else Color.Black
-                            )
-                        ) {
-                            Text(actionType.name)
-                        }
-                    }
-                }
+            val validAction = selectedActionType?.matches(playerContacts.size, otherContacts.size) == true
 
-                val validAction = selectedActionType?.matches(playerContacts.size, otherContacts.size) == true
-
-                Button(
-                    enabled = validAction,
-                    onClick = {
-                        gameFacade.action(
-                            player,
-                            selectedActionType!!,
-                            playerContacts,
-                            otherContacts,
-                        )
-                        actionSelectionState = ActionSelectionState.None
-                    },
-                ) {
-                    Text("Confirm selection")
-                }
+            Button(
+                enabled = validAction,
+                onClick = {
+                    gameFacade.action(
+                        player,
+                        selectedActionType!!,
+                        playerContacts,
+                        otherContacts,
+                    )
+                    actionSelectionState = ActionSelectionState.None
+                },
+            ) {
+                Text("Confirm selection")
             }
         }
     }
