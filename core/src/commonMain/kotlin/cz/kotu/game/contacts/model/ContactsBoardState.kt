@@ -21,6 +21,8 @@ data class ContactsBoardState internal constructor(
         ActionType.MyDoubleConnect,
         ActionType.AddHint,
     ),
+
+    val resolveMultiConnect : ResolveMultiConnect? = null,
 ) {
     @Serializable
     data class Player(
@@ -70,6 +72,16 @@ data class ContactsBoardState internal constructor(
             return hints[contact.id]
         }
     }
+
+    /**
+     * Target multi connect player will get to decide which of his contacts match best with the one of the original player
+     **/
+    @Serializable
+    data class ResolveMultiConnect(
+        val targetPlayer: Player,
+        val originalContact: ContactId,
+        val targetContacts: Set<ContactId>,
+    )
 
     companion object {
         fun empty(): ContactsBoardState = ContactsBoardState(

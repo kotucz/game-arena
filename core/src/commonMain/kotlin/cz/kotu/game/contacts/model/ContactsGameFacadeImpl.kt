@@ -39,6 +39,46 @@ class ContactsGameFacadeImpl(
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }
 
+    /**
+     * Multi connect requires the target player to make a resolution (choose the outcome)
+     */
+    fun multiConnect(
+        player: ContactsBoardState.Player,
+        actionType: ContactsBoardState.ActionType,
+        playerContact: ContactsBoardState.Contact,
+        otherContacts: Set<ContactsBoardState.Contact>,
+    ) {
+        val gameState = this@ContactsGameFacadeImpl.gameState.value
+
+        if (actionType !in setOf(
+                ContactsBoardState.ActionType.DoubleConnect,
+                ContactsBoardState.ActionType.TripleConnect,
+            ) ||
+            !actionType.matches(1, otherContacts.size) ||
+            !gameState.isOwnedBy(player, playerContact) ||
+            gameState.isSolved(playerContact) ||
+            otherContacts.isEmpty() ||
+            otherContacts.any { gameState.isSolved(it) } ||
+            otherContacts.any { !gameState.isOwnedByAnotherPlayer(player, it) }
+        ) {
+            return
+        }
+
+        // A multi-connect is resolved by the owner of the opposing rack. All
+        // selected contacts must therefore belong to the same rack.
+        val targetRack = gameState.racks.singleOrNull { rack ->
+            otherContacts.all { it.id in rack.contactIds }
+        } ?: return
+
+        _gameState.value = gameState.copy(
+            resolveMultiConnect = ContactsBoardState.ResolveMultiConnect(
+                targetPlayer = targetRack.owner,
+                originalContact = playerContact.id,
+                targetContacts = otherContacts.map { it.id }.toSet(),
+            ),
+        )
+    }
+
     override fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,
@@ -62,10 +102,19 @@ class ContactsGameFacadeImpl(
             ContactsBoardState.ActionType.AddHint -> {
                 _gameState.value = gameState.withHintFor(playerContacts.single())
             }
+
             ContactsBoardState.ActionType.StandardConnect -> connect(
                 player,
                 playerContact = playerContacts.single(),
                 otherContact = otherContacts.single(),
+            )
+
+            ContactsBoardState.ActionType.DoubleConnect,
+            ContactsBoardState.ActionType.TripleConnect -> multiConnect(
+                player,
+                actionType = actionType,
+                playerContact = playerContacts.single(),
+                otherContacts = otherContacts,
             )
             // TODO
             else -> {}
