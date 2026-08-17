@@ -33,15 +33,8 @@ class ServerContactsGameFacade(
                     delegate.action(
                         player = ContactsBoardState.Player(username),
                         actionType = action.actionType,
-                        otherContacts = action.playerContacts.map { state.requireContact(it) }.toSet(),
-                        playerContacts = action.otherContacts.map { state.requireContact(it) }.toSet(),
-                    )
-                }
-                is ContactsNetworkAction.ResolveMultiConnect -> {
-                    val state = delegate.gameState.value
-                    delegate.resolveMultiConnect(
-                        player = ContactsBoardState.Player(username),
-                        targetContact = state.requireContact(action.targetContact),
+                        playerContacts = action.playerContacts.map { state.requireContact(it) }.toSet(),
+                        otherContacts = action.otherContacts.map { state.requireContact(it) }.toSet(),
                     )
                 }
             }

@@ -164,7 +164,12 @@ fun ContactsPlayerScreen(
                         enabled = selectedResolutionContact != null,
                         onClick = {
                             selectedResolutionContact?.let { targetContact ->
-                                gameFacade.resolveMultiConnect(player, targetContact)
+                                gameFacade.action(
+                                    player = player,
+                                    actionType = ContactsBoardState.ActionType.ResolveMultiConnect,
+                                    playerContacts = setOf(targetContact),
+                                    otherContacts = emptySet(),
+                                )
                                 selectedResolutionContact = null
                             }
                         },

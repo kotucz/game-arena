@@ -83,7 +83,7 @@ class ContactsGameFacadeImplTest {
             playerContact = aliceContact,
             otherContacts = setOf(bobContact, bobOtherContact),
         )
-        facade.resolveMultiConnect(bob, bobContact)
+        facade.action(bob, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
 
         assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
         assertEquals(null, facade.gameState.value.resolveMultiConnect)
@@ -99,7 +99,7 @@ class ContactsGameFacadeImplTest {
             playerContact = aliceContact,
             otherContacts = setOf(bobContact, bobOtherContact),
         )
-        facade.resolveMultiConnect(bob, bobOtherContact)
+        facade.action(bob, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobOtherContact), emptySet())
 
         assertEquals(emptySet(), facade.gameState.value.solved)
         assertEquals(1, facade.gameState.value.faults)
@@ -117,7 +117,7 @@ class ContactsGameFacadeImplTest {
             playerContact = aliceContact,
             otherContacts = setOf(bobContact, bobOtherContact),
         )
-        facade.resolveMultiConnect(alice, bobContact)
+        facade.action(alice, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
 
         assertEquals(emptySet(), facade.gameState.value.solved)
         assertEquals(2, facade.gameState.value.resolveMultiConnect?.targetContacts?.size)

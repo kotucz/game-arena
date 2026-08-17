@@ -49,7 +49,13 @@ types.
 
 ## Verification
 
+- In PowerShell, invoke the Gradle wrapper as `.\gradlew.bat <task>`; do not
+  prefix it with an additional slash.
 - Run the narrowest relevant task:
   - Core: `gradlew.bat :core:jvmTest`
   - Shared UI: `gradlew.bat :app:shared:compileKotlinJvm`
   - Server: `gradlew.bat :server:test`
+
+If a command invocation or project-specific command fails, document the
+corrected command or the cause in this file or the README when it is useful for
+future agents. Notify the user about it

@@ -39,6 +39,7 @@ data class ContactsBoardState internal constructor(
         DoubleConnect(1, 2),
         TripleConnect(1, 3),
         MyDoubleConnect(2, 1),
+        ResolveMultiConnect(1, 0),
         ;
 
         fun matches(playerContactsCount: Int, otherContactsCount: Int): Boolean {
@@ -128,7 +129,9 @@ data class ContactsBoardState internal constructor(
                 pool = pool,
                 racks = racks,
                 solved = setOf(),
-                allowedActionTypes = ActionType.entries.toSet()
+                allowedActionTypes = ActionType.entries
+                    .filterNot { it == ActionType.ResolveMultiConnect }
+                    .toSet()
             )
         }
     }

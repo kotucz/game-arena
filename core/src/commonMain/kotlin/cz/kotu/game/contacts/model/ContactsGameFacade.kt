@@ -11,11 +11,6 @@ interface ContactsGameFacade {
         otherContact: ContactsBoardState.Contact,
     )
 
-    fun resolveMultiConnect(
-        player: ContactsBoardState.Player,
-        targetContact: ContactsBoardState.Contact,
-    )
-
     fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,

@@ -39,7 +39,7 @@ class ContactsGameFacadeImpl(
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }
 
-    override fun resolveMultiConnect(
+    private fun resolveMultiConnect(
         player: ContactsBoardState.Player,
         targetContact: ContactsBoardState.Contact,
     ) {
@@ -113,6 +113,12 @@ class ContactsGameFacadeImpl(
     ) {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
+        if (actionType == ContactsBoardState.ActionType.ResolveMultiConnect) {
+            if (!actionType.matches(playerContacts.size, otherContacts.size)) return
+            resolveMultiConnect(player, playerContacts.single())
+            return
+        }
+
         // TODO should be in single rack?
         val playerOwnsContacts = playerContacts.all { gameState.isOwnedBy(player, it) }
         val anotherPlayerOwnsContacts = otherContacts.all { gameState.isOwnedByAnotherPlayer(player, it) }
@@ -142,6 +148,7 @@ class ContactsGameFacadeImpl(
                 playerContact = playerContacts.single(),
                 otherContacts = otherContacts,
             )
+            ContactsBoardState.ActionType.ResolveMultiConnect -> error("Handled above")
             // TODO
             else -> {}
         }
