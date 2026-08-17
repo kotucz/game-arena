@@ -37,6 +37,13 @@ class ServerContactsGameFacade(
                         playerContacts = action.otherContacts.map { state.requireContact(it) }.toSet(),
                     )
                 }
+                is ContactsNetworkAction.ResolveMultiConnect -> {
+                    val state = delegate.gameState.value
+                    delegate.resolveMultiConnect(
+                        player = ContactsBoardState.Player(username),
+                        targetContact = state.requireContact(action.targetContact),
+                    )
+                }
             }
             return null
         } catch (error: Throwable) {

@@ -73,4 +73,54 @@ class ContactsGameFacadeImplTest {
         assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
     }
 
+    @Test
+    fun targetPlayerResolvesMultiConnectUsingStandardConnectResult() {
+        val facade = ContactsGameFacadeImpl(initialState)
+
+        facade.multiConnect(
+            player = alice,
+            actionType = ContactsBoardState.ActionType.DoubleConnect,
+            playerContact = aliceContact,
+            otherContacts = setOf(bobContact, bobOtherContact),
+        )
+        facade.resolveMultiConnect(bob, bobContact)
+
+        assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
+        assertEquals(null, facade.gameState.value.resolveMultiConnect)
+    }
+
+    @Test
+    fun targetPlayerResolvesMismatchUsingStandardConnectResult() {
+        val facade = ContactsGameFacadeImpl(initialState)
+
+        facade.multiConnect(
+            player = alice,
+            actionType = ContactsBoardState.ActionType.DoubleConnect,
+            playerContact = aliceContact,
+            otherContacts = setOf(bobContact, bobOtherContact),
+        )
+        facade.resolveMultiConnect(bob, bobOtherContact)
+
+        assertEquals(emptySet(), facade.gameState.value.solved)
+        assertEquals(1, facade.gameState.value.faults)
+        assertEquals(bobOtherContact.number.toString(), facade.gameState.value.racks[1].hint(bobOtherContact))
+        assertEquals(null, facade.gameState.value.resolveMultiConnect)
+    }
+
+    @Test
+    fun onlyTargetPlayerCanResolveMultiConnect() {
+        val facade = ContactsGameFacadeImpl(initialState)
+
+        facade.multiConnect(
+            player = alice,
+            actionType = ContactsBoardState.ActionType.DoubleConnect,
+            playerContact = aliceContact,
+            otherContacts = setOf(bobContact, bobOtherContact),
+        )
+        facade.resolveMultiConnect(alice, bobContact)
+
+        assertEquals(emptySet(), facade.gameState.value.solved)
+        assertEquals(2, facade.gameState.value.resolveMultiConnect?.targetContacts?.size)
+    }
+
 }

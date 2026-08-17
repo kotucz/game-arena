@@ -39,6 +39,32 @@ class ContactsGameFacadeImpl(
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }
 
+    override fun resolveMultiConnect(
+        player: ContactsBoardState.Player,
+        targetContact: ContactsBoardState.Contact,
+    ) {
+        val gameState = this@ContactsGameFacadeImpl.gameState.value
+        val resolution = gameState.resolveMultiConnect ?: return
+
+        if (resolution.targetPlayer != player || targetContact.id !in resolution.targetContacts) {
+            return
+        }
+
+        val originalContact = gameState.requireContact(resolution.originalContact)
+        val originalPlayer = gameState.racks
+            .firstOrNull { originalContact.id in it.contactIds }
+            ?.owner
+            ?: return
+
+        // Resolve with exactly the same validation and result as a normal
+        // StandardConnect made by the original contact's owner.
+        connect(originalPlayer, originalContact, targetContact)
+
+        _gameState.value = this@ContactsGameFacadeImpl.gameState.value.copy(
+            resolveMultiConnect = null,
+        )
+    }
+
     /**
      * Multi connect requires the target player to make a resolution (choose the outcome)
      */
