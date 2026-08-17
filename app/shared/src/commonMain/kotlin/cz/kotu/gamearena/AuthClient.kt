@@ -7,7 +7,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 import me.tatarka.inject.annotations.Inject
 
-expect fun createAuthHttpClient(): HttpClient
 expect fun authBaseUrl(): String
 
 @AppScope

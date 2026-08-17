@@ -17,7 +17,7 @@ import cz.kotu.gamearena.createAuthHttpClient
 
 @Composable
 fun MultiPlayerScreen(
-    debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient() },
+    debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient(onUnauthorized = {}) },
 ) {
     val appComponent = remember { AppComponent::class.create() }
     val viewModel: MultiPlayerViewModel = viewModel(

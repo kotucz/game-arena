@@ -11,30 +11,26 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.savedstate.read
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.contacts.ContactsGameViewModel
+import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
-import cz.kotu.game.contacts.ContactsPlayerScreen
-import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.NetworkContactsGameFacade
-import io.ktor.client.HttpClient
 
-internal const val AUTH_ROUTE = "auth"
 internal const val GAMES_ROUTE = "games"
 internal const val GOT_FIVE_ROUTE = "got-five"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
@@ -47,19 +43,13 @@ fun App() {
     MaterialTheme {
         val appComponent = remember { AppComponent::class.create() }
         val navController = rememberNavController()
-        var username by remember { mutableStateOf<String?>(null) }
-        var authenticationChecked by remember { mutableStateOf(false) }
+        val authManager = appComponent.authManager
+        var showAuthModal by remember { mutableStateOf(false) }
 
-        // Authentication is app state, not auth-screen state. A deep link can
-        // open the game route without ever composing AuthScreen.
-        LaunchedEffect(Unit) {
-            appComponent.authClient.currentUser()
-                .onSuccess {
-                    it.trim().takeIf(String::isNotEmpty)?.let { restoredUsername ->
-                        username = restoredUsername
-                    }
-                }
-            authenticationChecked = true
+        LaunchedEffect(authManager) {
+            authManager.unauthorizedEvent.collect {
+                showAuthModal = true
+            }
         }
 
         Column(
@@ -69,47 +59,14 @@ fun App() {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            NavHost(navController, startDestination = AUTH_ROUTE) {
-                composable(AUTH_ROUTE) {
-                    if (username == null) {
-                        AuthScreen(appComponent.authClient) { authenticatedUsername ->
-                            username = authenticatedUsername
-                            navController.navigate(GAMES_ROUTE) {
-                                popUpTo(AUTH_ROUTE) { inclusive = true }
-                            }
-                        }
-                    } else {
-                        // Session restoration may complete while this is still
-                        // the current destination. Deep-link navigation can
-                        // replace it independently.
-                        LaunchedEffect(username) {
-                            navController.navigate(GAMES_ROUTE) {
-                                popUpTo(AUTH_ROUTE) { inclusive = true }
-                            }
-                        }
-                    }
-                }
-
+            NavHost(navController, startDestination = GAMES_ROUTE) {
                 composable(GAMES_ROUTE) {
-                    if (!authenticationChecked) {
-                        Text("Restoring session…")
-                    } else {
-                        val authenticatedUsername = username
-                        if (authenticatedUsername == null) {
-                            Text("Authentication required")
-                        } else {
-                            GamesScreen(
-                                gamesClient = appComponent.gamesClient,
-                                username = authenticatedUsername,
-                                onStartGotFive = {
-                                    navController.navigate(GOT_FIVE_ROUTE)
-                                },
-                                onGameClick = { game ->
-                                    navController.navigate("game/${game.id}")
-                                },
-                            )
-                        }
-                    }
+                    GamesScreen(
+                        gamesClient = appComponent.gamesClient,
+                        authManager = authManager,
+                        onStartGotFive = { navController.navigate(GOT_FIVE_ROUTE) },
+                        onGameClick = { game -> navController.navigate("game/${game.id}") },
+                    )
                 }
 
                 composable(GOT_FIVE_ROUTE) {
@@ -128,24 +85,25 @@ fun App() {
                     val gameId = entry.arguments?.read {
                         getString(CONTACTS_GAME_ID_ARGUMENT)
                     }
-                    if (!authenticationChecked) {
-                        Text("Restoring session…")
-                    } else {
-                        val authenticatedUsername = username
-                        if (gameId == null || authenticatedUsername == null) {
-                            Text("Authentication required")
-                        } else {
-                            ContactsGameScreen(
-                                appComponent = appComponent,
-                                gameId = gameId,
-                                username = authenticatedUsername,
-                                onBack = { navController.popBackStack() },
-                            )
-                        }
+                    if (gameId != null) {
+                        ContactsGameScreen(
+                            appComponent = appComponent,
+                            gameId = gameId,
+                            onBack = { navController.popBackStack() },
+                        )
                     }
                 }
             }
             BrowserNavigationEffect(navController)
+        }
+
+        if (showAuthModal) {
+            Dialog(onDismissRequest = {}) {
+                AuthScreen(
+                    authManager = authManager,
+                    onAuthenticated = { showAuthModal = false },
+                )
+            }
         }
     }
 }
@@ -154,11 +112,10 @@ fun App() {
 private fun ContactsGameScreen(
     appComponent: AppComponent,
     gameId: String,
-    username: String,
     onBack: () -> Unit,
 ) {
     val gameViewModel: ContactsGameViewModel = viewModel {
-        appComponent.contactsGameViewModelFactory(gameId, username)
+        appComponent.contactsGameViewModelFactory(gameId)
     }
     TextButton(onClick = onBack) { Text("Back to games") }
     ContactsPlayerScreen(gameFacade = gameViewModel.gameFacade, player = gameViewModel.player)

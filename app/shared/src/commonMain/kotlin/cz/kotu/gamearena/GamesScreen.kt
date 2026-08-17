@@ -24,21 +24,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.launch
 
 @Composable
 fun GamesScreen(
     gamesClient: GamesClient,
-    username: String,
+    authManager: AuthManager,
     onStartGotFive: () -> Unit,
     onGameClick: (RunningGame) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val username by authManager.currentUsername.collectAsState()
     var games by remember { mutableStateOf<List<RunningGame>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var creatingGame by remember { mutableStateOf(false) }
-    var playersText by remember { mutableStateOf(username) }
+    var playersText by remember(username) { mutableStateOf(username ?: "") }
 
     fun loadGames() {
         scope.launch {
@@ -90,7 +92,7 @@ fun GamesScreen(
                     val players = playersText.lines()
                         .map { it.trim() }
                         .filter { it.isNotBlank() }
-                        .ifEmpty { listOf(username) }
+                        .ifEmpty { listOfNotNull(username) }
                     gamesClient.createGame(type = "contacts", players = players).fold(
                         onSuccess = onGameClick,
                         onFailure = { error = it.message ?: "Could not create game" },

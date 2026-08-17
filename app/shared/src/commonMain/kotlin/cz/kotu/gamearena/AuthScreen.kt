@@ -5,11 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.autofill.ContentType
-import androidx.compose.ui.semantics.contentType
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -21,9 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -32,8 +32,8 @@ private enum class AuthMode { Login, Register }
 
 @Composable
 fun AuthScreen(
-    authClient: AuthClient,
-    onAuthenticated: (String) -> Unit,
+    authManager: AuthManager,
+    onAuthenticated: () -> Unit,
 ) {
     var mode by remember { mutableStateOf(AuthMode.Login) }
     var username by remember { mutableStateOf("") }
@@ -50,12 +50,17 @@ fun AuthScreen(
             message = null
             scope.launch {
                 val result = if (mode == AuthMode.Login) {
-                    authClient.login(username, password)
+                    authManager.login(username, password)
                 } else {
-                    authClient.register(username, email, password)
+                    authManager.register(username, email, password)
                 }
                 submitting = false
-                result.fold({ onAuthenticated(username.trim()) }, { message = it.message ?: "Request failed" })
+                result.fold(
+                    onSuccess = {
+                        onAuthenticated()
+                    },
+                    onFailure = { message = it.message ?: "Request failed" },
+                )
             }
         }
     }
