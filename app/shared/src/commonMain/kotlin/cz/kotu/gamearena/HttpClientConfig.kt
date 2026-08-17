@@ -24,4 +24,9 @@ fun HttpClientConfig<*>.commonHttpClientConfig(onUnauthorized: () -> Unit) {
 }
 
 /** Platform-specific factory; each actual supplies the engine and cookie storage. */
-expect fun createAuthHttpClient(onUnauthorized: () -> Unit): HttpClient
+expect fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient
+
+fun createAuthHttpClient(onUnauthorized: () -> Unit): HttpClient =
+    createPlatformAuthHttpClient {
+        commonHttpClientConfig(onUnauthorized)
+    }
