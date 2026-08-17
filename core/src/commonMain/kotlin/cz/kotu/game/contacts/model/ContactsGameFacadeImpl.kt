@@ -65,6 +65,23 @@ class ContactsGameFacadeImpl(
         )
     }
 
+    private fun myDoubleConnect(
+        player: ContactsBoardState.Player,
+        actionType: ContactsBoardState.ActionType,
+        playerContacts: Set<ContactsBoardState.Contact>,
+        otherContact: ContactsBoardState.Contact,
+    ) {
+        if (!actionType.matches(playerContacts.size, 1)) return
+
+        // Select a matching contact before delegating so a non-matching first
+        // choice cannot record a fault when the other selected contact matches.
+        val playerContact = playerContacts.firstOrNull {
+            gameState.value.contactsMatch(it, otherContact)
+        } ?: playerContacts.first()
+
+        connect(player, playerContact, otherContact)
+    }
+
     /**
      * Multi connect requires the target player to make a resolution (choose the outcome)
      */
@@ -148,6 +165,14 @@ class ContactsGameFacadeImpl(
                 playerContact = playerContacts.single(),
                 otherContacts = otherContacts,
             )
+
+            ContactsBoardState.ActionType.MyDoubleConnect -> myDoubleConnect(
+                player,
+                actionType = actionType,
+                playerContacts = playerContacts,
+                otherContact = otherContacts.single(),
+            )
+
             ContactsBoardState.ActionType.ResolveMultiConnect -> error("Handled above")
             // TODO
             else -> {}

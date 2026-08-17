@@ -74,6 +74,40 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
+    fun myDoubleConnectSolvesWhenEitherPlayerContactMatches() {
+        val facade = ContactsGameFacadeImpl(initialState)
+
+        facade.action(
+            player = alice,
+            actionType = ContactsBoardState.ActionType.MyDoubleConnect,
+            playerContacts = setOf(aliceOtherContact, aliceContact),
+            otherContacts = setOf(bobContact),
+        )
+
+        assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
+        assertEquals(0, facade.gameState.value.faults)
+    }
+
+    @Test
+    fun myDoubleConnectUsesStandardConnectResultWhenNeitherContactMatches() {
+        val facade = ContactsGameFacadeImpl(initialState)
+
+        facade.action(
+            player = alice,
+            actionType = ContactsBoardState.ActionType.MyDoubleConnect,
+            playerContacts = setOf(aliceOtherContact, aliceMatchingContact),
+            otherContacts = setOf(bobOtherContact),
+        )
+
+        assertEquals(emptySet(), facade.gameState.value.solved)
+        assertEquals(1, facade.gameState.value.faults)
+        assertEquals(
+            bobOtherContact.number.toString(),
+            facade.gameState.value.racks[1].hint(bobOtherContact),
+        )
+    }
+
+    @Test
     fun targetPlayerResolvesMultiConnectUsingStandardConnectResult() {
         val facade = ContactsGameFacadeImpl(initialState)
 
