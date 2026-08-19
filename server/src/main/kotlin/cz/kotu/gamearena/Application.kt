@@ -217,8 +217,7 @@ fun Application.module() {
         // stale browser requesting an old Wasm hash must receive a 404, not HTML.
         staticFiles("/", webRoot)
     }
-
-    environment.monitor.subscribe(ApplicationStopped) {
+    monitor.subscribe(ApplicationStopped) {
         database.close()
     }
 }
