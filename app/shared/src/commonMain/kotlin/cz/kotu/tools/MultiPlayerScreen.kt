@@ -17,12 +17,13 @@ import cz.kotu.gamearena.createAuthHttpClient
 
 @Composable
 fun MultiPlayerScreen(
+    remoteGameId: String,
     debugHttpClientFactory: DebugHttpClientFactory = { createAuthHttpClient(onUnauthorized = {}) },
 ) {
     val appComponent = remember { AppComponent::class.create() }
     val viewModel: MultiPlayerViewModel = viewModel(
         initializer = {
-            appComponent.multiPlayerViewModelFactory("initial", debugHttpClientFactory)
+            appComponent.multiPlayerViewModelFactory(remoteGameId, debugHttpClientFactory)
         },
     )
 

@@ -18,8 +18,7 @@ typealias DebugHttpClientFactory = (String) -> HttpClient
 
 @Inject
 class MultiPlayerViewModel(
-    val remote: Boolean = false,
-    @Assisted private val gameId: String = "initial",
+    @Assisted private val remoteGameId: String,
     @Assisted private val debugHttpClientFactory: (String) -> HttpClient,
 ) : ViewModel() {
     val players = listOf(
@@ -30,11 +29,11 @@ class MultiPlayerViewModel(
     private val localFacade = ContactsGameFacadeImpl(players)
     private val networkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    fun gameFacadeForPlayer(username:String): ContactsGameFacade = if (remote) {
+    fun gameFacadeForPlayer(username:String): ContactsGameFacade = if (remoteGameId.isNotBlank()) {
         NetworkContactsGameFacade(
             httpClient = debugHttpClientFactory(username),
             endpoint = authBaseUrl().trimEnd('/') + "/api",
-            gameId = gameId,
+            gameId = remoteGameId,
             initialState = localFacade.gameState.value,
             scope = networkScope,
         )

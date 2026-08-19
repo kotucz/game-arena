@@ -26,7 +26,10 @@ fun main() = application {
         title = "Game Arena - Multiplayer Debug",
     ) {
         val debugHttpClientFactory: DebugHttpClientFactory = ::createDebugAuthHttpClient
-        MultiPlayerScreen(debugHttpClientFactory)
+        MultiPlayerScreen(
+            remoteGameId = "", // empty = local play - fill game id to join remote game
+            debugHttpClientFactory,
+        )
     }
 }
 
