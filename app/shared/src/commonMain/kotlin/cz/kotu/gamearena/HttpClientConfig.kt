@@ -3,6 +3,10 @@ package cz.kotu.gamearena
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.HttpResponseValidator
+import io.ktor.client.plugins.logging.DEFAULT
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.http.HttpStatusCode
 
@@ -14,6 +18,10 @@ import io.ktor.http.HttpStatusCode
  */
 fun HttpClientConfig<*>.commonHttpClientConfig(onUnauthorized: () -> Unit) {
     install(SSE)
+    install(Logging) {
+        level = LogLevel.INFO
+        logger = Logger.DEFAULT
+    }
     HttpResponseValidator {
         validateResponse { response ->
             if (response.status == HttpStatusCode.Unauthorized) {

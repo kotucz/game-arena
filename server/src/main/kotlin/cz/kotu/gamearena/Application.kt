@@ -37,6 +37,10 @@ fun main() {
 }
 
 fun Application.module() {
+    install(CallLogging) {
+        level = Level.INFO
+        logger = org.slf4j.LoggerFactory.getLogger("Ktor.Server")
+    }
     val database = createDatabase()
     val gamesManager = GamesManager()
     gamesManager.createContactsGame()

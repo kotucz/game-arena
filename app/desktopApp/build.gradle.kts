@@ -12,6 +12,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutinesSwing)
     implementation(libs.ktor.client.core)
+    implementation(libs.logback)
 
     implementation(libs.compose.uiToolingPreview)
 }
