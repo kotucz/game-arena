@@ -9,13 +9,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -94,7 +93,10 @@ fun ContactsPlayerScreen(
                     actionSelectionState = if (newPlayerContacts.isEmpty() && newOtherContacts.isEmpty()) {
                         ActionSelectionState.None
                     } else {
-                        ActionSelectionState.MultiConnect(playerContacts = newPlayerContacts, otherContacts = newOtherContacts)
+                        ActionSelectionState.MultiConnect(
+                            playerContacts = newPlayerContacts,
+                            otherContacts = newOtherContacts
+                        )
                     }
                 }
             }
@@ -251,7 +253,8 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
         Text(text = "Contacts Pool")
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val spacing = 4.dp
-            val poolTileWidth = (((maxWidth - spacing * 11) / 12) * 0.75f).coerceAtMost(40.dp)
+            val poolTileWidth = (((maxWidth - spacing * 12) / 12) * 0.75f).coerceAtMost(40.dp)
+            val poolTileHeight = poolTileWidth * phi
             val poolFontSize = (18f * (poolTileWidth / 30.dp).coerceIn(0.55f, 1f)).sp
 
             Row(
@@ -263,21 +266,19 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                 // Group contacts by number and sort by number
                 gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (_, contacts) ->
                     Column(
-                        modifier = Modifier.width(poolTileWidth),
+                        modifier = Modifier.wrapContentSize(),
                         verticalArrangement = Arrangement.spacedBy(spacing),
                     ) {
                         contacts.forEach { contact ->
                             Box(
                                 modifier = Modifier
-                                    .width(poolTileWidth)
-                                    .aspectRatio(1f / phi)
+                                    .size(width = poolTileWidth, height = poolTileHeight)
                                     .background(
                                         if (gameState.isSolved(contact)) Color(0xFF4CAF50) else Color(
                                             0xFFBDBDBD
                                         ),
                                         RoundedCornerShape(6.dp),
-                                    )
-                                    .padding(6.dp),
+                                    ),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
@@ -311,25 +312,25 @@ private fun RackView(
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val spacing = 8.dp
-            val tileWidth = ((maxWidth - spacing * 11) / 12).coerceAtMost(64.dp)
+            val tileWidth = ((maxWidth - spacing * 12) / 12).coerceAtMost(64.dp)
+            val tileHeight = tileWidth * phi
             val numberFontSize = (24f * (tileWidth / 50.dp).coerceIn(0.55f, 1f)).sp
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(spacing),
+                horizontalArrangement = Arrangement.spacedBy(spacing, alignment = Alignment.CenterHorizontally),
             ) {
                 gameState.contacts(rack).forEach { contact ->
                     Column(
-                        modifier = Modifier.width(tileWidth),
+                        modifier = Modifier.wrapContentSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(tileWidth)
-                                .aspectRatio(1f / phi)
+                                .size(width = tileWidth, height = tileHeight)
                                 .shadow(
                                     elevation = if (contact in highlightedContacts) 8.dp else 0.dp,
                                     shape = RoundedCornerShape(8.dp),
@@ -343,7 +344,6 @@ private fun RackView(
                                     },
                                     RoundedCornerShape(8.dp),
                                 )
-                                .padding(8.dp)
                                 .clickable(
                                     enabled = !gameState.isSolved(contact) &&
                                             (clickableContacts == null || contact in clickableContacts),
@@ -370,8 +370,7 @@ private fun RackView(
 
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(tileWidth / phi),
+                                .size(width = tileWidth, height = tileWidth / phi),
                             contentAlignment = Alignment.Center,
                         ) {
                             rack.hint(contact)?.let { hint ->
@@ -380,12 +379,10 @@ private fun RackView(
                                         .fillMaxSize()
                                         .background(Color(0xFFCCDDCC), RoundedCornerShape(8.dp))
                                         .border(1.dp, color = Color.Black, RoundedCornerShape(8.dp)),
-
                                     )
                                 Text(
                                     text = hint,
                                     color = Color.DarkGray,
-//                                    fontSize = (12f * (tileWidth / 50.dp).coerceIn(0.55f, 1f)).sp,
                                     fontSize = numberFontSize,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
