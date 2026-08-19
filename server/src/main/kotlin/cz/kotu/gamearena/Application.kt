@@ -1,7 +1,9 @@
 package cz.kotu.gamearena
 
-import io.ktor.http.Cookie
+import cz.kotu.gamearena.model.CreateGameRequest
+import cz.kotu.gamearena.model.RunningGame
 import io.ktor.http.ContentType
+import io.ktor.http.Cookie
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -10,6 +12,7 @@ import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
@@ -20,11 +23,10 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
-import cz.kotu.gamearena.model.RunningGame
-import cz.kotu.gamearena.model.CreateGameRequest
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import org.slf4j.event.Level
 import java.io.File
 import java.time.Instant
 
@@ -169,6 +171,20 @@ fun Application.module() {
                     } else {
                         call.respond(HttpStatusCode.BadRequest, error)
                     }
+                }
+            }
+        }
+
+        sse("/api/games/{gameId}/logs") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                val game = gamesManager.contactsGame(call.parameters["gameId"].orEmpty())
+                if (game == null) {
+                    call.respond(HttpStatusCode.NotFound, "Game not found")
+                } else {
+                    game.contacts.handleLogs(this, session.username)
                 }
             }
         }

@@ -17,6 +17,16 @@ class ServerContactsGameFacade(
         }
     }
 
+    suspend fun handleLogs(session: ServerSSESession, username: String) {
+        var lastSentLogIndex = -1
+        delegate.logs.collect { logs ->
+            for (i in (lastSentLogIndex + 1) until logs.size) {
+                session.send(ServerSentEvent(data = json.encodeToString(logs[i])))
+            }
+            lastSentLogIndex = logs.size - 1
+        }
+    }
+
     fun handleAction(payload: String, username: String): String? {
         try {
             when (val action = json.decodeFromString<ContactsNetworkAction>(payload)) {
@@ -43,5 +53,4 @@ class ServerContactsGameFacade(
             return error.message ?: "Invalid action"
         }
     }
-
 }

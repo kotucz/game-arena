@@ -61,3 +61,13 @@ types.
 If a command invocation or project-specific command fails, document the
 corrected command or the cause in this file or the README when it is useful for
 future agents. Notify the user about it
+
+## Gemini CLI
+
+# Private Project Memory - Manual File Update Workflow
+
+If `replace` or `write_file` tools fail due to "Cannot enable privileged approval modes in an untrusted folder", the following procedure should be used:
+1. Identify the files and necessary code changes.
+2. Present the exact code updates to the user in the chat.
+3. Ask the user to apply them manually.
+4. Record that this was done in this file and continue with the next task.

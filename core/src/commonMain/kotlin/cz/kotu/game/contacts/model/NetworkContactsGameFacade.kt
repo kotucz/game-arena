@@ -25,6 +25,7 @@ class NetworkContactsGameFacade(
 
     private val gameEndpoint: String = endpoint.trimEnd('/') + "/games/" + gameId + "/contacts"
     private val eventsEndpoint: String = gameEndpoint + "/events"
+    private val logsEndpoint: String = gameEndpoint.removeSuffix("/contacts") + "/logs"
     private val actionsEndpoint: String = gameEndpoint + "/actions"
 
     private val _gameState = MutableStateFlow(initialState)
@@ -35,6 +36,7 @@ class NetworkContactsGameFacade(
 
     init {
         scope.launch { runSession() }
+        scope.launch { runLogs() }
     }
 
     override fun connect(
@@ -83,6 +85,20 @@ class NetworkContactsGameFacade(
                     if (response.status.value !in 200..299) error("Action failed: ${response.status}")
                 }
             }.onFailure(onError)
+        }
+    }
+
+    private suspend fun runLogs() {
+        try {
+            httpClient.sse(logsEndpoint) {
+                incoming.collect { event ->
+                    event.data?.let { data ->
+                        _logs.value += json.decodeFromString<GameLogEntry>(data)
+                    }
+                }
+            }
+        } catch (error: Throwable) {
+            onError(error)
         }
     }
 
