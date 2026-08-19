@@ -49,6 +49,8 @@ types.
 
 ## Verification
 
+- Do not run gradlew commands. Just tell me to do it or ask before you do.
+- Use `--console=plain`
 - In PowerShell, invoke the Gradle wrapper as `.\gradlew.bat <task>`; do not
   prefix it with an additional slash.
 - Run the narrowest relevant task:

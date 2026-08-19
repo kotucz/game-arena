@@ -30,6 +30,9 @@ class NetworkContactsGameFacade(
     private val _gameState = MutableStateFlow(initialState)
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
 
+    private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
+    override val logs: StateFlow<List<GameLogEntry>> = _logs.asStateFlow()
+
     init {
         scope.launch { runSession() }
     }

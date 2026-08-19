@@ -79,6 +79,7 @@ kotlin {
             implementation(libs.androidx.navigation.compose)
             implementation(libs.ktor.client.core)
             implementation(libs.kotlin.inject.runtime.kmp)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {

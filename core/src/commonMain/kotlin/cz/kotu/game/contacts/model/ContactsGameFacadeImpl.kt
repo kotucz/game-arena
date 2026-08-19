@@ -3,6 +3,7 @@ package cz.kotu.game.contacts.model
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.time.Clock
 
 class ContactsGameFacadeImpl(
     private val _gameState: MutableStateFlow<ContactsBoardState>,
@@ -14,6 +15,9 @@ class ContactsGameFacadeImpl(
     internal constructor(initialState: ContactsBoardState) : this(MutableStateFlow(initialState))
 
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
+
+    private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
+    override val logs: StateFlow<List<GameLogEntry>> = _logs.asStateFlow()
 
     // TODO called via action
     override fun connect(
@@ -128,6 +132,15 @@ class ContactsGameFacadeImpl(
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
     ) {
+        addGameLog(
+            "${player.username}: $actionType ${
+                playerContacts.joinToString { "[${it.number}]" }
+            } other: ${
+//                otherContacts.joinToString { "[${ it.number }]" } // TODO only visible to owner. position may be
+                otherContacts.joinToString { "[?]" }
+            }"
+        )
+
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
         if (actionType == ContactsBoardState.ActionType.ResolveMultiConnect) {
@@ -174,8 +187,13 @@ class ContactsGameFacadeImpl(
             )
 
             ContactsBoardState.ActionType.ResolveMultiConnect -> error("Handled above")
-            // TODO
-            else -> {}
         }
+    }
+
+    private fun addGameLog(text: String) {
+        _logs.value += GameLogEntry(
+            Clock.System.now().toEpochMilliseconds(),
+            text,
+        )
     }
 }

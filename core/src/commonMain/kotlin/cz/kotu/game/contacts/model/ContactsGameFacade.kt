@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.StateFlow
 interface ContactsGameFacade {
     val gameState: StateFlow<ContactsBoardState>
 
+    val logs: StateFlow<List<GameLogEntry>>
+
     fun connect(
         player: ContactsBoardState.Player,
         playerContact: ContactsBoardState.Contact,
