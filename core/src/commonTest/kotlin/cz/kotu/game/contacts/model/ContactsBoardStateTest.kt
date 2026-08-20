@@ -37,7 +37,7 @@ class ContactsBoardStateTest {
         assertEquals(players, state.racks.map { it.owner })
         assertEquals(listOf(12, 12, 12, 12), state.racks.map { it.contactIds.size })
         state.racks.forEach { rack ->
-            assertEquals(state.contacts(rack).sorted(), state.contacts(rack))
+            assertEquals(state.rackContacts(rack).sorted(), state.rackContacts(rack))
         }
         assertEquals(
             expectedContactIds,
@@ -114,7 +114,7 @@ class ContactsBoardStateTest {
     fun contactMatchKeyUsesYForYellowAndNumberForOtherContacts() {
         assertEquals("Y", ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Yellow).matchKey)
         assertEquals("7", ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Blue).matchKey)
-        assertEquals("7", ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7, ContactsBoardState.ContactType.Red).matchKey)
+        assertEquals("R", ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7, ContactsBoardState.ContactType.Red).matchKey)
     }
 
     @Test
@@ -200,7 +200,7 @@ class ContactsBoardStateTest {
         val red = ContactsBoardState.Contact(
             ContactsBoardState.ContactId(2),
             number = 2,
-            type = ContactsBoardState.ContactType.Red,
+            type = ContactsBoardState.ContactType.Blue,
         )
         val state = ContactsBoardState(
             pool = listOf(blue, red),

@@ -335,7 +335,7 @@ private fun RackView(
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(spacing, alignment = Alignment.CenterHorizontally),
             ) {
-                gameState.contacts(rack).forEach { contact ->
+                gameState.rackContacts(rack).forEach { contact ->
                     Column(
                         modifier = Modifier.wrapContentSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,

@@ -20,6 +20,7 @@ data class ContactsBoardState internal constructor(
         ActionType.TripleConnect,
         ActionType.MyDoubleConnect,
         ActionType.SoloConnectRest,
+        ActionType.FinishReds,
         ActionType.AddHint,
     ),
 
@@ -48,6 +49,7 @@ data class ContactsBoardState internal constructor(
         TripleConnect(1, 3),
         MyDoubleConnect(2, 1),
         SoloConnectRest(-1, 0),
+        FinishReds(-1, 0),
         ResolveMultiConnect(1, 0),
         ;
 
@@ -178,7 +180,11 @@ data class ContactsBoardState internal constructor(
         return requireNotNull(contact(contactId)) { "Unknown contact id: $contactId" }
     }
 
-    fun contacts(rack: Rack): List<Contact> {
+    fun playerRacks(player: Player): List<Rack> {
+        return racks.filter { it.owner == player }
+    }
+
+    fun rackContacts(rack: Rack): List<Contact> {
         return rack.contactIds.map(::requireContact)
     }
 
@@ -212,9 +218,36 @@ data class ContactsBoardState internal constructor(
             return "Action type is not allowed"
         }
 
+        if (actionType == ActionType.FinishReds) {
+            if (playerContacts.isEmpty() || otherContacts.isNotEmpty()) {
+                return "Invalid number of selected contacts"
+            }
+            if (playerContacts.any { it.type != ContactType.Red }) {
+                return "All selected contacts must be red"
+            }
+            if (playerContacts.any { !isOwnedBy(player, it) || isSolved(it) }) {
+                return "Selected contact must be an unsolved contact owned by the player"
+            }
+            val unsolvedPlayerContacts = playerRacks(player)
+                .flatMap { rack -> rackContacts(rack) }
+                .filter { !isSolved(it) }.toSet()
+            if (unsolvedPlayerContacts.any { it.type != ContactType.Red }) {
+                return "All other contacts must be solved"
+            }
+            if (playerContacts != unsolvedPlayerContacts) {
+                return "All remaining red contacts must be selected"
+            }
+            return null
+        }
+
+        val anyPlayerContactsRed = playerContacts.any { it.type == ContactType.Red }
+
         if (actionType == ActionType.SoloConnectRest) {
             if (playerContacts.isEmpty() || otherContacts.isNotEmpty()) {
                 return "Invalid number of selected contacts"
+            }
+            if (anyPlayerContactsRed) {
+                return "Selected not be red. Use FinishRed action"
             }
             if (playerContacts.map { it.matchKey }.toSet().size != 1) {
                 return "Selected contacts must have the same number or all yellow"
@@ -223,6 +256,12 @@ data class ContactsBoardState internal constructor(
                 return "Selected contact must be an unsolved contact owned by the player"
             }
             val matchKey = playerContacts.first().matchKey
+            val remainingNotOwnedContacts = pool.filter {
+                it.matchKey == matchKey && !isOwnedBy(player, it) && !isSolved(it)
+            }.toSet()
+            if (remainingNotOwnedContacts.isNotEmpty()) {
+                return "Some other player still has that contact"
+            }
             val remainingOwnedContacts = pool.filter {
                 it.matchKey == matchKey && isOwnedBy(player, it) && !isSolved(it)
             }.toSet()
@@ -247,6 +286,10 @@ data class ContactsBoardState internal constructor(
                 return "Selected contact is not a multi-connect target"
             }
             return null
+        }
+
+        if (anyPlayerContactsRed) {
+            return "Red contacts cannot be connected"
         }
 
         if (playerContacts.any { !isOwnedBy(player, it) }) {
@@ -278,19 +321,7 @@ data class ContactsBoardState internal constructor(
     }
 
     fun withFaultFor(contact: Contact): ContactsBoardState {
-        // TODO use withHintFor
-        val rackIndex = racks.indexOfFirst { contact.id in it.contactIds }
-        if (rackIndex < 0) return this
-
-        val rack = racks[rackIndex]
-        val updatedRack = rack.copy(
-            hints = rack.hints + (contact.id to contact.number.toString()),
-        )
-
-        return copy(
-            racks = racks.toMutableList().also { it[rackIndex] = updatedRack },
-            faults = faults + 1,
-        )
+        return withHintFor(contact).copy(faults = faults + 1)
     }
 
     fun withHintFor(contact: Contact): ContactsBoardState {
@@ -298,8 +329,9 @@ data class ContactsBoardState internal constructor(
         if (rackIndex < 0) return this
 
         val rack = racks[rackIndex]
+        val hintText = contact.matchKey
         val updatedRack = rack.copy(
-            hints = rack.hints + (contact.id to contact.number.toString()),
+            hints = rack.hints + (contact.id to hintText),
         )
 
         return copy(
@@ -310,4 +342,8 @@ data class ContactsBoardState internal constructor(
 }
 
 val ContactsBoardState.Contact.matchKey: String
-    get() = if (type == ContactsBoardState.ContactType.Yellow) "Y" else number.toString()
+    get() = when (type) {
+        ContactsBoardState.ContactType.Blue -> number.toString()
+        ContactsBoardState.ContactType.Yellow -> "Y"
+        ContactsBoardState.ContactType.Red -> "R"
+    }

@@ -46,10 +46,16 @@ class ContactsGameFacadeImpl(
         }
 
         if (!gameState.contactsMatch(playerContact, otherContact)) {
+            if (otherContact.type == ContactsBoardState.ContactType.Red) {
+                addGameLog("${player.username}: Red Connected! [Game Over]")
+            }
             _gameState.value = gameState.withFaultFor(otherContact)
             return
         }
 
+        if (otherContact.type == ContactsBoardState.ContactType.Red) {
+            addGameLog("${player.username}: Connected successfully!")
+        }
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
     }
 
@@ -115,6 +121,7 @@ class ContactsGameFacadeImpl(
             otherContacts.all { it.id in rack.contactIds }
         }
 
+        addGameLog("${targetRack.owner.username} has to resolve multi connect")
         _gameState.value = gameState.copy(
             resolveMultiConnect = ContactsBoardState.ResolveMultiConnect(
                 targetPlayer = targetRack.owner,
@@ -178,6 +185,10 @@ class ContactsGameFacadeImpl(
             )
 
             ContactsBoardState.ActionType.SoloConnectRest -> {
+                _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
+            }
+
+            ContactsBoardState.ActionType.FinishReds -> {
                 _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
             }
 
