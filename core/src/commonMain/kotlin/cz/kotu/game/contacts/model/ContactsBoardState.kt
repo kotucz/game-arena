@@ -19,6 +19,7 @@ data class ContactsBoardState internal constructor(
         ActionType.DoubleConnect,
         ActionType.TripleConnect,
         ActionType.MyDoubleConnect,
+        ActionType.SoloConnectRest,
         ActionType.AddHint,
     ),
 
@@ -39,6 +40,7 @@ data class ContactsBoardState internal constructor(
         DoubleConnect(1, 2),
         TripleConnect(1, 3),
         MyDoubleConnect(2, 1),
+        SoloConnectRest(-1, 0),
         ResolveMultiConnect(1, 0),
         ;
 
@@ -178,8 +180,28 @@ data class ContactsBoardState internal constructor(
             return "Action type is not allowed"
         }
 
+        if (actionType == ActionType.SoloConnectRest) {
+            if (playerContacts.isEmpty() || otherContacts.isNotEmpty()) {
+                return "Invalid number of selected contacts"
+            }
+            if (playerContacts.map { it.number }.toSet().size != 1) {
+                return "Selected contacts must have the same number"
+            }
+            if (playerContacts.any { !isOwnedBy(player, it) || isSolved(it) }) {
+                return "Selected contact must be an unsolved contact owned by the player"
+            }
+            val number = playerContacts.first().number
+            val remainingOwnedContacts = pool.filter {
+                it.number == number && isOwnedBy(player, it) && !isSolved(it)
+            }.toSet()
+            if (playerContacts != remainingOwnedContacts) {
+                return "All remaining contacts with the number must be selected"
+            }
+            return null
+        }
+
         if (!actionType.matches(playerContacts.size, otherContacts.size)) {
-            return "Invalid number of selected contacts"
+            return "Invalid number of selected contacts: player (${playerContacts.size}/${actionType.playerContactsCount}) other (${otherContacts.size}/${actionType.otherContactsCount})"
         }
 
         if (actionType == ActionType.ResolveMultiConnect) {

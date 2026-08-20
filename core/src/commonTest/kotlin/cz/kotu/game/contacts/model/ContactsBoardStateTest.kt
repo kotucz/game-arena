@@ -80,7 +80,7 @@ class ContactsBoardStateTest {
         val (state, alice, bob, aliceContact, bobContact) = validationState()
 
         assertEquals(
-            "Invalid number of selected contacts",
+            "Invalid number of selected contacts: player (0/1) other (1/1)",
             state.isActionLegal(alice, ContactsBoardState.ActionType.StandardConnect, emptySet(), setOf(bobContact)),
         )
         assertEquals(

@@ -225,7 +225,23 @@ fun ContactsPlayerScreen(
                     }
                 }
 
-                val validAction = selectedActionType?.matches(playerContacts.size, otherContacts.size) == true
+                val validationError = selectedActionType?.let { actionType ->
+                    gameState.isActionLegal(
+                        player,
+                        actionType,
+                        playerContacts,
+                        otherContacts,
+                    )
+                }
+                val validAction = selectedActionType != null && validationError == null
+
+                validationError?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color(0xFFCC0000),
+                        textAlign = TextAlign.Center,
+                    )
+                }
 
                 Button(
                     enabled = validAction,
@@ -379,7 +395,7 @@ private fun RackView(
                                         .fillMaxSize()
                                         .background(Color(0xFFCCDDCC), RoundedCornerShape(8.dp))
                                         .border(1.dp, color = Color.Black, RoundedCornerShape(8.dp)),
-                                    )
+                                )
                                 Text(
                                     text = hint,
                                     color = Color.DarkGray,

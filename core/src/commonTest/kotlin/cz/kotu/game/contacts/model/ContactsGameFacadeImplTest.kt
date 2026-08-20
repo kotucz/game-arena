@@ -157,4 +157,39 @@ class ContactsGameFacadeImplTest {
         assertEquals(2, facade.gameState.value.resolveMultiConnect?.targetContacts?.size)
     }
 
+    @Test
+    fun soloConnectRestSolvesAllRemainingSameNumberContactsAcrossRacks() {
+        val state = initialState.copy(
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceContact.id, aliceOtherContact.id)),
+                ContactsBoardState.Rack(alice, listOf(aliceMatchingContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
+            ),
+        )
+        val facade = ContactsGameFacadeImpl(state)
+
+        facade.action(
+            alice,
+            ContactsBoardState.ActionType.SoloConnectRest,
+            setOf(aliceContact, aliceMatchingContact),
+            emptySet(),
+        )
+
+        assertEquals(setOf(aliceContact.id, aliceMatchingContact.id), facade.gameState.value.solved)
+    }
+
+    @Test
+    fun soloConnectRestRejectsIncompleteSelection() {
+        val facade = ContactsGameFacadeImpl(initialState)
+
+        facade.action(
+            alice,
+            ContactsBoardState.ActionType.SoloConnectRest,
+            setOf(aliceContact),
+            emptySet(),
+        )
+
+        assertEquals(emptySet(), facade.gameState.value.solved)
+    }
+
 }

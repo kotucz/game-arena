@@ -169,6 +169,10 @@ class ContactsGameFacadeImpl(
                 otherContact = otherContacts.single(),
             )
 
+            ContactsBoardState.ActionType.SoloConnectRest -> {
+                _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
+            }
+
             ContactsBoardState.ActionType.ResolveMultiConnect -> error("Handled above")
         }
     }
