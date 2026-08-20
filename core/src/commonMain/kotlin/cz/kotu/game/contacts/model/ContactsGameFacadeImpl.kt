@@ -27,11 +27,13 @@ class ContactsGameFacadeImpl(
     ) {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
-        val playerOwnsContact = gameState.isOwnedBy(player, playerContact)
-        val anotherPlayerOwnsContact = gameState.isOwnedByAnotherPlayer(player, otherContact)
-        val contactsAreUnsolved = !gameState.isSolved(playerContact) && !gameState.isSolved(otherContact)
-
-        if (!playerOwnsContact || !anotherPlayerOwnsContact || !contactsAreUnsolved) {
+        if (gameState.isActionLegal(
+                player,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(playerContact),
+                setOf(otherContact),
+            ) != null
+        ) {
             return
         }
 
@@ -97,25 +99,13 @@ class ContactsGameFacadeImpl(
     ) {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
-        if (actionType !in setOf(
-                ContactsBoardState.ActionType.DoubleConnect,
-                ContactsBoardState.ActionType.TripleConnect,
-            ) ||
-            !actionType.matches(1, otherContacts.size) ||
-            !gameState.isOwnedBy(player, playerContact) ||
-            gameState.isSolved(playerContact) ||
-            otherContacts.isEmpty() ||
-            otherContacts.any { gameState.isSolved(it) } ||
-            otherContacts.any { !gameState.isOwnedByAnotherPlayer(player, it) }
-        ) {
+        if (gameState.isActionLegal(player, actionType, setOf(playerContact), otherContacts) != null) {
             return
         }
 
-        // A multi-connect is resolved by the owner of the opposing rack. All
-        // selected contacts must therefore belong to the same rack.
-        val targetRack = gameState.racks.singleOrNull { rack ->
+        val targetRack = gameState.racks.single { rack ->
             otherContacts.all { it.id in rack.contactIds }
-        } ?: return
+        }
 
         _gameState.value = gameState.copy(
             resolveMultiConnect = ContactsBoardState.ResolveMultiConnect(
@@ -144,19 +134,12 @@ class ContactsGameFacadeImpl(
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
         if (actionType == ContactsBoardState.ActionType.ResolveMultiConnect) {
-            if (!actionType.matches(playerContacts.size, otherContacts.size)) return
+            if (gameState.isActionLegal(player, actionType, playerContacts, otherContacts) != null) return
             resolveMultiConnect(player, playerContacts.single())
             return
         }
 
-        // TODO should be in single rack?
-        val playerOwnsContacts = playerContacts.all { gameState.isOwnedBy(player, it) }
-        val anotherPlayerOwnsContacts = otherContacts.all { gameState.isOwnedByAnotherPlayer(player, it) }
-        val contactsAreUnsolved =
-            playerContacts.all { !gameState.isSolved(it) } &&
-                    otherContacts.all { !gameState.isSolved(it) }
-
-        if (!playerOwnsContacts || !anotherPlayerOwnsContacts || !contactsAreUnsolved) {
+        if (gameState.isActionLegal(player, actionType, playerContacts, otherContacts) != null) {
             return
         }
 

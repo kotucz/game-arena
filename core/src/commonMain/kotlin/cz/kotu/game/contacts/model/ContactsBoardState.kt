@@ -22,7 +22,7 @@ data class ContactsBoardState internal constructor(
         ActionType.AddHint,
     ),
 
-    val resolveMultiConnect : ResolveMultiConnect? = null,
+    val resolveMultiConnect: ResolveMultiConnect? = null,
 ) {
     @Serializable
     data class Player(
@@ -166,6 +166,55 @@ data class ContactsBoardState internal constructor(
 
     fun contactsMatch(first: Contact, second: Contact): Boolean {
         return first.number == second.number
+    }
+
+    fun isActionLegal(
+        player: Player,
+        actionType: ActionType,
+        playerContacts: Set<Contact>,
+        otherContacts: Set<Contact>,
+    ): String? {
+        if (actionType !in allowedActionTypes && actionType != ActionType.ResolveMultiConnect) {
+            return "Action type is not allowed"
+        }
+
+        if (!actionType.matches(playerContacts.size, otherContacts.size)) {
+            return "Invalid number of selected contacts"
+        }
+
+        if (actionType == ActionType.ResolveMultiConnect) {
+            val resolution = resolveMultiConnect
+                ?: return "There is no multi-connect to resolve"
+            val targetContact = playerContacts.single()
+            if (resolution.targetPlayer != player) {
+                return "Only the target player can resolve the multi-connect"
+            }
+            if (targetContact.id !in resolution.targetContacts) {
+                return "Selected contact is not a multi-connect target"
+            }
+            return null
+        }
+
+        if (playerContacts.any { !isOwnedBy(player, it) }) {
+            return "Player does not own the selected contact"
+        }
+        if (otherContacts.any { !isOwnedByAnotherPlayer(player, it) }) {
+            return "Selected opposing contact is not owned by another player"
+        }
+        if (playerContacts.any(::isSolved) || otherContacts.any(::isSolved)) {
+            return "Selected contact is already solved"
+        }
+
+        if (actionType == ActionType.DoubleConnect || actionType == ActionType.TripleConnect) {
+            val targetRack = racks.singleOrNull { rack ->
+                otherContacts.all { it.id in rack.contactIds }
+            }
+            if (targetRack == null) {
+                return "Selected opposing contacts must belong to one rack"
+            }
+        }
+
+        return null
     }
 
     fun withSolvedContacts(vararg contacts: Contact): ContactsBoardState {

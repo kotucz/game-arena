@@ -2,6 +2,7 @@ package cz.kotu.game.contacts.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ContactsBoardStateTest {
     @Test
@@ -59,4 +60,85 @@ class ContactsBoardStateTest {
             state.racks.map { it.owner },
         )
     }
+
+    @Test
+    fun isActionLegalReturnsNullForAValidConnect() {
+        val (state, alice, bob, aliceContact, bobContact) = validationState()
+
+        assertNull(
+            state.isActionLegal(
+                alice,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(aliceContact),
+                setOf(bobContact),
+            ),
+        )
+    }
+
+    @Test
+    fun isActionLegalExplainsInvalidSelectionAndOwnership() {
+        val (state, alice, bob, aliceContact, bobContact) = validationState()
+
+        assertEquals(
+            "Invalid number of selected contacts",
+            state.isActionLegal(alice, ContactsBoardState.ActionType.StandardConnect, emptySet(), setOf(bobContact)),
+        )
+        assertEquals(
+            "Player does not own the selected contact",
+            state.isActionLegal(bob, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact)),
+        )
+    }
+
+    @Test
+    fun isActionLegalExplainsSolvedAndDisallowedActions() {
+        val (state, alice, _, aliceContact, bobContact) = validationState()
+
+        assertEquals(
+            "Selected contact is already solved",
+            state.withSolvedContacts(aliceContact).isActionLegal(
+                alice,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(aliceContact),
+                setOf(bobContact),
+            ),
+        )
+        assertEquals(
+            "Action type is not allowed",
+            state.copy(allowedActionTypes = emptySet()).isActionLegal(
+                alice,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(aliceContact),
+                setOf(bobContact),
+            ),
+        )
+    }
+
+    private fun validationState(): ValidationState {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 1)
+        val bobContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 2)
+        return ValidationState(
+            ContactsBoardState(
+                pool = listOf(aliceContact, bobContact),
+                racks = listOf(
+                    ContactsBoardState.Rack(alice, listOf(aliceContact.id)),
+                    ContactsBoardState.Rack(bob, listOf(bobContact.id)),
+                ),
+                solved = emptySet(),
+            ),
+            alice,
+            bob,
+            aliceContact,
+            bobContact,
+        )
+    }
+
+    private data class ValidationState(
+        val state: ContactsBoardState,
+        val alice: ContactsBoardState.Player,
+        val bob: ContactsBoardState.Player,
+        val aliceContact: ContactsBoardState.Contact,
+        val bobContact: ContactsBoardState.Contact,
+    )
 }
