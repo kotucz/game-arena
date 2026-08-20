@@ -9,7 +9,15 @@ class ContactsGameFacadeImpl(
     private val _gameState: MutableStateFlow<ContactsBoardState>,
 ) : ContactsGameFacade {
     constructor(players: List<ContactsBoardState.Player>) : this(
-        MutableStateFlow(ContactsBoardState.create(players)),
+        MutableStateFlow(
+            ContactsBoardState.create(
+                ContactsBoardState.ContactsGameConfig(
+                    players,
+                    yellowCount = 4,
+                    redCount = 2,
+                )
+            )
+        ),
     )
 
     internal constructor(initialState: ContactsBoardState) : this(MutableStateFlow(initialState))

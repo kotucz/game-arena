@@ -268,8 +268,10 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(text = "Contacts Pool")
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val groups = gameState.pool.groupBy { it.number to it.type }.entries.sortedBy { it.value.first() }
+
             val spacing = 4.dp
-            val poolTileWidth = (((maxWidth - spacing * 12) / 12) * 0.75f).coerceAtMost(40.dp)
+            val poolTileWidth = (((maxWidth - spacing * groups.size) / groups.size)).coerceAtMost(40.dp)
             val poolTileHeight = poolTileWidth * phi
             val poolFontSize = (18f * (poolTileWidth / 30.dp).coerceIn(0.55f, 1f)).sp
 
@@ -280,31 +282,24 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                 horizontalArrangement = Arrangement.spacedBy(spacing),
             ) {
                 // Group contacts by number and sort by number
-                gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (_, contacts) ->
+//                gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (_, contacts) ->
+
+                groups.forEach { (_, contacts) ->
                     Column(
                         modifier = Modifier.wrapContentSize(),
                         verticalArrangement = Arrangement.spacedBy(spacing),
                     ) {
                         contacts.forEach { contact ->
-                            Box(
-                                modifier = Modifier
-                                    .size(width = poolTileWidth, height = poolTileHeight)
-                                    .background(
-                                        if (gameState.isSolved(contact)) Color(0xFF4CAF50) else Color(
-                                            0xFFBDBDBD
-                                        ),
-                                        RoundedCornerShape(6.dp),
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = contact.number.toString(),
-                                    color = if (gameState.isSolved(contact)) Color.White else Color.Black,
-                                    fontSize = poolFontSize,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
+                            ContactTileView(
+                                contact = contact,
+                                tileWidth = poolTileWidth,
+                                tileHeight = poolTileHeight,
+                                backgroundColor = if (gameState.isSolved(contact)) Color(0xFF4CAF50) else Color(0xFFBDBDBD),
+                                isSecret = false,
+                                fontSize = poolFontSize,
+                                fontWeight = FontWeight.Bold,
+                                textColor = if (gameState.isSolved(contact)) Color.White else Color.Black,
+                            )
                         }
                     }
                 }
@@ -327,8 +322,10 @@ private fun RackView(
         Text(text = "Owner: " + rack.owner.username)
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val maxContacts = gameState.racks.maxOf { it.contactIds.size }
+
             val spacing = 8.dp
-            val tileWidth = ((maxWidth - spacing * 12) / 12).coerceAtMost(64.dp)
+            val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(64.dp)
             val tileHeight = tileWidth * phi
             val numberFontSize = (24f * (tileWidth / 50.dp).coerceIn(0.55f, 1f)).sp
 
@@ -344,45 +341,30 @@ private fun RackView(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(
+                        ContactTileView(
+                            contact = contact,
+                            tileWidth = tileWidth,
+                            tileHeight = tileHeight,
+                            backgroundColor = when {
+                                gameState.isSolved(contact) -> Color(0xFF808080)
+                                contact in selectedContacts -> Color(0xFF1976D2)
+                                contact in highlightedContacts -> Color(0xFFFFB300)
+                                else -> Color(0xFF4A4A4A)
+                            },
+                            isSecret = !isOwner && !gameState.isSolved(contact),
+                            fontSize = numberFontSize,
+                            fontWeight = if (isOwner || gameState.isSolved(contact)) FontWeight.Bold else FontWeight.Normal,
                             modifier = Modifier
-                                .size(width = tileWidth, height = tileHeight)
                                 .shadow(
                                     elevation = if (contact in highlightedContacts) 8.dp else 0.dp,
                                     shape = RoundedCornerShape(8.dp),
-                                )
-                                .background(
-                                    when {
-                                        gameState.isSolved(contact) -> Color(0xFF808080)
-                                        contact in selectedContacts -> Color(0xFF1976D2)
-                                        contact in highlightedContacts -> Color(0xFFFFB300)
-                                        else -> Color(0xFF4A4A4A)
-                                    },
-                                    RoundedCornerShape(8.dp),
                                 )
                                 .clickable(
                                     enabled = !gameState.isSolved(contact) &&
                                             (clickableContacts == null || contact in clickableContacts),
                                     onClick = { onContactClick(contact) },
                                 ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = if (isOwner || gameState.isSolved(contact)) {
-                                    contact.number.toString()
-                                } else {
-                                    "?"
-                                },
-                                color = Color.White,
-                                fontSize = numberFontSize,
-                                fontWeight = if (isOwner || gameState.isSolved(contact)) {
-                                    FontWeight.Bold
-                                } else {
-                                    FontWeight.Normal
-                                },
-                                textAlign = TextAlign.Center,
-                            )
-                        }
+                        )
 
                         Box(
                             modifier = Modifier
@@ -410,5 +392,49 @@ private fun RackView(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ContactTileView(
+    contact: ContactsBoardState.Contact,
+    tileWidth: androidx.compose.ui.unit.Dp,
+    tileHeight: androidx.compose.ui.unit.Dp,
+    backgroundColor: Color,
+    isSecret: Boolean,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontWeight: FontWeight,
+    modifier: Modifier = Modifier,
+    textColor: Color = Color.White,
+) {
+    val cornerRadius = tileWidth / 8
+    val shape = RoundedCornerShape(cornerRadius)
+
+    Box(
+        modifier = modifier.size(tileWidth, tileHeight).background(backgroundColor, shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!isSecret) {
+            Box(
+                modifier = Modifier
+                    .size(tileWidth, tileHeight / 5)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        color = when (contact.type) {
+                            ContactsBoardState.ContactType.Blue -> Color.Blue
+                            ContactsBoardState.ContactType.Yellow -> Color.Yellow
+                            ContactsBoardState.ContactType.Red -> Color.Red
+                        },
+                        shape = RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius),
+                    ),
+            )
+        }
+        Text(
+            text = if (isSecret) "?" else contact.number.toString(),
+            color = textColor,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            textAlign = TextAlign.Center,
+        )
     }
 }

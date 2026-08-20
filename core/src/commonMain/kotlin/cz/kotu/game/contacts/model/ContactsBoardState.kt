@@ -30,6 +30,13 @@ data class ContactsBoardState internal constructor(
         val username: String,
     )
 
+    data class ContactsGameConfig(
+        val players: List<Player>,
+        val blueCount: Int = 12, // x4
+        val yellowCount: Int = 0,
+        val redCount: Int = 0,
+    )
+
     @Serializable
     enum class ActionType(
         val playerContactsCount: Int,
@@ -57,12 +64,21 @@ data class ContactsBoardState internal constructor(
         override fun compareTo(other: ContactId): Int = value.compareTo(other.value)
     }
 
+    enum class ContactType {
+        Blue,
+        Yellow,
+        Red,
+    }
+
     @Serializable
     data class Contact(
         val id: ContactId,
         val number: Int,
+        val type: ContactType = ContactType.Blue,
     ) : Comparable<Contact> {
-        override fun compareTo(other: Contact): Int = number.compareTo(other.number)
+        override fun compareTo(other: Contact): Int {
+            return compareValuesBy(this, other, Contact::number, { it.type.ordinal })
+        }
     }
 
     @Serializable
@@ -94,21 +110,37 @@ data class ContactsBoardState internal constructor(
             allowedActionTypes = emptySet(),
         )
 
-        fun create(players: List<Player>): ContactsBoardState {
+        fun create(config: ContactsGameConfig): ContactsBoardState {
             val numRacks = 4
+            require(config.players.isNotEmpty()) { "At least one player is required" }
+            require(config.yellowCount >= 0) { "yellowCount must not be negative" }
+            require(config.redCount >= 0) { "redCount must not be negative" }
+            require(config.yellowCount + config.redCount < config.blueCount) {
+                "The total number of yellow and red contacts must not exceed ${config.blueCount}"
+            }
 
-            val pool: MutableList<Contact> = mutableListOf()
+            val specialTypes = buildList {
+                repeat(config.yellowCount) { add(ContactType.Yellow) }
+                repeat(config.redCount) { add(ContactType.Red) }
+            }.shuffled()
+            val specialNumbers = (1..<config.blueCount).shuffled().take(specialTypes.size)
+                .zip(specialTypes)
+                .toMap()
+            val pool = mutableListOf<Contact>()
 
             var contId = 1
 
-            for (num in 1..12) {
+            for (num in 1..config.blueCount) {
                 // 4 instances per number
-                for (i in 1..4) {
+                repeat(4) {
                     pool.add(Contact(id = ContactId(contId), number = num))
                     contId++
                 }
+                specialNumbers[num]?.let { type ->
+                    pool.add(Contact(id = ContactId(contId), number = num, type = type))
+                    contId++
+                }
             }
-
 
             val rackContacts: List<MutableList<ContactId>> = (1..numRacks).map { mutableListOf() }
 
@@ -120,10 +152,10 @@ data class ContactsBoardState internal constructor(
 
             val contactsById = pool.associateBy { it.id }
             val racks = rackContacts.mapIndexed { index, contacts ->
-                val player = players[index % players.size]
+                val player = config.players[index % config.players.size]
                 Rack(
                     owner = player,
-                    contactIds = contacts.sortedBy { contactsById.getValue(it).number },
+                    contactIds = contacts.sortedBy { contactsById.getValue(it) },
                 )
             }
 
@@ -167,7 +199,7 @@ data class ContactsBoardState internal constructor(
     }
 
     fun contactsMatch(first: Contact, second: Contact): Boolean {
-        return first.number == second.number
+        return first.matchKey == second.matchKey
     }
 
     fun isActionLegal(
@@ -184,15 +216,15 @@ data class ContactsBoardState internal constructor(
             if (playerContacts.isEmpty() || otherContacts.isNotEmpty()) {
                 return "Invalid number of selected contacts"
             }
-            if (playerContacts.map { it.number }.toSet().size != 1) {
-                return "Selected contacts must have the same number"
+            if (playerContacts.map { it.matchKey }.toSet().size != 1) {
+                return "Selected contacts must have the same number or all yellow"
             }
             if (playerContacts.any { !isOwnedBy(player, it) || isSolved(it) }) {
                 return "Selected contact must be an unsolved contact owned by the player"
             }
-            val number = playerContacts.first().number
+            val matchKey = playerContacts.first().matchKey
             val remainingOwnedContacts = pool.filter {
-                it.number == number && isOwnedBy(player, it) && !isSolved(it)
+                it.matchKey == matchKey && isOwnedBy(player, it) && !isSolved(it)
             }.toSet()
             if (playerContacts != remainingOwnedContacts) {
                 return "All remaining contacts with the number must be selected"
@@ -276,3 +308,6 @@ data class ContactsBoardState internal constructor(
     }
 
 }
+
+val ContactsBoardState.Contact.matchKey: String
+    get() = if (type == ContactsBoardState.ContactType.Yellow) "Y" else number.toString()
