@@ -7,6 +7,8 @@ import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -17,6 +19,7 @@ class GamesViewModel(
     private val gamesClient: GamesClient,
     private val authManager: AuthManager,
 ) : ViewModel() {
+    val username = authManager.currentUsername
     private val _games = MutableStateFlow<List<RunningGame>?>(null)
     val games: StateFlow<List<RunningGame>?> = _games.asStateFlow()
 
@@ -42,11 +45,9 @@ class GamesViewModel(
     val configText: StateFlow<String> = _configText.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            authManager.currentUsername.collect { username ->
-                _playersText.value = username ?: ""
-            }
-        }
+        authManager.currentUsername
+            .onEach { _playersText.value = it ?: "" }
+            .launchIn(viewModelScope)
         loadGames()
     }
 
@@ -56,6 +57,12 @@ class GamesViewModel(
 
     fun updateConfigText(text: String) {
         _configText.update { text }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            authManager.logout()
+        }
     }
 
     fun loadGames() {

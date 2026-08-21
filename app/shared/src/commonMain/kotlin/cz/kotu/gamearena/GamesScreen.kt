@@ -18,6 +18,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cz.kotu.gamearena.model.RunningGame
@@ -33,6 +35,7 @@ fun GamesScreen(
     val creatingGame by viewModel.creatingGame.collectAsState()
     val playersText by viewModel.playersText.collectAsState()
     val configText by viewModel.configText.collectAsState()
+    val username by viewModel.username.collectAsState()
 
     Column(
         modifier = Modifier
@@ -42,6 +45,17 @@ fun GamesScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.End),
+            verticalAlignment = CenterVertically,
+        ) {
+            Text(username ?: "Not logged in")
+            Button(onClick = viewModel::logout) {
+                Text("Logout")
+            }
+        }
+
         Text("Running games")
         Text("Join a game already in progress, or start a game just for yourself.")
 

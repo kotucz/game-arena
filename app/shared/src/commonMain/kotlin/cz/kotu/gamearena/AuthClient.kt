@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 import me.tatarka.inject.annotations.Inject
@@ -26,6 +27,13 @@ class AuthClient(private val httpClient: HttpClient) {
             append("password", password)
         }
     )
+
+    suspend fun logout(): Result<String> = runCatching {
+        val response = httpClient.post(endpoint("/api/logout"))
+        val message = response.bodyAsText()
+        if (response.status.value !in 200..299) error(message.ifBlank { "Logout failed" })
+        message
+    }
 
     suspend fun currentUser(): Result<String> = runCatching {
         val response = httpClient.get(endpoint("/api/me"))

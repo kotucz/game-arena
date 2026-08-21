@@ -24,7 +24,7 @@ import me.tatarka.inject.annotations.Inject
 @Inject
 class AuthManager(
     private val authClient: AuthClient,
-    unauthorizedEvents: MutableSharedFlow<Unit>,
+    private val unauthorizedEvents: MutableSharedFlow<Unit>,
 ) {
     private val _currentUsername = MutableStateFlow<String?>(null)
     val currentUsername: StateFlow<String?> = _currentUsername.asStateFlow()
@@ -49,11 +49,9 @@ class AuthManager(
             _currentUsername.value = username.trim()
         }
 
-    fun onLoginSuccess(username: String) {
-        _currentUsername.value = username
-    }
-
-    fun logout() {
+    suspend fun logout() {
+        authClient.logout()
         _currentUsername.value = null
+        unauthorizedEvents.tryEmit(Unit)
     }
 }

@@ -94,6 +94,23 @@ fun Application.module() {
             }
         }
 
+        post("/api/logout") {
+            val token = call.request.cookies[SessionTokens.cookieName]
+            if (token != null) {
+                database.sessionDao().deleteByTokenHash(SessionTokens.hash(token))
+            }
+            call.response.cookies.append(
+                Cookie(
+                    name = SessionTokens.cookieName,
+                    value = "",
+                    maxAge = 0,
+                    httpOnly = true,
+                    path = "/",
+                ),
+            )
+            call.respondText("Logout successful")
+        }
+
         get("/api/games") {
             val session = currentSession(call, database)
             if (session == null) {
