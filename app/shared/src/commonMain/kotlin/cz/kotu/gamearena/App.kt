@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -100,10 +101,15 @@ fun App() {
 
         if (showAuthModal) {
             Dialog(onDismissRequest = {}) {
-                AuthScreen(
-                    authManager = authManager,
-                    onAuthenticated = { showAuthModal = false },
-                )
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    AuthScreen(
+                        authManager = authManager,
+                        onAuthenticated = { showAuthModal = false },
+                    )
+                }
             }
         }
     }
