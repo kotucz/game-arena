@@ -2,6 +2,7 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.gotfive.GameViewModel
+import cz.kotu.gamearena.GamesViewModel
 import cz.kotu.tools.MultiPlayerViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +25,7 @@ abstract class AppComponent {
 
     // username parameter removed — ContactsGameViewModel now injects AuthManager directly
     abstract val contactsGameViewModelFactory: (String) -> ContactsGameViewModel
+    abstract val gamesViewModelFactory: () -> GamesViewModel
 
     /**
      * Single shared event flow: the Ktor 401 interceptor emits into it, and

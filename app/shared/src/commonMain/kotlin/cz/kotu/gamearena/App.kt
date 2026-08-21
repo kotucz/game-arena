@@ -61,9 +61,9 @@ fun App() {
         ) {
             NavHost(navController, startDestination = GAMES_ROUTE) {
                 composable(GAMES_ROUTE) {
+                    val gamesViewModel: GamesViewModel = viewModel { appComponent.gamesViewModelFactory() }
                     GamesScreen(
-                        gamesClient = appComponent.gamesClient,
-                        authManager = authManager,
+                        viewModel = gamesViewModel,
                         onStartGotFive = { navController.navigate(GOT_FIVE_ROUTE) },
                         onGameClick = { game -> navController.navigate("game/${game.id}") },
                     )

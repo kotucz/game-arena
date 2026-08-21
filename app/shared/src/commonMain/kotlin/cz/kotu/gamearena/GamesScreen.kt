@@ -16,60 +16,23 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
 @Composable
 fun GamesScreen(
-    gamesClient: GamesClient,
-    authManager: AuthManager,
+    viewModel: GamesViewModel,
     onStartGotFive: () -> Unit,
     onGameClick: (RunningGame) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-    val username by authManager.currentUsername.collectAsState()
-    var games by remember { mutableStateOf<List<RunningGame>?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var creatingGame by remember { mutableStateOf(false) }
-    var playersText by remember(username) { mutableStateOf(username ?: "") }
-    var configText by remember {
-        mutableStateOf(
-            Json.encodeToString(
-                ContactsBoardState.ContactsGameConfig.serializer(),
-                ContactsBoardState.ContactsGameConfig(
-                    blueCount = 8,
-                    yellowCount = 4,
-                    redCount = 2,
-                )
-            )
-        )
-    }
-
-    fun loadGames() {
-        scope.launch {
-            error = null
-            games = null
-            gamesClient.runningGames().fold(
-                onSuccess = { games = it },
-                onFailure = { error = it.message ?: "Could not load running games" },
-            )
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        loadGames()
-    }
+    val games by viewModel.games.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val creatingGame by viewModel.creatingGame.collectAsState()
+    val playersText by viewModel.playersText.collectAsState()
+    val configText by viewModel.configText.collectAsState()
 
     Column(
         modifier = Modifier
@@ -90,7 +53,7 @@ fun GamesScreen(
 
         TextField(
             value = playersText,
-            onValueChange = { playersText = it },
+            onValueChange = viewModel::updatePlayersText,
             label = { Text("Players (one username per line)") },
             placeholder = { Text("Enter player usernames\none per line") },
             modifier = Modifier.fillMaxWidth(),
@@ -100,7 +63,7 @@ fun GamesScreen(
 
         TextField(
             value = configText,
-            onValueChange = { configText = it },
+            onValueChange = viewModel::updateConfigText,
             label = { Text("Contacts config") },
             placeholder = { Text("ContactsGameConfig") },
             modifier = Modifier.fillMaxWidth(),
@@ -109,21 +72,7 @@ fun GamesScreen(
         )
 
         Button(
-            onClick = {
-                scope.launch {
-                    creatingGame = true
-                    error = null
-                    val players = playersText.lines()
-                        .map { it.trim() }
-                        .filter { it.isNotBlank() }
-                        .ifEmpty { listOfNotNull(username) }
-                    gamesClient.createGame(type = "contacts", players = players, config = configText).fold(
-                        onSuccess = onGameClick,
-                        onFailure = { error = it.message ?: "Could not create game" },
-                    )
-                    creatingGame = false
-                }
-            },
+            onClick = { viewModel.createGame(onSuccess = onGameClick) },
             enabled = !creatingGame,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -136,7 +85,7 @@ fun GamesScreen(
             games == null && error == null -> CircularProgressIndicator()
             error != null -> {
                 Text(error!!)
-                Button(onClick = ::loadGames) { Text("Try again") }
+                Button(onClick = viewModel::loadGames) { Text("Try again") }
             }
 
             games!!.isEmpty() -> Text("There are no running multiplayer games.")
