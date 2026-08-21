@@ -26,7 +26,13 @@ class MultiPlayerViewModel(
         ContactsBoardState.Player("bob"),
     )
 
-    private val localFacade = ContactsGameFacadeImpl(players)
+    private val localFacade = ContactsGameFacadeImpl(
+        players, ContactsBoardState.ContactsGameConfig(
+            blueCount = 12,
+            yellowCount = 4,
+            redCount = 2,
+        )
+    )
     private val networkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun gameFacadeForPlayer(username:String): ContactsGameFacade = if (remoteGameId.isNotBlank()) {

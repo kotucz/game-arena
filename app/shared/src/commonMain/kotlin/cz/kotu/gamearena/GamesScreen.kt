@@ -1,12 +1,12 @@
 package cz.kotu.gamearena
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,9 +25,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
+import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 @Composable
 fun GamesScreen(
@@ -41,6 +43,18 @@ fun GamesScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var creatingGame by remember { mutableStateOf(false) }
     var playersText by remember(username) { mutableStateOf(username ?: "") }
+    var configText by remember {
+        mutableStateOf(
+            Json.encodeToString(
+                ContactsBoardState.ContactsGameConfig.serializer(),
+                ContactsBoardState.ContactsGameConfig(
+                    blueCount = 8,
+                    yellowCount = 4,
+                    redCount = 2,
+                )
+            )
+        )
+    }
 
     fun loadGames() {
         scope.launch {
@@ -84,6 +98,16 @@ fun GamesScreen(
             maxLines = 10,
         )
 
+        TextField(
+            value = configText,
+            onValueChange = { configText = it },
+            label = { Text("Contacts config") },
+            placeholder = { Text("ContactsGameConfig") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 10,
+        )
+
         Button(
             onClick = {
                 scope.launch {
@@ -93,7 +117,7 @@ fun GamesScreen(
                         .map { it.trim() }
                         .filter { it.isNotBlank() }
                         .ifEmpty { listOfNotNull(username) }
-                    gamesClient.createGame(type = "contacts", players = players).fold(
+                    gamesClient.createGame(type = "contacts", players = players, config = configText).fold(
                         onSuccess = onGameClick,
                         onFailure = { error = it.message ?: "Could not create game" },
                     )
@@ -114,6 +138,7 @@ fun GamesScreen(
                 Text(error!!)
                 Button(onClick = ::loadGames) { Text("Try again") }
             }
+
             games!!.isEmpty() -> Text("There are no running multiplayer games.")
             else -> games!!.forEach { game -> RunningGameCard(game, onClick = { onGameClick(game) }) }
         }

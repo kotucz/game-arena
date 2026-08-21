@@ -14,12 +14,16 @@ class GamesManager(
     private val games = ConcurrentHashMap<String, ManagedGame>()
 
     @Synchronized
-    fun createContactsGame(players: List<String> = listOf("alice", "bob")): ContactsGame {
+    fun createContactsGame(
+        players: List<String>,
+        config: ContactsBoardState.ContactsGameConfig,
+    ): ContactsGame {
         val game = ContactsGame(
             metadata = newMetadata(type = "contacts", players = players),
             contacts = ServerContactsGameFacade(
                 ContactsGameFacadeImpl(
                     players.map(ContactsBoardState::Player),
+                    config,
                 ),
             ),
         )

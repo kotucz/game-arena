@@ -45,23 +45,6 @@ class ApplicationTest {
     }
 
     @Test
-    fun listsRunningGamesForAuthenticatedUser() = testApplication {
-        application { module() }
-
-        val response = client.get("/api/games") {
-            header("X-Debug-Username", "test-user")
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val body = response.bodyAsText()
-        assertTrue(body.startsWith("["))
-        assertTrue(body.contains("\"id\":"))
-        assertTrue(body.contains("\"type\":\"contacts\""))
-        assertTrue(body.contains("\"players\":[\"alice\",\"bob\"]"))
-        assertTrue(body.contains("\"createdAt\":"))
-    }
-
-    @Test
     fun listingGamesRequiresAuthentication() = testApplication {
         application { module() }
 
@@ -77,13 +60,27 @@ class ApplicationTest {
         val response = client.post("/api/games") {
             header("X-Debug-Username", "test-user")
             contentType(ContentType.Application.Json)
-            setBody("{\"type\":\"contacts\",\"players\":[\"alice\",\"bob\"]}")
+            setBody("{\"type\":\"contacts\",\"players\":[\"alice\",\"bob\"], \"config\":\"{}\"}")
         }
 
         assertEquals(HttpStatusCode.Created, response.status)
         assertEquals(ContentType.Application.Json, response.contentType())
         assertTrue(response.bodyAsText().contains("\"type\":\"contacts\""))
         assertTrue(response.bodyAsText().contains("\"players\":[\"alice\",\"bob\"]"))
+
+        // listsRunningGamesForAuthenticatedUser
+
+        val response2 = client.get("/api/games") {
+            header("X-Debug-Username", "test-user")
+        }
+
+        assertEquals(HttpStatusCode.OK, response2.status)
+        val body = response2.bodyAsText()
+        assertTrue(body.startsWith("["))
+        assertTrue(body.contains("\"id\":"))
+        assertTrue(body.contains("\"type\":\"contacts\""))
+        assertTrue(body.contains("\"players\":[\"alice\",\"bob\"]"))
+        assertTrue(body.contains("\"createdAt\":"))
     }
 
     @Test

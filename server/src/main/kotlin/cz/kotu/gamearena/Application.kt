@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.CreateGameRequest
 import cz.kotu.gamearena.model.RunningGame
 import io.ktor.http.ContentType
@@ -43,7 +44,6 @@ fun Application.module() {
     }
     val database = createDatabase()
     val gamesManager = GamesManager()
-    gamesManager.createContactsGame()
     install(SSE)
     val webRoot = File(
         // relative url with ./gradlew :server:run
@@ -122,13 +122,15 @@ fun Application.module() {
                     call.respond(HttpStatusCode.BadRequest, "Invalid game request")
                 } else {
                     val players = request.players.map(String::trim)
+                    val config =
+                        Json.decodeFromString(ContactsBoardState.ContactsGameConfig.serializer(), request.config)
                     when {
                         request.type != "contacts" ->
                             call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
                         players.isEmpty() || players.any(String::isEmpty) ->
                             call.respond(HttpStatusCode.BadRequest, "At least one player is required")
                         else -> {
-                            val game = gamesManager.createContactsGame(players)
+                            val game = gamesManager.createContactsGame(players, config)
                             val response = RunningGame(
                                 id = game.metadata.id,
                                 type = game.metadata.type,

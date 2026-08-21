@@ -8,14 +8,14 @@ import kotlin.time.Clock
 class ContactsGameFacadeImpl(
     private val _gameState: MutableStateFlow<ContactsBoardState>,
 ) : ContactsGameFacade {
-    constructor(players: List<ContactsBoardState.Player>) : this(
+    constructor(
+        players: List<ContactsBoardState.Player>,
+        config: ContactsBoardState.ContactsGameConfig,
+    ) : this(
         MutableStateFlow(
             ContactsBoardState.create(
-                ContactsBoardState.ContactsGameConfig(
-                    players,
-                    yellowCount = 4,
-                    redCount = 2,
-                )
+                players,
+                config,
             )
         ),
     )

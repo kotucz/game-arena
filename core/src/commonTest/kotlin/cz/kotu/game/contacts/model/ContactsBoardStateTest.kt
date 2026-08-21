@@ -24,7 +24,7 @@ class ContactsBoardStateTest {
             ContactsBoardState.Player("dave"),
         )
 
-        val state = ContactsBoardState.create(ContactsBoardState.ContactsGameConfig(players))
+        val state = ContactsBoardState.create(players, ContactsBoardState.ContactsGameConfig())
 
         assertEquals(48, state.pool.size)
         val expectedContactIds = (1..48).map { ContactsBoardState.ContactId(it) }.toSet()
@@ -53,7 +53,7 @@ class ContactsBoardStateTest {
             ContactsBoardState.Player("bob"),
         )
 
-        val state = ContactsBoardState.create(ContactsBoardState.ContactsGameConfig(players))
+        val state = ContactsBoardState.create(players, ContactsBoardState.ContactsGameConfig())
 
         assertEquals(
             listOf(players[0], players[1], players[0], players[1]),
@@ -64,8 +64,8 @@ class ContactsBoardStateTest {
     @Test
     fun createAddsConfiguredSpecialContactsWithUniqueNumbersInRange() {
         val state = ContactsBoardState.create(
+            players = listOf(ContactsBoardState.Player("alice")),
             ContactsBoardState.ContactsGameConfig(
-                players = listOf(ContactsBoardState.Player("alice")),
                 yellowCount = 3,
                 redCount = 2,
             ),
@@ -105,24 +105,40 @@ class ContactsBoardStateTest {
     fun contactsMatchRequiresTheSameType() {
         val state = ContactsBoardState.empty()
         val blue = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Blue)
-        val yellow = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Yellow)
+        val yellow =
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Yellow)
 
         assertEquals(false, state.contactsMatch(blue, yellow))
     }
 
     @Test
     fun contactMatchKeyUsesYForYellowAndNumberForOtherContacts() {
-        assertEquals("Y", ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Yellow).matchKey)
-        assertEquals("7", ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Blue).matchKey)
-        assertEquals("R", ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7, ContactsBoardState.ContactType.Red).matchKey)
+        assertEquals(
+            "Y",
+            ContactsBoardState.Contact(
+                ContactsBoardState.ContactId(1),
+                7,
+                ContactsBoardState.ContactType.Yellow
+            ).matchKey
+        )
+        assertEquals(
+            "7",
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Blue).matchKey
+        )
+        assertEquals(
+            "R",
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7, ContactsBoardState.ContactType.Red).matchKey
+        )
     }
 
     @Test
     fun blueContactsMatchOnlyWhenNumbersMatch() {
         val state = ContactsBoardState.empty()
         val first = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Blue)
-        val sameNumber = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Blue)
-        val differentNumber = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 8, ContactsBoardState.ContactType.Blue)
+        val sameNumber =
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 7, ContactsBoardState.ContactType.Blue)
+        val differentNumber =
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 8, ContactsBoardState.ContactType.Blue)
 
         assertEquals(true, state.contactsMatch(first, sameNumber))
         assertEquals(false, state.contactsMatch(first, differentNumber))
@@ -131,8 +147,10 @@ class ContactsBoardStateTest {
     @Test
     fun yellowContactsMatchRegardlessOfNumber() {
         val state = ContactsBoardState.empty()
-        val first = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Yellow)
-        val second = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8, ContactsBoardState.ContactType.Yellow)
+        val first =
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Yellow)
+        val second =
+            ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8, ContactsBoardState.ContactType.Yellow)
 
         assertEquals(true, state.contactsMatch(first, second))
     }
@@ -161,7 +179,12 @@ class ContactsBoardStateTest {
         )
         assertEquals(
             "Player does not own the selected contact",
-            state.isActionLegal(bob, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact)),
+            state.isActionLegal(
+                bob,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(aliceContact),
+                setOf(bobContact)
+            ),
         )
     }
 

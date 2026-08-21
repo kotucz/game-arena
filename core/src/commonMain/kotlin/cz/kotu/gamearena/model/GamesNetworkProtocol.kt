@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class CreateGameRequest(
     val type: String,
     val players: List<String>,
+    val config: String,
 )
 
 @Serializable

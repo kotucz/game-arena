@@ -31,8 +31,8 @@ data class ContactsBoardState internal constructor(
         val username: String,
     )
 
+    @Serializable
     data class ContactsGameConfig(
-        val players: List<Player>,
         val blueCount: Int = 12, // x4
         val yellowCount: Int = 0,
         val redCount: Int = 0,
@@ -112,9 +112,9 @@ data class ContactsBoardState internal constructor(
             allowedActionTypes = emptySet(),
         )
 
-        fun create(config: ContactsGameConfig): ContactsBoardState {
+        fun create(players: List<Player>, config: ContactsGameConfig): ContactsBoardState {
             val numRacks = 4
-            require(config.players.isNotEmpty()) { "At least one player is required" }
+            require(players.isNotEmpty()) { "At least one player is required" }
             require(config.yellowCount >= 0) { "yellowCount must not be negative" }
             require(config.redCount >= 0) { "redCount must not be negative" }
             require(config.yellowCount + config.redCount < config.blueCount) {
@@ -154,7 +154,7 @@ data class ContactsBoardState internal constructor(
 
             val contactsById = pool.associateBy { it.id }
             val racks = rackContacts.mapIndexed { index, contacts ->
-                val player = config.players[index % config.players.size]
+                val player = players[index % players.size]
                 Rack(
                     owner = player,
                     contactIds = contacts.sortedBy { contactsById.getValue(it) },

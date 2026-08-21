@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.model.ContactsBoardState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
@@ -9,6 +10,8 @@ import java.time.Instant
 
 class GamesManagerTest {
 
+    private val players = listOf("alice", "bob")
+
     @Test
     fun createsAndFindsContactsGameByStringId() {
         val createdAt = Instant.parse("2026-08-14T18:30:00Z")
@@ -17,7 +20,14 @@ class GamesManagerTest {
             clock = { createdAt },
         )
 
-        val game = manager.createContactsGame()
+        val game = manager.createContactsGame(
+            players = players,
+            config = ContactsBoardState.ContactsGameConfig(
+                blueCount = 12,
+                yellowCount = 4,
+                redCount = 2,
+            )
+        )
 
         assertEquals("game-1", game.metadata.id)
         assertEquals(listOf("alice", "bob"), game.metadata.players)
@@ -31,8 +41,22 @@ class GamesManagerTest {
         val ids = ArrayDeque(listOf("game-1", "game-2"))
         val manager = GamesManager(idGenerator = { ids.removeFirst() })
 
-        val first = manager.createContactsGame()
-        val second = manager.createContactsGame()
+        val first = manager.createContactsGame(
+            players = players,
+            config = ContactsBoardState.ContactsGameConfig(
+                blueCount = 12,
+                yellowCount = 4,
+                redCount = 2,
+            )
+        )
+        val second = manager.createContactsGame(
+            players = players,
+            config = ContactsBoardState.ContactsGameConfig(
+                blueCount = 12,
+                yellowCount = 4,
+                redCount = 2,
+            )
+        )
 
         assertNotSame(first, second)
         assertNotSame(first.contacts, second.contacts)

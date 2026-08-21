@@ -25,10 +25,10 @@ class GamesClient(private val httpClient: HttpClient) {
         Json.decodeFromString(body)
     }
 
-    suspend fun createGame(type: String, players: List<String>): Result<RunningGame> = runCatching {
+    suspend fun createGame(type: String, players: List<String>, config: String): Result<RunningGame> = runCatching {
         val response = httpClient.post(endpoint("/api/games")) {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(Json.encodeToString(CreateGameRequest.serializer(), CreateGameRequest(type, players)))
+            setBody(Json.encodeToString(CreateGameRequest.serializer(), CreateGameRequest(type, players, config)))
         }
         val body = response.bodyAsText()
         if (response.status.value !in 200..299) {
