@@ -34,7 +34,7 @@ fun MultiPlayerScreen(
                     .weight(1f)
                     .border(1.dp, Color.Black),
             ) {
-                ContactsPlayerScreen(remember{viewModel.gameFacadeForPlayer(player.username)}, player)
+                ContactsPlayerScreen(remember { viewModel.gameFacadeForPlayer(player.username) }, player.username)
             }
         }
     }

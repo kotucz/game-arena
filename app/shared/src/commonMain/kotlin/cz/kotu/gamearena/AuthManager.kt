@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onSubscription
 import me.tatarka.inject.annotations.Inject
 
 /**
@@ -27,6 +28,13 @@ class AuthManager(
 ) {
     private val _currentUsername = MutableStateFlow<String?>(null)
     val currentUsername: StateFlow<String?> = _currentUsername.asStateFlow()
+        .onSubscription {
+            if (_currentUsername.value == null) {
+                // TODO handle parallel calls or do better
+                val username = authClient.currentUser().getOrNull()
+                _currentUsername.value = username
+            }
+        }
 
     /** Emitted (via the shared flow) by the Ktor interceptor on HTTP 401. */
     val unauthorizedEvent: SharedFlow<Unit> = unauthorizedEvents.asSharedFlow()

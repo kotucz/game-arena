@@ -50,6 +50,7 @@ types.
 ## Verification
 
 - Do not run gradlew commands. Just tell me to do it or ask before you do.
+- If possible, run verification via IntelliJ API.
 - Use `--console=plain`
 - In PowerShell, invoke the Gradle wrapper as `.\gradlew.bat <task>`; do not
   prefix it with an additional slash.

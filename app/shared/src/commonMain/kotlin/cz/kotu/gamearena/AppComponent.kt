@@ -2,7 +2,6 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.gotfive.GameViewModel
-import cz.kotu.gamearena.GamesViewModel
 import cz.kotu.tools.MultiPlayerViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.MutableSharedFlow

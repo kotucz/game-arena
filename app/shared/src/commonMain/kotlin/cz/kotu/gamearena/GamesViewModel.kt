@@ -42,8 +42,11 @@ class GamesViewModel(
     val configText: StateFlow<String> = _configText.asStateFlow()
 
     init {
-        val username = authManager.currentUsername.value
-        _playersText.value = username ?: ""
+        viewModelScope.launch {
+            authManager.currentUsername.collect { username ->
+                _playersText.value = username ?: ""
+            }
+        }
         loadGames()
     }
 

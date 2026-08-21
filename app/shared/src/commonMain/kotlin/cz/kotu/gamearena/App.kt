@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -117,8 +118,17 @@ private fun ContactsGameScreen(
     val gameViewModel: ContactsGameViewModel = viewModel {
         appComponent.contactsGameViewModelFactory(gameId)
     }
-    TextButton(onClick = onBack) { Text("Back to games") }
-    ContactsPlayerScreen(gameFacade = gameViewModel.gameFacade, player = gameViewModel.player)
+
+    Column {
+        TextButton(onClick = onBack) { Text("Back to games") }
+
+        val username = gameViewModel.username.collectAsState().value
+        if (username == null) {
+            Text("Not logged in")
+        } else {
+            ContactsPlayerScreen(gameFacade = gameViewModel.gameFacade, username = username)
+        }
+    }
 }
 
 @Composable

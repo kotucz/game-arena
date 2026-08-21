@@ -46,10 +46,11 @@ private const val phi = 1.618f
 @Composable
 fun ContactsPlayerScreen(
     gameFacade: ContactsGameFacade,
-    player: ContactsBoardState.Player,
+    username: String,
 ) {
     var actionSelectionState by remember { mutableStateOf<ActionSelectionState>(ActionSelectionState.None) }
     val gameState: ContactsBoardState by gameFacade.gameState.collectAsState()
+    val player = gameState.racks.map { it.owner }.firstOrNull { it.username == username }
     val logs: List<GameLogEntry> by gameFacade.logs.collectAsState()
     var isLogsExpanded by remember { mutableStateOf(false) }
     val resolution = gameState.resolveMultiConnect
@@ -111,7 +112,7 @@ fun ContactsPlayerScreen(
                         .weight(2f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    Text(text = "Player: " + player.username)
+                    Text(text = "Player: " + player?.username)
 
                     SolvedContactsPool(gameState)
 
@@ -185,6 +186,8 @@ fun ContactsPlayerScreen(
                     )
                 }
             }
+
+            if (player != null)
 
             Column(
                 modifier = Modifier

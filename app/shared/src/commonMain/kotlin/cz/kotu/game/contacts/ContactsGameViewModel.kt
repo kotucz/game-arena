@@ -22,9 +22,7 @@ class ContactsGameViewModel(
 ) : ViewModel() {
     private val networkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Username is read once at construction time. If null the server will reject the
-    // connection with 401, which the Ktor interceptor will surface as an auth prompt.
-    val player = ContactsBoardState.Player(authManager.currentUsername.value ?: "")
+    val username = authManager.currentUsername
 
     val gameFacade: ContactsGameFacade = NetworkContactsGameFacade(
         httpClient = httpClient,
