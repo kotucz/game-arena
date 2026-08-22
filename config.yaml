@@ -1,6 +1,6 @@
 name: "Game Arena"
 slug: "gamearena"
-version: "1.0.3"
+version: "1.0.5"
 description: "Game Arena - Kotlin KMP backend + Compose Wasm frontend"
 arch:
   - amd64
@@ -8,7 +8,5 @@ arch:
 ports:
   8080/tcp: 8080
 map:
-  - type: app_config
-    read_only: false
-    path: /data
+  - app_config:rw
 init: false
