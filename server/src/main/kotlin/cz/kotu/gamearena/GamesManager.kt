@@ -14,7 +14,7 @@ class GamesManager(
     private val clock: () -> Instant = Instant::now,
 ) {
     private val games = ConcurrentHashMap<String, ManagedGame>()
-    private val gamesUpdated = MutableStateFlow(Unit)
+    private val gamesUpdated = MutableStateFlow(0)
     val runningGames = gamesUpdated.map { runningGames() }
 
     @Synchronized
@@ -32,7 +32,7 @@ class GamesManager(
             ),
         )
         games[game.metadata.id] = game
-        gamesUpdated.tryEmit(Unit)
+        gamesUpdated.value++
         return game
     }
 
@@ -40,7 +40,7 @@ class GamesManager(
         check(games.putIfAbsent(game.metadata.id, game) == null) {
             "Game ID is already registered: ${game.metadata.id}"
         }
-        gamesUpdated.tryEmit(Unit)
+        gamesUpdated.value++
         return game
     }
 

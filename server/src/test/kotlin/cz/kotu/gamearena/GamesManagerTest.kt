@@ -1,12 +1,15 @@
 package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.gamearena.model.RunningGame
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
-import java.time.Instant
 
 class GamesManagerTest {
 
@@ -82,5 +85,31 @@ class GamesManagerTest {
 
         assertNull(manager.contactsGame("gotfive-1"))
         assertEquals("gotfive", manager.runningGames().single().type)
+    }
+
+    @Test
+    fun runningGamesFlowEmitsUpdatesOnGameCreation() = runBlocking {
+        val manager = GamesManager(idGenerator = { "game-1" })
+        val emissions = mutableListOf<List<RunningGame>>()
+        val job = launch(kotlinx.coroutines.Dispatchers.Unconfined) {
+            manager.runningGames.collect { emissions.add(it) }
+        }
+
+        assertEquals(1, emissions.size) // Initial emission
+        assertEquals(0, emissions[0].size)
+
+        manager.createContactsGame(
+            players = players,
+            config = ContactsBoardState.ContactsGameConfig(
+                blueCount = 12,
+                yellowCount = 4,
+                redCount = 2,
+            )
+        )
+
+        assertEquals(2, emissions.size)
+        assertEquals(1, emissions[1].size)
+        assertEquals("game-1", emissions[1][0].id)
+        job.cancel()
     }
 }
