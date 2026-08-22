@@ -18,6 +18,7 @@ class ServerContactsGameFacade(
     }
 
     suspend fun handleLogs(session: ServerSSESession, username: String) {
+        session.send(ServerSentEvent(comments = "start"))
         var lastSentLogIndex = -1
         delegate.logs.collect { logs ->
             for (i in (lastSentLogIndex + 1) until logs.size) {
