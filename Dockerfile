@@ -23,7 +23,7 @@ COPY --from=build /src/app/webApp/build/dist/wasmJs/productionExecutable /opt/ga
 ENV WEB_ROOT=/opt/gamearena/web
 ENV PORT=8080
 ENV DATABASE_PATH=/data/gamearena.db
-VOLUME ["/data"]
+# Remove VOLUME ["/data"] since Home Assistant supervisor automatically mounts /data for app_config and complains about duplicate mount point if VOLUME is declared in Dockerfile.
 EXPOSE 8080
 
 ENTRYPOINT ["/opt/gamearena/server/bin/server"]
