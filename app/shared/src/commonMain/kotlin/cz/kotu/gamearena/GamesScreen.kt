@@ -16,6 +16,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -36,6 +37,10 @@ fun GamesScreen(
     val playersText by viewModel.playersText.collectAsState()
     val configText by viewModel.configText.collectAsState()
     val username by viewModel.username.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.observeLobby()
+    }
 
     Column(
         modifier = Modifier

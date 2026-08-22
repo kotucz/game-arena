@@ -4,15 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
+import kotlin.math.pow
+import kotlin.time.Duration.Companion.seconds
 
 @Inject
 class GamesViewModel(
@@ -48,7 +52,24 @@ class GamesViewModel(
         authManager.currentUsername
             .onEach { _playersText.value = it ?: "" }
             .launchIn(viewModelScope)
-        loadGames()
+    }
+
+    suspend fun observeLobby() {
+        gamesClient.observeGames()
+            .retryWhen { cause, attempt ->
+                // Log exception if needed
+                _error.value = cause.message ?: "Could not observe games"
+                // exponential delay (1s, 2s, 4s, capped at 10s)
+                val delay = (1.seconds * 2.0.pow(attempt.toDouble())).coerceAtMost(10.seconds)
+                delay(delay)
+
+                // Returning true tells Kotlin Flow to retry executing the channelFlow block
+                true
+            }
+            .collect {
+                _error.value = null
+                _games.value = it
+            }
     }
 
     fun updatePlayersText(text: String) {
@@ -66,14 +87,7 @@ class GamesViewModel(
     }
 
     fun loadGames() {
-        viewModelScope.launch {
-            _error.value = null
-            _games.value = null
-            gamesClient.runningGames().fold(
-                onSuccess = { _games.value = it },
-                onFailure = { _error.value = it.message ?: "Could not load running games" },
-            )
-        }
+        _error.value = null
     }
 
     fun createGame(onSuccess: (RunningGame) -> Unit) {

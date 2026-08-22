@@ -24,6 +24,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
+import io.ktor.sse.ServerSentEvent
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -121,6 +122,21 @@ fun Application.module() {
                     gamesManager.runningGames(),
                 )
                 call.respondText(games, ContentType.Application.Json)
+            }
+        }
+
+        sse("/api/games/events") {
+            val session = currentSession(call, database)
+            if (session == null) {
+                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            } else {
+                gamesManager.runningGames.collect { games ->
+                    send(
+                        ServerSentEvent(
+                            Json.encodeToString(ListSerializer(RunningGame.serializer()), games),
+                        ),
+                    )
+                }
             }
         }
 

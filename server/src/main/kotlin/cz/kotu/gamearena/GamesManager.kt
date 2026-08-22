@@ -3,6 +3,8 @@ package cz.kotu.gamearena
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.gamearena.model.RunningGame
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -12,6 +14,8 @@ class GamesManager(
     private val clock: () -> Instant = Instant::now,
 ) {
     private val games = ConcurrentHashMap<String, ManagedGame>()
+    private val gamesUpdated = MutableStateFlow(Unit)
+    val runningGames = gamesUpdated.map { runningGames() }
 
     @Synchronized
     fun createContactsGame(
@@ -28,6 +32,7 @@ class GamesManager(
             ),
         )
         games[game.metadata.id] = game
+        gamesUpdated.tryEmit(Unit)
         return game
     }
 
@@ -35,6 +40,7 @@ class GamesManager(
         check(games.putIfAbsent(game.metadata.id, game) == null) {
             "Game ID is already registered: ${game.metadata.id}"
         }
+        gamesUpdated.tryEmit(Unit)
         return game
     }
 
