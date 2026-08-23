@@ -16,7 +16,7 @@ class GamesManagerTest {
     private val players = listOf("alice", "bob")
 
     @Test
-    fun createsAndFindsContactsGameByStringId() {
+    fun createsAndFindsContactsGameByStringId() = runBlocking {
         val createdAt = Instant.parse("2026-08-14T18:30:00Z")
         val manager = GamesManager(
             idGenerator = { "game-1" },
@@ -40,7 +40,7 @@ class GamesManagerTest {
     }
 
     @Test
-    fun createsIndependentGames() {
+    fun createsIndependentGames() = runBlocking {
         val ids = ArrayDeque(listOf("game-1", "game-2"))
         val manager = GamesManager(idGenerator = { ids.removeFirst() })
 
@@ -70,7 +70,7 @@ class GamesManagerTest {
     }
 
     @Test
-    fun contactsLookupDoesNotReturnOtherGameTypes() {
+    fun contactsLookupDoesNotReturnOtherGameTypes() = runBlocking {
         val manager = GamesManager(idGenerator = { "gotfive-1" })
         val otherGame = object : ManagedGame {
             override val metadata = GameMetadata(

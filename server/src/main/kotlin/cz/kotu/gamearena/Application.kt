@@ -44,7 +44,8 @@ fun Application.module() {
         logger = org.slf4j.LoggerFactory.getLogger("Ktor.Server")
     }
     val database = createDatabase()
-    val gamesManager = GamesManager()
+    val gamesManager = GamesManager(gameDao = database.gameDao())
+    kotlinx.coroutines.runBlocking { gamesManager.restorePersistedGames() }
     install(SSE)
     val webRoot = File(
         // relative url with ./gradlew :server:run
@@ -206,6 +207,7 @@ fun Application.module() {
                 } else {
                     val error = game.contacts.handleAction(call.receiveText(), session.username)
                     if (error == null) {
+                        gamesManager.persist(game)
                         call.respond(HttpStatusCode.Accepted)
                     } else {
                         call.respond(HttpStatusCode.BadRequest, error)

@@ -3,14 +3,18 @@ package cz.kotu.gamearena
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsNetworkAction
+import cz.kotu.game.contacts.model.GameLogEntry
 import io.ktor.server.sse.ServerSSESession
 import io.ktor.sse.ServerSentEvent
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 
 class ServerContactsGameFacade(
     private val delegate: ContactsGameFacade,
     private val json: Json = Json { classDiscriminator = "type" },
 ) {
+    val gameState: StateFlow<ContactsBoardState> = delegate.gameState
+    val logs: StateFlow<List<GameLogEntry>> = delegate.logs
     suspend fun handleEvents(session: ServerSSESession, username: String) {
         delegate.gameState.collect { state ->
             session.send(ServerSentEvent(data = json.encodeToString(state)))

@@ -7,6 +7,7 @@ import kotlin.time.Clock
 
 class ContactsGameFacadeImpl(
     private val _gameState: MutableStateFlow<ContactsBoardState>,
+    private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf()),
 ) : ContactsGameFacade {
     constructor(
         players: List<ContactsBoardState.Player>,
@@ -18,13 +19,15 @@ class ContactsGameFacadeImpl(
                 config,
             )
         ),
+        MutableStateFlow(listOf()),
     )
 
-    internal constructor(initialState: ContactsBoardState) : this(MutableStateFlow(initialState))
+    constructor(initialState: ContactsBoardState, initialLogs: List<GameLogEntry> = emptyList()) : this(
+        MutableStateFlow(initialState),
+        MutableStateFlow(initialLogs),
+    )
 
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
-
-    private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
     override val logs: StateFlow<List<GameLogEntry>> = _logs.asStateFlow()
 
     // TODO called via action

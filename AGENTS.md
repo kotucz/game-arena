@@ -3,6 +3,12 @@
 `GameArena` is a Kotlin Multiplatform project. Platform-independent game rules
 live in `core`; Compose Multiplatform UI lives in `app/shared` and depends on
 `core`.
+The project is in a prototype stage.
+Plan is to support multiple game types – while still figuring out the best 
+architecture for that – and to support multiple clients (desktop, web, mobile)
+with shared UI code.
+GotFive is a client-only game now.
+Contacts is the first client/server game.
 
 ## Games manager
 
