@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
+import cz.kotu.game.contacts.ContactsPlayerViewModel
 import cz.kotu.gamearena.AppComponent
 import cz.kotu.gamearena.create
 import cz.kotu.gamearena.createAuthHttpClient
@@ -29,12 +30,22 @@ fun MultiPlayerScreen(
 
     Row(modifier = Modifier.fillMaxSize()) {
         viewModel.players.forEach { player ->
+            val playerViewModel: ContactsPlayerViewModel = viewModel(
+                key = player.username,
+                initializer = {
+                    ContactsPlayerViewModel(
+                        gameFacade = viewModel.gameFacadeForPlayer(player.username),
+                        username = player.username,
+                    )
+                },
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .border(1.dp, Color.Black),
             ) {
-                ContactsPlayerScreen(remember { viewModel.gameFacadeForPlayer(player.username) }, player.username)
+                ContactsPlayerScreen(playerViewModel)
             }
         }
     }

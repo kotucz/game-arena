@@ -25,9 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -36,43 +33,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.GameLogEntry
 
 private const val phi = 1.618f
 
 @Composable
 fun ContactsPlayerScreen(
-    gameFacade: ContactsGameFacade,
-    username: String,
+    viewModel: ContactsPlayerViewModel,
 ) {
-    var actionSelectionState by remember { mutableStateOf<ActionSelectionState>(ActionSelectionState.None) }
-    val gameState: ContactsBoardState by gameFacade.gameState.collectAsState()
-    val player = gameState.racks.map { it.owner }.firstOrNull { it.username == username }
-    val logs: List<GameLogEntry> by gameFacade.logs.collectAsState()
-    var isLogsExpanded by remember { mutableStateOf(false) }
+    val actionSelectionState = viewModel.actionSelectionState
+    val gameState: ContactsBoardState by viewModel.gameFacade.gameState.collectAsState()
+    val player = viewModel.player
+    val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
+    val isLogsExpanded = viewModel.isLogsExpanded
     val resolution = gameState.resolveMultiConnect
-    val availableActionTypes = when {
-        resolution == null -> gameState.allowedActionTypes
-        resolution.targetPlayer == player -> setOf(ContactsBoardState.ActionType.ResolveMultiConnect)
-        else -> emptySet()
-    }
-    var selectedActionType by remember(availableActionTypes) {
-        mutableStateOf(availableActionTypes.firstOrNull())
-    }
-    val resolutionTargetContacts = resolution?.targetContacts
-        ?.mapNotNull(gameState::contact)
-        ?.toSet()
-    val resolutionClickableContacts = when {
-        resolution == null -> null
-        selectedActionType == ContactsBoardState.ActionType.ResolveMultiConnect -> resolutionTargetContacts.orEmpty()
-        else -> emptySet()
-    }
+    val availableActionTypes = viewModel.availableActionTypes()
+    val selectedActionType = viewModel.selectedActionType
+    val resolutionTargetContacts = viewModel.resolutionTargetContacts()
+    val resolutionClickableContacts = viewModel.resolutionClickableContacts()
 
     LaunchedEffect(resolution) {
-        actionSelectionState = ActionSelectionState.None
+        viewModel.resetActionSelection()
+    }
+
+    LaunchedEffect(availableActionTypes) {
+        viewModel.updateSelectedActionTypeIfNeeded(availableActionTypes)
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -81,25 +67,13 @@ fun ContactsPlayerScreen(
         if (isLogsExpanded && !isDualPane) {
             GameLogsDialog(
                 logs = logs,
-                onClose = { isLogsExpanded = false },
+                onClose = { viewModel.isLogsExpanded = false },
             )
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
             LaunchedEffect(gameState.solved) {
-                val state = actionSelectionState
-                val newPlayerContacts = state.playerContacts.filter { !gameState.isSolved(it) }.toSet()
-                val newOtherContacts = state.otherContacts.filter { !gameState.isSolved(it) }.toSet()
-                if (newPlayerContacts != state.playerContacts || newOtherContacts != state.otherContacts) {
-                    actionSelectionState = if (newPlayerContacts.isEmpty() && newOtherContacts.isEmpty()) {
-                        ActionSelectionState.None
-                    } else {
-                        ActionSelectionState.MultiConnect(
-                            playerContacts = newPlayerContacts,
-                            otherContacts = newOtherContacts
-                        )
-                    }
-                }
+                viewModel.updateActionSelectionForSolved()
             }
 
             Row(
@@ -125,7 +99,7 @@ fun ContactsPlayerScreen(
 
                     GameLogsCollapsedView(
                         logs = logs,
-                        onExpand = { isLogsExpanded = true },
+                        onExpand = { viewModel.isLogsExpanded = true },
                     )
 
                     gameState.racks.filter { it.owner != player }.forEach { rack ->
@@ -137,16 +111,7 @@ fun ContactsPlayerScreen(
                             clickableContacts = resolutionClickableContacts,
                             highlightedContacts = resolutionTargetContacts.orEmpty(),
                             onContactClick = { contact ->
-                                val state = actionSelectionState
-                                val newOtherContacts = if (contact in state.otherContacts) {
-                                    state.otherContacts - contact
-                                } else {
-                                    state.otherContacts + contact
-                                }
-                                actionSelectionState = ActionSelectionState.MultiConnect(
-                                    playerContacts = state.playerContacts,
-                                    otherContacts = newOtherContacts,
-                                )
+                                viewModel.onOtherContactClick(contact)
                             },
                         )
                     }
@@ -160,16 +125,7 @@ fun ContactsPlayerScreen(
                             clickableContacts = resolutionClickableContacts,
                             highlightedContacts = resolutionTargetContacts.orEmpty(),
                             onContactClick = { contact ->
-                                val state = actionSelectionState
-                                val newPlayerContacts = if (contact in state.playerContacts) {
-                                    state.playerContacts - contact
-                                } else {
-                                    state.playerContacts + contact
-                                }
-                                actionSelectionState = ActionSelectionState.MultiConnect(
-                                    playerContacts = newPlayerContacts,
-                                    otherContacts = state.otherContacts,
-                                )
+                                viewModel.onPlayerContactClick(contact)
                             },
                         )
                     }
@@ -178,7 +134,7 @@ fun ContactsPlayerScreen(
                 if (isLogsExpanded && isDualPane) {
                     GameLogsSidePane(
                         logs = logs,
-                        onClose = { isLogsExpanded = false },
+                        onClose = { viewModel.isLogsExpanded = false },
                         modifier = Modifier
                             .fillMaxHeight()
                             .weight(1f)
@@ -189,78 +145,62 @@ fun ContactsPlayerScreen(
 
             if (player != null)
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFE8E8E8))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val playerContacts = actionSelectionState.playerContacts
-                val otherContacts = actionSelectionState.otherContacts
-
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .background(Color(0xFFE8E8E8))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    availableActionTypes.forEach { actionType ->
-                        val isSelected = actionType == selectedActionType
-                        Button(
-                            onClick = { selectedActionType = actionType },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
-                                contentColor = if (isSelected) Color.White else Color.Black
-                            )
-                        ) {
-                            Text(actionType.name)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        availableActionTypes.forEach { actionType ->
+                            val isSelected = actionType == selectedActionType
+                            Button(
+                                onClick = { viewModel.selectActionType(actionType) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
+                                    contentColor = if (isSelected) Color.White else Color.Black
+                                )
+                            ) {
+                                Text(actionType.name)
+                            }
                         }
                     }
-                }
 
-                if (resolution != null) {
-                    if (resolution.targetPlayer == player) {
-                        Text("Original contact: ${gameState.contact(resolution.originalContact)?.number ?: "?"}")
-                    } else {
-                        Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
+                    if (resolution != null) {
+                        if (resolution.targetPlayer == player) {
+                            Text("Original contact: ${gameState.contact(resolution.originalContact)?.number ?: "?"}")
+                        } else {
+                            Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
+                        }
+                    }
+
+                    val validationError = viewModel.validationError()
+                    val validAction = viewModel.validAction()
+
+                    validationError?.let { error ->
+                        Text(
+                            text = error,
+                            color = Color(0xFFCC0000),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+
+                    Button(
+                        enabled = validAction,
+                        onClick = {
+                            viewModel.confirmAction()
+                        },
+                    ) {
+                        Text("Confirm selection")
                     }
                 }
-
-                val validationError = selectedActionType?.let { actionType ->
-                    gameState.isActionLegal(
-                        player,
-                        actionType,
-                        playerContacts,
-                        otherContacts,
-                    )
-                }
-                val validAction = selectedActionType != null && validationError == null
-
-                validationError?.let { error ->
-                    Text(
-                        text = error,
-                        color = Color(0xFFCC0000),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-
-                Button(
-                    enabled = validAction,
-                    onClick = {
-                        gameFacade.action(
-                            player,
-                            selectedActionType!!,
-                            playerContacts,
-                            otherContacts,
-                        )
-                        actionSelectionState = ActionSelectionState.None
-                    },
-                ) {
-                    Text("Confirm selection")
-                }
-            }
         }
     }
 }
@@ -284,9 +224,6 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(spacing),
             ) {
-                // Group contacts by number and sort by number
-//                gameState.pool.groupBy { it.number }.entries.sortedBy { it.key }.forEach { (_, contacts) ->
-
                 groups.forEach { (_, contacts) ->
                     Column(
                         modifier = Modifier.wrapContentSize(),

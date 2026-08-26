@@ -30,6 +30,7 @@ import androidx.navigation.navArgument
 import androidx.savedstate.read
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
+import cz.kotu.game.contacts.ContactsPlayerViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
 
@@ -132,7 +133,10 @@ private fun ContactsGameScreen(
         if (username == null) {
             Text("Not logged in")
         } else {
-            ContactsPlayerScreen(gameFacade = gameViewModel.gameFacade, username = username)
+            val playerViewModel: ContactsPlayerViewModel = viewModel {
+                ContactsPlayerViewModel(gameViewModel.gameFacade, username)
+            }
+            ContactsPlayerScreen(viewModel = playerViewModel)
         }
     }
 }
