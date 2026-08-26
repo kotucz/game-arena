@@ -74,6 +74,7 @@ class NetworkContactsGameFacade(
                         _logs.value += json.decodeFromString<GameLogEntry>(data)
                     }
                 }
+                onError(IllegalStateException("Incoming logs finished unexpectedly"))
             }
         } catch (error: Throwable) {
             onError(error)
@@ -88,6 +89,7 @@ class NetworkContactsGameFacade(
                         _gameState.value = json.decodeFromString<ContactsBoardState>(data)
                     }
                 }
+                onError(IllegalStateException("Incoming game events finished unexpectedly"))
             }
         } catch (error: Throwable) {
             onError(error)
