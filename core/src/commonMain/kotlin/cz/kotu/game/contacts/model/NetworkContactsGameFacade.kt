@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 
 class NetworkContactsGameFacade(
     private val httpClient: HttpClient,
@@ -20,7 +21,6 @@ class NetworkContactsGameFacade(
     initialState: ContactsBoardState,
     private val scope: CoroutineScope,
     private val json: Json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" },
-    private val onError: (Throwable) -> Unit = {},
 ) : ContactsGameFacade {
 
     private val gameEndpoint: String = endpoint.trimEnd('/') + "/games/" + gameId + "/contacts"
@@ -62,7 +62,7 @@ class NetworkContactsGameFacade(
                 }.also { response ->
                     if (response.status.value !in 200..299) error("Action failed: ${response.status}")
                 }
-            }.onFailure(onError)
+            }.onFailure(::onError)
         }
     }
 
@@ -92,6 +92,10 @@ class NetworkContactsGameFacade(
         } catch (error: Throwable) {
             onError(error)
         }
+    }
+
+    private fun onError(error: Throwable) {
+        _logs.value += GameLogEntry(Clock.System.now().toEpochMilliseconds(), error.stackTraceToString())
     }
 
 }
