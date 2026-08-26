@@ -2,14 +2,29 @@ package cz.kotu.gamearena
 
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
 
-actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(CIO) {
+actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(OkHttp) {
     install(HttpCookies) {
         storage = PreferencesCookieStorage()
+    }
+    // Default REST timeouts (e.g. 15s)
+    install(HttpTimeout) {
+        requestTimeoutMillis = 15_000
+        connectTimeoutMillis = 10_000
+    }
+
+    engine {
+        config {
+            // 0 = Infinite socket read timeout for OkHttp.
+            // Ktor's HttpTimeout plugin will still enforce timeouts on regular REST calls.
+            readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+            connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        }
     }
     configure()
 }
