@@ -7,12 +7,6 @@ interface ContactsGameFacade {
 
     val logs: StateFlow<List<GameLogEntry>>
 
-    fun connect(
-        player: ContactsBoardState.Player,
-        playerContact: ContactsBoardState.Contact,
-        otherContact: ContactsBoardState.Contact,
-    )
-
     fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,

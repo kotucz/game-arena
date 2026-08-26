@@ -39,28 +39,6 @@ class NetworkContactsGameFacade(
         scope.launch { runLogs() }
     }
 
-    override fun connect(
-        player: ContactsBoardState.Player,
-        playerContact: ContactsBoardState.Contact,
-        otherContact: ContactsBoardState.Contact,
-    ) {
-        scope.launch {
-            runCatching {
-                httpClient.post(actionsEndpoint) {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        json.encodeToString(
-                            ContactsNetworkAction.serializer(),
-                            ContactsNetworkAction.Connect(playerContact.id, otherContact.id)
-                        )
-                    )
-                }.also { response ->
-                    if (response.status.value !in 200..299) error("Action failed: ${response.status}")
-                }
-            }.onFailure(onError)
-        }
-    }
-
     override fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,

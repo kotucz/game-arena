@@ -35,14 +35,6 @@ class ServerContactsGameFacade(
     fun handleAction(payload: String, username: String): String? {
         try {
             when (val action = json.decodeFromString<ContactsNetworkAction>(payload)) {
-                is ContactsNetworkAction.Connect -> {
-                    val state = delegate.gameState.value
-                    delegate.connect(
-                        ContactsBoardState.Player(username),
-                        state.requireContact(action.playerContact),
-                        state.requireContact(action.otherContact),
-                    )
-                }
                 is ContactsNetworkAction.Action -> {
                     val state = delegate.gameState.value
                     delegate.action(

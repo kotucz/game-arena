@@ -30,8 +30,7 @@ class ContactsGameFacadeImpl(
     override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
     override val logs: StateFlow<List<GameLogEntry>> = _logs.asStateFlow()
 
-    // TODO called via action
-    override fun connect(
+    internal fun connect(
         player: ContactsBoardState.Player,
         playerContact: ContactsBoardState.Contact,
         otherContact: ContactsBoardState.Contact,
@@ -108,7 +107,7 @@ class ContactsGameFacadeImpl(
     /**
      * Multi connect requires the target player to make a resolution (choose the outcome)
      */
-    fun multiConnect(
+    internal fun multiConnect(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,
         playerContact: ContactsBoardState.Contact,
