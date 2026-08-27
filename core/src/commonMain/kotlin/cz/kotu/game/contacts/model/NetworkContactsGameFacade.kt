@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
@@ -50,31 +50,31 @@ class NetworkContactsGameFacade(
     ) { logsList, _ -> logsList }
         .stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), _logs.value)
 
-    override fun action(
+    override suspend fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
-    ) {
-        scope.launch {
-            runCatching {
-                httpClient.post(actionsEndpoint) {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        json.encodeToString(
-                            ContactsNetworkAction.serializer(),
-                            ContactsNetworkAction.Action(
-                                actionType = actionType,
-                                playerContacts = playerContacts.map { it.id }.toSet(),
-                                otherContacts = otherContacts.map { it.id }.toSet(),
-                            )
+    ): Result<Unit> {
+        return runCatching {
+            val response = httpClient.post(actionsEndpoint) {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    json.encodeToString(
+                        ContactsNetworkAction.serializer(),
+                        ContactsNetworkAction.Action(
+                            actionType = actionType,
+                            playerContacts = playerContacts.map { it.id }.toSet(),
+                            otherContacts = otherContacts.map { it.id }.toSet(),
                         )
                     )
-                }.also { response ->
-                    if (response.status.value !in 200..299) error("Action failed: ${response.status}")
-                }
-            }.onFailure(::onError)
-        }
+                )
+            }
+            if (response.status.value !in 200..299) {
+                val detail = response.bodyAsText().ifBlank { "Action failed: ${response.status}" }
+                error(detail)
+            }
+        }.onFailure(::onError)
     }
 
     private fun gameLogs(): Flow<Unit> = flow {
@@ -124,6 +124,7 @@ class NetworkContactsGameFacade(
     }
 
     private fun onError(error: Throwable) {
+        logLocal("Error: " + error.message)
         logLocal(error.stackTraceToString())
     }
 

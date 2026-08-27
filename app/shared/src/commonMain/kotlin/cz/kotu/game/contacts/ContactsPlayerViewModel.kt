@@ -4,9 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
+import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
     val gameFacade: ContactsGameFacade,
@@ -26,7 +28,21 @@ class ContactsPlayerViewModel(
 
     var selectedActionType by mutableStateOf<ContactsBoardState.ActionType?>(null)
 
+    var actionInProgress by mutableStateOf(false)
+
+    var actionResultError by mutableStateOf<String?>(null)
+
+    // keep validation on backend only for now
+    var clientValidationEnabled by mutableStateOf(false)
+
+    fun actionError(): String? = actionResultError ?: validationError()
+
+    private fun dismissActionResultError() {
+        actionResultError = null
+    }
+
     fun onPlayerContactClick(contact: ContactsBoardState.Contact) {
+        dismissActionResultError()
         val state = actionSelectionState
         val newPlayerContacts = if (contact in state.playerContacts) {
             state.playerContacts - contact
@@ -40,6 +56,7 @@ class ContactsPlayerViewModel(
     }
 
     fun onOtherContactClick(contact: ContactsBoardState.Contact) {
+        dismissActionResultError()
         val state = actionSelectionState
         val newOtherContacts = if (contact in state.otherContacts) {
             state.otherContacts - contact
@@ -53,10 +70,12 @@ class ContactsPlayerViewModel(
     }
 
     fun resetActionSelection() {
+        dismissActionResultError()
         actionSelectionState = ActionSelectionState.None
     }
 
     fun updateActionSelectionForSolved() {
+        dismissActionResultError()
         val currentGameState = gameState
         val state = actionSelectionState
         val newPlayerContacts = state.playerContacts.filter { !currentGameState.isSolved(it) }.toSet()
@@ -99,11 +118,13 @@ class ContactsPlayerViewModel(
 
     fun updateSelectedActionTypeIfNeeded(availableActionTypes: Set<ContactsBoardState.ActionType>) {
         if (selectedActionType !in availableActionTypes) {
+            dismissActionResultError()
             selectedActionType = availableActionTypes.firstOrNull()
         }
     }
 
     fun selectActionType(actionType: ContactsBoardState.ActionType) {
+        dismissActionResultError()
         selectedActionType = actionType
     }
 
@@ -119,18 +140,32 @@ class ContactsPlayerViewModel(
     }
 
     fun validAction(): Boolean {
-        return selectedActionType != null && validationError() == null
+        val isValid = if (clientValidationEnabled) validationError() == null else true
+        return !actionInProgress && selectedActionType != null && isValid
     }
 
     fun confirmAction() {
+        if (actionInProgress) return
+
         val currentPlayer = player ?: return
         val actionType = selectedActionType ?: return
-        gameFacade.action(
-            player = currentPlayer,
-            actionType = actionType,
-            playerContacts = actionSelectionState.playerContacts,
-            otherContacts = actionSelectionState.otherContacts,
-        )
-        actionSelectionState = ActionSelectionState.None
+        if (clientValidationEnabled && validationError() != null) return
+
+        actionResultError = null
+        actionInProgress = true
+
+        viewModelScope.launch {
+            val result = gameFacade.action(
+                player = currentPlayer,
+                actionType = actionType,
+                playerContacts = actionSelectionState.playerContacts,
+                otherContacts = actionSelectionState.otherContacts,
+            )
+
+            actionInProgress = false
+            result.onFailure { error ->
+                actionResultError = error.message ?: "Action failed"
+            }
+        }
     }
 }

@@ -241,12 +241,12 @@ fun Application.module() {
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {
-                    val error = game.contacts.handleAction(call.receiveText(), session.username)
-                    if (error == null) {
+                    val result = game.contacts.handleAction(call.receiveText(), session.username)
+                    if (result.isSuccess) {
                         gamesManager.persist(game)
                         call.respond(HttpStatusCode.Accepted)
                     } else {
-                        call.respond(HttpStatusCode.BadRequest, error)
+                        call.respond(HttpStatusCode.BadRequest, result.exceptionOrNull()?.message ?: "Invalid action")
                     }
                 }
             }
@@ -282,7 +282,7 @@ fun Application.module() {
         }
 
         // Static assets are versioned and change infrequently, so cache them aggressively.
-        // Keep the app shell uncached so clients pick up new bundle hashes after deploys.
+        // Keep the app shell uncached so clients pick up new bundle hashes after deployment.
         staticFiles("/", webRoot) {
             cacheControl { resource ->
                 staticAssetCacheControl(resource)

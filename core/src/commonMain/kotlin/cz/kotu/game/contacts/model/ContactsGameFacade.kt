@@ -7,10 +7,10 @@ interface ContactsGameFacade {
 
     val logs: StateFlow<List<GameLogEntry>>
 
-    fun action(
+    suspend fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
-    )
+    ): Result<Unit>
 }

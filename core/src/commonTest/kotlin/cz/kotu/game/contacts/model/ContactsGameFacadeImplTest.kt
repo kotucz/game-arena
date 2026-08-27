@@ -1,7 +1,9 @@
 package cz.kotu.game.contacts.model
 
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ContactsGameFacadeImplTest {
     private val alice = ContactsBoardState.Player("alice")
@@ -36,8 +38,10 @@ class ContactsGameFacadeImplTest {
     fun connectRejectsContactNotOwnedByActingPlayer() {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.connect(alice, bobContact, aliceContact)
+        val result = facade.connect(alice, bobContact, aliceContact)
 
+        assertTrue(result.isFailure)
+        assertEquals("Player does not own the selected contact", result.exceptionOrNull()?.message)
         assertEquals(emptySet(), facade.gameState.value.solved)
     }
 
@@ -75,7 +79,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun myDoubleConnectSolvesWhenEitherPlayerContactMatches() {
+    fun myDoubleConnectSolvesWhenEitherPlayerContactMatches() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         facade.action(
@@ -90,7 +94,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun myDoubleConnectUsesStandardConnectResultWhenNeitherContactMatches() {
+    fun myDoubleConnectUsesStandardConnectResultWhenNeitherContactMatches() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         facade.action(
@@ -109,7 +113,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun targetPlayerResolvesMultiConnectUsingStandardConnectResult() {
+    fun targetPlayerResolvesMultiConnectUsingStandardConnectResult() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         facade.multiConnect(
@@ -125,7 +129,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun targetPlayerResolvesMismatchUsingStandardConnectResult() {
+    fun targetPlayerResolvesMismatchUsingStandardConnectResult() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         facade.multiConnect(
@@ -143,7 +147,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun onlyTargetPlayerCanResolveMultiConnect() {
+    fun onlyTargetPlayerCanResolveMultiConnect() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         facade.multiConnect(
@@ -159,7 +163,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun soloConnectRestSolvesAllRemainingSameNumberContactsAcrossRacks() {
+    fun soloConnectRestSolvesAllRemainingSameNumberContactsAcrossRacks() = runTest {
         val state = initialState.copy(
             racks = listOf(
                 ContactsBoardState.Rack(alice, listOf(aliceContact.id, aliceOtherContact.id, aliceMatchingSoloContact.id)),
@@ -180,7 +184,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun soloConnectRestRejectsIncompleteSelection() {
+    fun soloConnectRestRejectsIncompleteSelection() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         facade.action(
@@ -194,7 +198,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun finishRedsSolvesAllRemainingRedContacts() {
+    fun finishRedsSolvesAllRemainingRedContacts() = runTest {
         val redContact = aliceContact.copy(type = ContactsBoardState.ContactType.Red)
         val otherRedContact = bobContact.copy(type = ContactsBoardState.ContactType.Red)
         val state = initialState.copy(
@@ -218,7 +222,7 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun finishRedsRejectsWhenAnyOtherUnsolvedContactRemains() {
+    fun finishRedsRejectsWhenAnyOtherUnsolvedContactRemains() = runTest {
         val redContact = aliceContact.copy(type = ContactsBoardState.ContactType.Red)
         val state = initialState.copy(
             pool = listOf(redContact, aliceOtherContact),

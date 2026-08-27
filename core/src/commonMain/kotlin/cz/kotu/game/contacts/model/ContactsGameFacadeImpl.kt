@@ -34,17 +34,17 @@ class ContactsGameFacadeImpl(
         player: ContactsBoardState.Player,
         playerContact: ContactsBoardState.Contact,
         otherContact: ContactsBoardState.Contact,
-    ) {
+    ): Result<Unit> {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
-        if (gameState.isActionLegal(
-                player,
-                ContactsBoardState.ActionType.StandardConnect,
-                setOf(playerContact),
-                setOf(otherContact),
-            ) != null
-        ) {
-            return
+        val error = gameState.isActionLegal(
+            player,
+            ContactsBoardState.ActionType.StandardConnect,
+            setOf(playerContact),
+            setOf(otherContact),
+        )
+        if (error != null) {
+            return Result.failure(IllegalStateException(error))
         }
 
         if (!gameState.contactsMatch(playerContact, otherContact)) {
@@ -52,39 +52,42 @@ class ContactsGameFacadeImpl(
                 addGameLog("${player.username}: Red Connected! [Game Over]")
             }
             _gameState.value = gameState.withFaultFor(otherContact)
-            return
+            return Result.success(Unit)
         }
 
         if (otherContact.type == ContactsBoardState.ContactType.Red) {
             addGameLog("${player.username}: Connected successfully!")
         }
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
+        return Result.success(Unit)
     }
 
     private fun resolveMultiConnect(
         player: ContactsBoardState.Player,
         targetContact: ContactsBoardState.Contact,
-    ) {
+    ): Result<Unit> {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
-        val resolution = gameState.resolveMultiConnect ?: return
+        val resolution = gameState.resolveMultiConnect ?: return Result.failure(IllegalStateException("No multi connect to resolve"))
 
         if (resolution.targetPlayer != player || targetContact.id !in resolution.targetContacts) {
-            return
+            return Result.failure(IllegalStateException("Invalid multi connect target"))
         }
 
         val originalContact = gameState.requireContact(resolution.originalContact)
         val originalPlayer = gameState.racks
             .firstOrNull { originalContact.id in it.contactIds }
             ?.owner
-            ?: return
+            ?: return Result.failure(IllegalStateException("Original player not found"))
 
         // Resolve with exactly the same validation and result as a normal
         // StandardConnect made by the original contact's owner.
-        connect(originalPlayer, originalContact, targetContact)
+        val result = connect(originalPlayer, originalContact, targetContact)
+        if (result.isFailure) return result
 
         _gameState.value = this@ContactsGameFacadeImpl.gameState.value.copy(
             resolveMultiConnect = null,
         )
+        return Result.success(Unit)
     }
 
     private fun myDoubleConnect(
@@ -92,8 +95,10 @@ class ContactsGameFacadeImpl(
         actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContact: ContactsBoardState.Contact,
-    ) {
-        if (!actionType.matches(playerContacts.size, 1)) return
+    ): Result<Unit> {
+        if (!actionType.matches(playerContacts.size, 1)) {
+            return Result.failure(IllegalStateException("Invalid number of selected contacts"))
+        }
 
         // Select a matching contact before delegating so a non-matching first
         // choice cannot record a fault when the other selected contact matches.
@@ -101,7 +106,7 @@ class ContactsGameFacadeImpl(
             gameState.value.contactsMatch(it, otherContact)
         } ?: playerContacts.first()
 
-        connect(player, playerContact, otherContact)
+        return connect(player, playerContact, otherContact)
     }
 
     /**
@@ -112,11 +117,12 @@ class ContactsGameFacadeImpl(
         actionType: ContactsBoardState.ActionType,
         playerContact: ContactsBoardState.Contact,
         otherContacts: Set<ContactsBoardState.Contact>,
-    ) {
+    ): Result<Unit> {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
-        if (gameState.isActionLegal(player, actionType, setOf(playerContact), otherContacts) != null) {
-            return
+        val error = gameState.isActionLegal(player, actionType, setOf(playerContact), otherContacts)
+        if (error != null) {
+            return Result.failure(IllegalStateException(error))
         }
 
         val targetRack = gameState.racks.single { rack ->
@@ -131,14 +137,15 @@ class ContactsGameFacadeImpl(
                 targetContacts = otherContacts.map { it.id }.toSet(),
             ),
         )
+        return Result.success(Unit)
     }
 
-    override fun action(
+    override suspend fun action(
         player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
-    ) {
+    ): Result<Unit> {
         addGameLog(
             "${player.username}: $actionType ${
                 playerContacts.joinToString { "[${it.number}]" }
@@ -151,18 +158,22 @@ class ContactsGameFacadeImpl(
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
         if (actionType == ContactsBoardState.ActionType.ResolveMultiConnect) {
-            if (gameState.isActionLegal(player, actionType, playerContacts, otherContacts) != null) return
-            resolveMultiConnect(player, playerContacts.single())
-            return
+            val error = gameState.isActionLegal(player, actionType, playerContacts, otherContacts)
+            if (error != null) {
+                return Result.failure(IllegalStateException(error))
+            }
+            return resolveMultiConnect(player, playerContacts.single())
         }
 
-        if (gameState.isActionLegal(player, actionType, playerContacts, otherContacts) != null) {
-            return
+        val error = gameState.isActionLegal(player, actionType, playerContacts, otherContacts)
+        if (error != null) {
+            return Result.failure(IllegalStateException(error))
         }
 
-        when (actionType) {
+        return when (actionType) {
             ContactsBoardState.ActionType.AddHint -> {
                 _gameState.value = gameState.withHintFor(playerContacts.single())
+                Result.success(Unit)
             }
 
             ContactsBoardState.ActionType.StandardConnect -> connect(
@@ -188,10 +199,12 @@ class ContactsGameFacadeImpl(
 
             ContactsBoardState.ActionType.SoloConnectRest -> {
                 _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
+                Result.success(Unit)
             }
 
             ContactsBoardState.ActionType.FinishReds -> {
                 _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
+                Result.success(Unit)
             }
 
             ContactsBoardState.ActionType.ResolveMultiConnect -> error("Handled above")

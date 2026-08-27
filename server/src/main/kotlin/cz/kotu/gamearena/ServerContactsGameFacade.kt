@@ -36,9 +36,10 @@ class ServerContactsGameFacade(
         }
     }
 
-    fun handleAction(payload: String, username: String): String? {
-        try {
-            when (val action = json.decodeFromString<ContactsNetworkAction>(payload)) {
+    suspend fun handleAction(payload: String, username: String): Result<Unit> {
+        return try {
+            val action = json.decodeFromString<ContactsNetworkAction>(payload)
+            when (action) {
                 is ContactsNetworkAction.Action -> {
                     val state = delegate.gameState.value
                     delegate.action(
@@ -49,9 +50,8 @@ class ServerContactsGameFacade(
                     )
                 }
             }
-            return null
         } catch (error: Throwable) {
-            return error.message ?: "Invalid action"
+            Result.failure(error)
         }
     }
 }

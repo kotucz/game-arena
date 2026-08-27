@@ -181,8 +181,7 @@ fun ContactsPlayerScreen(
                         }
                     }
 
-                    val validationError = viewModel.validationError()
-                    val validAction = viewModel.validAction()
+                    val validationError = viewModel.actionError()
 
                     validationError?.let { error ->
                         Text(
@@ -193,7 +192,7 @@ fun ContactsPlayerScreen(
                     }
 
                     Button(
-                        enabled = validAction,
+                        enabled = viewModel.validAction(),
                         onClick = {
                             viewModel.confirmAction()
                         },

@@ -4,9 +4,11 @@ import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ContactsPlayerViewModelTest {
 
@@ -37,6 +39,24 @@ class ContactsPlayerViewModelTest {
     }
 
     @Test
+    fun clientValidationCanBeDisabledToUseBackendOnlyChecks() {
+        val state = createState()
+        val facade = TestContactsGameFacade(state)
+        val viewModel = ContactsPlayerViewModel(facade, "alice")
+
+        val (playerContact, otherContact) = matchingContacts(state)
+        viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
+        viewModel.onPlayerContactClick(playerContact)
+        viewModel.onOtherContactClick(otherContact)
+
+        assertTrue(!viewModel.clientValidationEnabled)
+        assertTrue(viewModel.validAction())
+
+        viewModel.clientValidationEnabled = true
+        assertNull(viewModel.validationError())
+    }
+
+    @Test
     fun resolutionTargetsAreOnlyClickableWhenResolvingAMultiConnect() {
         val state = createState()
         val alice = state.racks.first { it.owner.username == "alice" }.owner
@@ -48,12 +68,14 @@ class ContactsPlayerViewModelTest {
         val targetContacts = bobRack.contactIds.map(state::requireContact).take(2).toSet()
 
         val facade = TestContactsGameFacade(state)
-        facade.action(
-            player = alice,
-            actionType = ContactsBoardState.ActionType.DoubleConnect,
-            playerContacts = setOf(playerContact),
-            otherContacts = targetContacts,
-        )
+        runBlocking {
+            facade.action(
+                player = alice,
+                actionType = ContactsBoardState.ActionType.DoubleConnect,
+                playerContacts = setOf(playerContact),
+                otherContacts = targetContacts,
+            )
+        }
 
         val viewModel = ContactsPlayerViewModel(facade, "bob")
         val resolution = facade.gameState.value.resolveMultiConnect
@@ -121,13 +143,13 @@ class ContactsPlayerViewModelTest {
         override val gameState = delegate.gameState
         override val logs = delegate.logs
 
-        override fun action(
+        override suspend fun action(
             player: ContactsBoardState.Player,
             actionType: ContactsBoardState.ActionType,
             playerContacts: Set<ContactsBoardState.Contact>,
             otherContacts: Set<ContactsBoardState.Contact>,
-        ) {
-            delegate.action(player, actionType, playerContacts, otherContacts)
+        ): Result<Unit> {
+            return delegate.action(player, actionType, playerContacts, otherContacts)
         }
     }
 }
