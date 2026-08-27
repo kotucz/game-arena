@@ -3,8 +3,10 @@ package cz.kotu.gamearena
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.CreateGameRequest
 import cz.kotu.gamearena.model.RunningGame
+import io.ktor.http.CacheControl
 import io.ktor.http.ContentType
 import io.ktor.http.Cookie
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -270,22 +272,6 @@ fun Application.module() {
         }
 
         get("/") {
-            call.respondFile(File(webRoot, "index.html"))
-        }
-
-        // The Wasm client uses browser history for these SPA routes. Serve the
-        // application shell on refresh so the client-side navigation can take
-        // over after the page has loaded.
-        get("/auth") {
-            call.respondFile(File(webRoot, "index.html"))
-        }
-        get("/games") {
-            call.respondFile(File(webRoot, "index.html"))
-        }
-        get("/got-five") {
-            call.respondFile(File(webRoot, "index.html"))
-        }
-        get("/game/{gameId}") {
             call.respondFile(File(webRoot, "index.html"))
         }
 
