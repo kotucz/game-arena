@@ -225,7 +225,8 @@ fun Application.module() {
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {
-                    game.contacts.handleLogs(this, session.username)
+                    val lastSentLogIndex = call.request.queryParameters["lastSentLogIndex"]?.toIntOrNull() ?: -1
+                    game.contacts.handleLogs(this, session.username, lastSentLogIndex)
                 }
             }
         }

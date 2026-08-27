@@ -21,14 +21,18 @@ class ServerContactsGameFacade(
         }
     }
 
-    suspend fun handleLogs(session: ServerSSESession, username: String) {
+    suspend fun handleLogs(
+        session: ServerSSESession,
+        username: String,
+        lastSentLogIndex: Int = -1,
+    ) {
         session.send(ServerSentEvent(comments = "start"))
-        var lastSentLogIndex = -1
+        var nextLogIndex = lastSentLogIndex
         delegate.logs.collect { logs ->
-            for (i in (lastSentLogIndex + 1) until logs.size) {
+            for (i in (nextLogIndex + 1) until logs.size) {
                 session.send(ServerSentEvent(data = json.encodeToString(logs[i])))
             }
-            lastSentLogIndex = logs.size - 1
+            nextLogIndex = logs.size - 1
         }
     }
 

@@ -42,6 +42,7 @@ class NetworkContactsGameFacade(
         gameEvents().stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), initialState)
 
     private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
+    private var lastSentLogIndex: Int = -1
 
     override val logs: StateFlow<List<GameLogEntry>> = combine(
         _logs,
@@ -79,11 +80,19 @@ class NetworkContactsGameFacade(
     private fun gameLogs(): Flow<Unit> = flow {
         while (currentCoroutineContext().isActive) {
             try {
-                httpClient.sse(logsEndpoint) {
+                val connectAfterIndex = maxOf(lastSentLogIndex, _logs.value.lastIndex)
+                val subscriptionUrl = if (connectAfterIndex >= 0) {
+                    "$logsEndpoint?lastSentLogIndex=$connectAfterIndex"
+                } else {
+                    logsEndpoint
+                }
+                httpClient.sse(subscriptionUrl) {
                     logLocal("Log events connected")
                     incoming.collect { event ->
                         event.data?.let { data ->
-                            _logs.value += json.decodeFromString<GameLogEntry>(data)
+                            val parsed = json.decodeFromString<GameLogEntry>(data)
+                            _logs.value += parsed
+                            lastSentLogIndex = _logs.value.lastIndex
                         }
                     }
                     onError(IllegalStateException("Incoming logs finished unexpectedly"))
@@ -120,6 +129,7 @@ class NetworkContactsGameFacade(
 
     private fun logLocal(text: String) {
         _logs.value += GameLogEntry(Clock.System.now().toEpochMilliseconds(), text)
+        lastSentLogIndex = _logs.value.lastIndex
     }
 
 }
