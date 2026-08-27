@@ -95,8 +95,8 @@ class NetworkContactsGameFacade(
                             lastSentLogIndex = _logs.value.lastIndex
                         }
                     }
-                    onError(IllegalStateException("Incoming logs finished unexpectedly"))
                 }
+                logLocal("Incoming logs finished unexpectedly")
             } catch (error: Throwable) {
                 onError(error)
                 delay(1000.milliseconds)
@@ -114,8 +114,8 @@ class NetworkContactsGameFacade(
                             emit(json.decodeFromString<ContactsBoardState>(data))
                         }
                     }
-                    onError(IllegalStateException("Incoming game events finished unexpectedly"))
                 }
+                logLocal("Incoming game events finished unexpectedly")
             } catch (error: Throwable) {
                 onError(error)
                 delay(1000.milliseconds)
