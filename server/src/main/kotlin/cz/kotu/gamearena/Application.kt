@@ -271,17 +271,35 @@ fun Application.module() {
             }
         }
 
-        get("/") {
-            call.respondFile(File(webRoot, "index.html"))
+        suspend fun respondAppShell(call: ApplicationCall) {
+            val file = File(webRoot, "index.html")
+            call.response.headers.append(HttpHeaders.CacheControl, CacheControl.NoCache(CacheControl.Visibility.Private).toString())
+            call.respondFile(file)
         }
 
-        // Do not fall back to index.html for missing assets. In particular, a
-        // stale browser requesting an old Wasm hash must receive a 404, not HTML.
-        staticFiles("/", webRoot)
+        get("/") {
+            respondAppShell(call)
+        }
+
+        // Static assets are versioned and change infrequently, so cache them aggressively.
+        // Keep the app shell uncached so clients pick up new bundle hashes after deploys.
+        staticFiles("/", webRoot) {
+            cacheControl { resource ->
+                staticAssetCacheControl(resource)
+            }
+        }
     }
     monitor.subscribe(ApplicationStopped) {
         database.close()
     }
+}
+
+private fun staticAssetCacheControl(resource: File): List<CacheControl> = when {
+    resource.name.equals("index.html", ignoreCase = true) -> listOf(CacheControl.NoCache(CacheControl.Visibility.Private))
+    resource.extension.lowercase() in setOf("wasm", "js", "css", "svg", "png", "ico", "woff", "woff2", "ttf", "otf") ->
+        listOf(CacheControl.MaxAge(365 * 24 * 60 * 60, visibility = CacheControl.Visibility.Public))
+
+    else -> emptyList()
 }
 
 private fun validateRegistration(username: String, email: String, password: String): String? = when {
