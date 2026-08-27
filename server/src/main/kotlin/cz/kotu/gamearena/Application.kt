@@ -23,6 +23,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
+import io.ktor.server.sse.heartbeat
 import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
 import kotlinx.serialization.SerializationException
@@ -31,6 +32,7 @@ import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 import java.io.File
 import java.time.Instant
+import kotlin.time.Duration.Companion.seconds
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -127,6 +129,11 @@ fun Application.module() {
         }
 
         sse("/api/games/events") {
+            heartbeat {
+                period = 15.seconds
+                event = ServerSentEvent(comments = "heartbeat")
+            }
+
             val session = currentSession(call, database)
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
@@ -183,6 +190,10 @@ fun Application.module() {
         }
 
         sse("/api/games/{gameId}/contacts/events") {
+            heartbeat {
+                period = 15.seconds
+                event = ServerSentEvent(comments = "heartbeat")
+            }
             val session = currentSession(call, database)
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
@@ -217,6 +228,10 @@ fun Application.module() {
         }
 
         sse("/api/games/{gameId}/logs") {
+            heartbeat {
+                period = 15.seconds
+                event = ServerSentEvent(comments = "heartbeat")
+            }
             val session = currentSession(call, database)
             if (session == null) {
                 call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
