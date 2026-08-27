@@ -7,6 +7,14 @@ import io.ktor.client.plugins.cookies.HttpCookies
 
 actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(OkHttp) {
     install(HttpCookies)
+    engine {
+        preconfigured = okhttp3.OkHttpClient.Builder()
+            .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            .build()
+        config {
+            protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+        }
+    }
     configure()
 }
 

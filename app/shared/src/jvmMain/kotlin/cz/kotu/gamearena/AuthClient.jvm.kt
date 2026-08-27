@@ -19,11 +19,15 @@ actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Uni
     }
 
     engine {
+        preconfigured = okhttp3.OkHttpClient.Builder()
+            .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            .build()
         config {
             // 0 = Infinite socket read timeout for OkHttp.
             // Ktor's HttpTimeout plugin will still enforce timeouts on regular REST calls.
             readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
             connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
         }
     }
     configure()

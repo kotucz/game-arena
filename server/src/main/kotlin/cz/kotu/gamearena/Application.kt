@@ -10,6 +10,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
+import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.Netty
@@ -26,6 +27,7 @@ import io.ktor.server.sse.SSE
 import io.ktor.server.sse.heartbeat
 import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
+import io.netty.channel.ChannelOption
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -36,8 +38,27 @@ import kotlin.time.Duration.Companion.seconds
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
-    embeddedServer(Netty, port = port, host = "0.0.0.0", module = Application::module)
-        .start(wait = true)
+    embeddedServer(
+        factory = Netty,
+        configure = {
+            // Set host and port via connector
+            connector {
+                host = "0.0.0.0"
+                this.port = port
+            }
+
+            // Enable HTTP/2 over cleartext (h2c) for local proxy connections
+            enableHttp2 = true
+            enableH2c = true
+
+            // Disable Nagle's algorithm directly on Netty's Channel bootstrap
+            configureBootstrap = {
+                option(ChannelOption.TCP_NODELAY, true)
+                childOption(ChannelOption.TCP_NODELAY, true)
+            }
+        },
+        module = Application::module
+    ).start(wait = true)
 }
 
 fun Application.module() {
@@ -168,8 +189,10 @@ fun Application.module() {
                     when {
                         request.type != "contacts" ->
                             call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
+
                         players.isEmpty() || players.any(String::isEmpty) ->
                             call.respond(HttpStatusCode.BadRequest, "At least one player is required")
+
                         else -> {
                             val game = gamesManager.createContactsGame(players, config)
                             val response = RunningGame(
