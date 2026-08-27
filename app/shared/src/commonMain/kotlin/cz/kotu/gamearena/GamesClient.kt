@@ -11,11 +11,15 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.isActive
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
+import kotlin.time.Duration.Companion.seconds
 
 @AppScope
 @Inject
@@ -29,12 +33,19 @@ class GamesClient(private val httpClient: HttpClient) {
         Json.decodeFromString(body)
     }
 
-    fun observeGames(): Flow<List<RunningGame>> = channelFlow {
-        httpClient.sse(endpoint("/api/games/events")) {
-            incoming.collect { event ->
-                event.data?.let {
-                    send(Json.decodeFromString(ListSerializer(RunningGame.serializer()), it))
+    fun observeGames(): Flow<List<RunningGame>> = flow {
+        while (currentCoroutineContext().isActive) {
+            try {
+                httpClient.sse(endpoint("/api/games/events")) {
+                    incoming.collect { event ->
+                        event.data?.let {
+                            emit(Json.decodeFromString(ListSerializer(RunningGame.serializer()), it))
+                        }
+                    }
                 }
+            } catch (_: Throwable) {
+                // TODO log
+                delay(1.seconds)
             }
         }
     }
