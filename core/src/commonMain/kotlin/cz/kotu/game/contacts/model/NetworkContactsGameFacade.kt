@@ -7,12 +7,22 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class NetworkContactsGameFacade(
     private val httpClient: HttpClient,
@@ -28,16 +38,16 @@ class NetworkContactsGameFacade(
     private val logsEndpoint: String = gameEndpoint.removeSuffix("/contacts") + "/logs"
     private val actionsEndpoint: String = gameEndpoint + "/actions"
 
-    private val _gameState = MutableStateFlow(initialState)
-    override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
+    override val gameState: StateFlow<ContactsBoardState> =
+        gameEvents().stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), initialState)
 
     private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
-    override val logs: StateFlow<List<GameLogEntry>> = _logs.asStateFlow()
 
-    init {
-        scope.launch { runSession() }
-        scope.launch { runLogs() }
-    }
+    override val logs: StateFlow<List<GameLogEntry>> = combine(
+        _logs,
+        gameLogs().stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), Unit)
+    ) { logsList, _ -> logsList }
+        .stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), _logs.value)
 
     override fun action(
         player: ContactsBoardState.Player,
@@ -66,38 +76,50 @@ class NetworkContactsGameFacade(
         }
     }
 
-    private suspend fun runLogs() {
-        try {
-            httpClient.sse(logsEndpoint) {
-                incoming.collect { event ->
-                    event.data?.let { data ->
-                        _logs.value += json.decodeFromString<GameLogEntry>(data)
+    private fun gameLogs(): Flow<Unit> = flow {
+        while (currentCoroutineContext().isActive) {
+            try {
+                httpClient.sse(logsEndpoint) {
+                    logLocal("Log events connected")
+                    incoming.collect { event ->
+                        event.data?.let { data ->
+                            _logs.value += json.decodeFromString<GameLogEntry>(data)
+                        }
                     }
+                    onError(IllegalStateException("Incoming logs finished unexpectedly"))
                 }
-                onError(IllegalStateException("Incoming logs finished unexpectedly"))
+            } catch (error: Throwable) {
+                onError(error)
+                delay(1000.milliseconds)
             }
-        } catch (error: Throwable) {
-            onError(error)
         }
     }
 
-    private suspend fun runSession() {
-        try {
-            httpClient.sse(eventsEndpoint) {
-                incoming.collect { event ->
-                    event.data?.let { data ->
-                        _gameState.value = json.decodeFromString<ContactsBoardState>(data)
+    private fun gameEvents(): Flow<ContactsBoardState> = flow {
+        while (currentCoroutineContext().isActive) {
+            try {
+                httpClient.sse(eventsEndpoint) {
+                    logLocal("Game events connected")
+                    incoming.collect { event ->
+                        event.data?.let { data ->
+                            emit(json.decodeFromString<ContactsBoardState>(data))
+                        }
                     }
+                    onError(IllegalStateException("Incoming game events finished unexpectedly"))
                 }
-                onError(IllegalStateException("Incoming game events finished unexpectedly"))
+            } catch (error: Throwable) {
+                onError(error)
+                delay(1000.milliseconds)
             }
-        } catch (error: Throwable) {
-            onError(error)
         }
     }
 
     private fun onError(error: Throwable) {
-        _logs.value += GameLogEntry(Clock.System.now().toEpochMilliseconds(), error.stackTraceToString())
+        logLocal(error.stackTraceToString())
+    }
+
+    private fun logLocal(text: String) {
+        _logs.value += GameLogEntry(Clock.System.now().toEpochMilliseconds(), text)
     }
 
 }
