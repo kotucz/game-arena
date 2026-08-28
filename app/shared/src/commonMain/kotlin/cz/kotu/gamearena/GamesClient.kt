@@ -11,6 +11,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +28,7 @@ class GamesClient(private val httpClient: HttpClient) {
     suspend fun runningGames(): Result<List<RunningGame>> = runCatching {
         val response = httpClient.get(endpoint("/api/games"))
         val body = response.bodyAsText()
-        if (response.status.value !in 200..299) {
+        if (!response.status.isSuccess()) {
             error(body.ifBlank { "Could not load running games" })
         }
         Json.decodeFromString(body)
@@ -56,7 +57,7 @@ class GamesClient(private val httpClient: HttpClient) {
             setBody(Json.encodeToString(CreateGameRequest.serializer(), CreateGameRequest(type, players, config)))
         }
         val body = response.bodyAsText()
-        if (response.status.value !in 200..299) {
+        if (!response.status.isSuccess()) {
             error(body.ifBlank { "Could not create game" })
         }
         Json.decodeFromString(body)

@@ -7,6 +7,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -70,7 +71,7 @@ class NetworkContactsGameFacade(
                     )
                 )
             }
-            if (response.status.value !in 200..299) {
+            if (!response.status.isSuccess()) {
                 val detail = response.bodyAsText().ifBlank { "Action failed: ${response.status}" }
                 error(detail)
             }
