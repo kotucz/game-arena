@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 class AuthIntegrationTest {
     @Test
     fun registerSetsSessionCookieAndAllowsAuthenticatedMe() = testApplication {
-        application { module() }
+        application { module(TestServerComponent::class.create()) }
 
         val username = "testuser_${System.currentTimeMillis()}"
         val email = "$username@example.com"

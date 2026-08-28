@@ -69,13 +69,13 @@ fun main() {
     ).start(wait = true)
 }
 
-fun Application.module() {
+fun Application.module(serverComponent: ServerBindings = ServerComponent::class.create()) {
     install(CallLogging) {
         level = Level.INFO
         logger = org.slf4j.LoggerFactory.getLogger("Ktor.Server")
     }
-    val database = createDatabase()
-    val gamesManager = GamesManager(gameDao = database.gameDao())
+    val database = serverComponent.database
+    val gamesManager = serverComponent.gamesManager
     kotlinx.coroutines.runBlocking { gamesManager.restorePersistedGames() }
     install(Sessions) {
         cookie<String>(SessionTokens.cookieName) {

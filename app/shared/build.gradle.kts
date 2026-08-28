@@ -102,7 +102,7 @@ kotlin {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", "me.tatarka.inject:kotlin-inject-compiler-ksp:${libs.versions.kotlinInject.get()}")
+    add("kspCommonMainMetadata", libs.kotlin.inject.compiler.ksp)
     androidRuntimeClasspath(libs.compose.uiTooling)
 }
 
