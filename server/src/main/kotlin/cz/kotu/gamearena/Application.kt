@@ -12,6 +12,8 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.session
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
@@ -25,6 +27,10 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import io.ktor.server.sessions.Sessions
+import io.ktor.server.sessions.cookie
+import io.ktor.server.sessions.maxAge
+import io.ktor.server.sessions.sessions
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.heartbeat
 import io.ktor.server.sse.sse
@@ -71,6 +77,30 @@ fun Application.module() {
     val database = createDatabase()
     val gamesManager = GamesManager(gameDao = database.gameDao())
     kotlinx.coroutines.runBlocking { gamesManager.restorePersistedGames() }
+    install(Sessions) {
+        cookie<String>(SessionTokens.cookieName) {
+            cookie.path = "/"
+            cookie.httpOnly = true
+            cookie.maxAge = SessionTokens.lifetimeSeconds.seconds
+        }
+    }
+
+    // Authentication provider that validates session tokens stored in the database.
+    // Debug header handling remains in currentSession() for later work; do not touch Sessions here.
+    install(Authentication) {
+        session<String>("auth-session") {
+            validate { token ->
+                val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token))
+                if (session == null) return@validate null
+                if (session.expiresAt <= Instant.now().epochSecond) {
+                    database.sessionDao().deleteByTokenHash(session.tokenHash)
+                    return@validate null
+                }
+                SessionPrincipal(session.username)
+            }
+        }
+    }
+
     install(SSE)
     val webRoot = File(
         // relative url with ./gradlew :server:run
@@ -112,6 +142,15 @@ fun Application.module() {
             }
         }
 
+        post("/api/logout") {
+            val token = call.request.cookies[SessionTokens.cookieName]
+            if (token != null) {
+                database.sessionDao().deleteByTokenHash(SessionTokens.hash(token))
+            }
+            call.sessions.clear(SessionTokens.cookieName)
+            call.respondText("Logout successful")
+        }
+
         get("/api/me") {
             val session = currentSession(call, database)
             if (session == null) {
@@ -119,23 +158,6 @@ fun Application.module() {
             } else {
                 call.respondText(session.username)
             }
-        }
-
-        post("/api/logout") {
-            val token = call.request.cookies[SessionTokens.cookieName]
-            if (token != null) {
-                database.sessionDao().deleteByTokenHash(SessionTokens.hash(token))
-            }
-            call.response.cookies.append(
-                Cookie(
-                    name = SessionTokens.cookieName,
-                    value = "",
-                    maxAge = 0,
-                    httpOnly = true,
-                    path = "/",
-                ),
-            )
-            call.respondText("Logout successful")
         }
 
         get("/api/games") {
@@ -318,6 +340,9 @@ private suspend fun createSession(call: ApplicationCall, database: AppDatabase, 
             expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
         )
     )
+    // Use Ktor Sessions API to set the cookie-backed session value so Authentication/session can read it.
+    call.sessions.set(SessionTokens.cookieName, token)
+    // Also append a Set-Cookie header for clients that rely on raw cookies (tests and non-ktor clients)
     call.response.cookies.append(
         Cookie(
             name = SessionTokens.cookieName,

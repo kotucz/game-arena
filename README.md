@@ -69,6 +69,22 @@ Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
     - JS target: `./gradlew :app:shared:jsTest`
 - iOS tests: `./gradlew :app:shared:iosSimulatorArm64Test`
 
+### Server authentication and sessions
+
+The Ktor server uses a cookie-backed session with Ktor authentication. A successful login or registration creates a session cookie named `gamearena_session`, and the server validates the session token against the SQLite-backed `sessions` table.
+
+Relevant endpoints:
+
+- `POST /api/register` — registers a user and immediately creates a session.
+- `POST /api/login` — validates credentials and creates a session.
+- `POST /api/logout` — removes the DB session and clears the cookie.
+- `GET /api/me` — returns the current authenticated username.
+- Protected game endpoints require an authenticated session.
+
+The authentication flow is implemented with the Ktor `Sessions` and `Authentication` plugins. Session state is kept server-side in the DB; the cookie only stores the opaque token. The server also exposes the `SessionPrincipal` for authenticated route access.
+
+For local test/dev convenience, a debug header may be used temporarily to bypass the normal cookie flow when explicitly enabled in the test environment. This is not production behavior and should remain isolated from the normal auth path.
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),

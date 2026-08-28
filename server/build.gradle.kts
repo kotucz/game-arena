@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.room.runtime)
     implementation(libs.sqlite.bundled)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.sessions)
     ksp(libs.room.compiler)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
