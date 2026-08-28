@@ -3,7 +3,9 @@
 `GameArena` is a Kotlin Multiplatform project. Platform-independent game rules
 live in `core`; Compose Multiplatform UI lives in `app/shared` and depends on
 `core`.
-The project is in a prototype stage.
+The project is in a prototype stage. However, the code should be idiomatic, 
+use industrial standards and best practices. Validate with user, if the effort
+does not seem reasonable.    
 Plan is to support multiple game types – while still figuring out the best 
 architecture for that – and to support multiple clients (desktop, web, mobile)
 with shared UI code.
@@ -52,6 +54,20 @@ Preserve production defaults, but allow tests to inject deterministic initial
 state, game ID generators, and clocks. Use small explicit fixtures rather than
 searching randomized state; use explicit `ManagedGame` fixtures for future game
 types.
+
+### Testing DI (kotlin-inject)
+
+Use kotlin-inject to provide test-specific bindings idiomatically:
+
+- Introduce a `ServerBindings` interface with common providers (e.g. `database`, `gamesManager`).
+- Make the production `ServerComponent` implement `ServerBindings` and supply real bindings.
+- Create `TestFakes` in test sources with `@get:Provides` properties for fakes (for example a temp `AppDatabase`).
+- Create a `TestServerComponent(@Component val fakes: TestFakes = TestFakes()) : ServerBindings` and call the generated factory in tests: `val c = TestServerComponent::class.create()`.
+- Change `Application.module(...)` to accept `ServerBindings` (defaulting to the production component). Tests pass the test component instance into `module(c)`.
+
+Notes:
+- Enable KSP for test sources (kspTest) so kotlin-inject generates `create()` for test components; run `./gradlew :server:compileTestKotlin` to generate artifacts.
+- Prefer using real dependencies and only fake edges (DB/network) in tests. Remove legacy ServiceLocator usage — tests should use `TestFakes` instead.
 
 ## Verification
 
