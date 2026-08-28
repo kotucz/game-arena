@@ -13,7 +13,9 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.session
+import io.ktor.server.auth.principal
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.http.content.staticFiles
@@ -86,7 +88,6 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
     }
 
     // Authentication provider that validates session tokens stored in the database.
-    // Debug header handling remains in currentSession() for later work; do not touch Sessions here.
     install(Authentication) {
         session<String>("auth-session") {
             validate { token ->
@@ -96,7 +97,7 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
                     database.sessionDao().deleteByTokenHash(session.tokenHash)
                     return@validate null
                 }
-                SessionPrincipal(session.username)
+                UserPrincipal(session.username)
             }
         }
     }
@@ -151,38 +152,28 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
             call.respondText("Logout successful")
         }
 
-        get("/api/me") {
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
-                call.respondText(session.username)
+        authenticate("auth-session") {
+            get("/api/me") {
+                val principal = call.principal<UserPrincipal>()!!
+                call.respondText(principal.username)
             }
-        }
 
-        get("/api/games") {
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
+            get("/api/games") {
+                val principal = call.principal<UserPrincipal>()!!
                 val games = Json.encodeToString(
                     ListSerializer(RunningGame.serializer()),
                     gamesManager.runningGames(),
                 )
                 call.respondText(games, ContentType.Application.Json)
             }
-        }
 
-        sse("/api/games/events") {
-            heartbeat {
-                period = 15.seconds
-                event = ServerSentEvent(comments = "heartbeat")
-            }
+            sse("/api/games/events") {
+                heartbeat {
+                    period = 15.seconds
+                    event = ServerSentEvent(comments = "heartbeat")
+                }
 
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
+                val principal = call.principal<UserPrincipal>()!!
                 gamesManager.runningGames.collect { games ->
                     send(
                         ServerSentEvent(
@@ -191,13 +182,9 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
                     )
                 }
             }
-        }
 
-        post("/api/games") {
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
+            post("/api/games") {
+                val principal = call.principal<UserPrincipal>()!!
                 val request = try {
                     Json.decodeFromString(CreateGameRequest.serializer(), call.receiveText())
                 } catch (_: SerializationException) {
@@ -234,36 +221,28 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
                     }
                 }
             }
-        }
 
-        sse("/api/games/{gameId}/contacts/events") {
-            heartbeat {
-                period = 15.seconds
-                event = ServerSentEvent(comments = "heartbeat")
-            }
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
+            sse("/api/games/{gameId}/contacts/events") {
+                heartbeat {
+                    period = 15.seconds
+                    event = ServerSentEvent(comments = "heartbeat")
+                }
+                val principal = call.principal<UserPrincipal>()!!
                 val game = gamesManager.contactsGame(call.parameters["gameId"].orEmpty())
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {
-                    game.contacts.handleEvents(this, session.username)
+                    game.contacts.handleEvents(this, principal.username)
                 }
             }
-        }
 
-        post("/api/games/{gameId}/contacts/actions") {
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
+            post("/api/games/{gameId}/contacts/actions") {
+                val principal = call.principal<UserPrincipal>()!!
                 val game = gamesManager.contactsGame(call.parameters["gameId"].orEmpty())
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {
-                    val result = game.contacts.handleAction(call.receiveText(), session.username)
+                    val result = game.contacts.handleAction(call.receiveText(), principal.username)
                     if (result.isSuccess) {
                         gamesManager.persist(game)
                         call.respond(HttpStatusCode.Accepted)
@@ -272,23 +251,19 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
                     }
                 }
             }
-        }
 
-        sse("/api/games/{gameId}/logs") {
-            heartbeat {
-                period = 15.seconds
-                event = ServerSentEvent(comments = "heartbeat")
-            }
-            val session = currentSession(call, database)
-            if (session == null) {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            } else {
+            sse("/api/games/{gameId}/logs") {
+                heartbeat {
+                    period = 15.seconds
+                    event = ServerSentEvent(comments = "heartbeat")
+                }
+                val principal = call.principal<UserPrincipal>()!!
                 val game = gamesManager.contactsGame(call.parameters["gameId"].orEmpty())
                 if (game == null) {
                     call.respond(HttpStatusCode.NotFound, "Game not found")
                 } else {
                     val lastSentLogIndex = call.request.queryParameters["lastSentLogIndex"]?.toIntOrNull() ?: -1
-                    game.contacts.handleLogs(this, session.username, lastSentLogIndex)
+                    game.contacts.handleLogs(this, principal.username, lastSentLogIndex)
                 }
             }
         }
@@ -354,26 +329,3 @@ private suspend fun createSession(call: ApplicationCall, database: AppDatabase, 
     )
 }
 
-internal suspend fun currentSession(call: ApplicationCall, database: AppDatabase): Session? {
-    // Development clients can bypass the persistent session cookie by sending
-    // a username explicitly. The fake session is only used for the duration
-    // of this request; the username is the only value consumed by the game.
-    val debugUsername = call.request.headers[DEBUG_USERNAME_HEADER]?.trim()
-    if (!debugUsername.isNullOrEmpty()) {
-        return Session(
-            tokenHash = "debug:$debugUsername",
-            username = debugUsername,
-            expiresAt = Long.MAX_VALUE,
-        )
-    }
-
-    val token = call.request.cookies[SessionTokens.cookieName] ?: return null
-    val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token)) ?: return null
-    if (session.expiresAt <= Instant.now().epochSecond) {
-        database.sessionDao().deleteByTokenHash(session.tokenHash)
-        return null
-    }
-    return session
-}
-
-private const val DEBUG_USERNAME_HEADER = "X-Debug-Username"

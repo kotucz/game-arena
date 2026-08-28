@@ -16,7 +16,7 @@ Current plan for debug headers
 3. Prefer auth provider validation over ad hoc checks
 - When a route truly needs auth, use the Ktor auth machinery (`authenticate("auth-session")`).
 - Inside the auth provider’s validation, keep real session-token lookup only.
-- For debug/test mode, keep a separate dev-only branch or preflight helper that returns a `SessionPrincipal` without touching plugin lifecycle ordering.
+- For debug/test mode, keep a separate dev-only branch or preflight helper that returns a `UserPrincipal` without touching plugin lifecycle ordering.
 
 4. Avoid early plugin access
 - Never use `call.sessions` before the `Sessions` plugin is installed and ready.
@@ -48,7 +48,7 @@ Suggested implementation shape
   - `private fun currentSessionOrDebug(call: ApplicationCall, database: AppDatabase): Session?`
 - route usage:
   - protected endpoints under `authenticate("auth-session")`
-  - inside handlers, read `call.principal<SessionPrincipal>()`
+  - inside handlers, read `call.principal<UserPrincipal>()`
 
 Important rule:
 - Do not mutate `call.sessions` in setup interceptors. If needed, create and attach a dev-only session in the route or auth-validation path only after the plugin is ready.

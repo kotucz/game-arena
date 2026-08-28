@@ -81,7 +81,7 @@ Relevant endpoints:
 - `GET /api/me` — returns the current authenticated username.
 - Protected game endpoints require an authenticated session.
 
-The authentication flow is implemented with the Ktor `Sessions` and `Authentication` plugins. Session state is kept server-side in the DB; the cookie only stores the opaque token. The server also exposes the `SessionPrincipal` for authenticated route access.
+The authentication flow is implemented with the Ktor `Sessions` and `Authentication` plugins. Session state is kept server-side in the DB; the cookie only stores the opaque token. The server also exposes the `UserPrincipal` for authenticated route access.
 
 For local test/dev convenience, a debug header may be used temporarily to bypass the normal cookie flow when explicitly enabled in the test environment. This is not production behavior and should remain isolated from the normal auth path.
 
