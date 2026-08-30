@@ -1,5 +1,8 @@
 package cz.kotu.gamearena
 
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
+import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -8,10 +11,44 @@ import kotlin.test.*
 
 class ApplicationTest {
 
+    private suspend fun ensureTestUser(database: AppDatabase, username: String = "test-user") {
+        if (database.userDao().findByUsername(username) == null) {
+            database.userDao().insert(
+                User(
+                    username = username,
+                    passwordHash = PasswordHasher.hash("password123"),
+                    email = "$username@example.com",
+                )
+            )
+        }
+    }
+
+    private suspend fun ApplicationTestBuilder.createAuthenticatedClient(
+        component: ServerBindings,
+        username: String = "test-user",
+        password: String = "password123",
+    ): HttpClient {
+        ensureTestUser(component.database, username)
+
+        val authenticatedClient = createClient {
+            install(HttpCookies) {
+                storage = AcceptAllCookiesStorage()
+            }
+        }
+
+        val loginResponse = authenticatedClient.post("/api/login") {
+            contentType(ContentType.Application.FormUrlEncoded)
+            setBody(listOf("username" to username, "password" to password).formUrlEncode())
+        }
+        assertEquals(HttpStatusCode.OK, loginResponse.status, "Failed to log in test user")
+        return authenticatedClient
+    }
+
     @Test
     fun healthCheck() = testApplication {
+        val component = TestServerComponent::class.create()
         application {
-            module()
+            module(component)
         }
         val response = client.get("/health")
         assertEquals(HttpStatusCode.OK, response.status)
@@ -20,7 +57,8 @@ class ApplicationTest {
 
     @Test
     fun registrationCreatesPersistentSession() = testApplication {
-        application { module() }
+        val component = TestServerComponent::class.create()
+        application { module(component) }
 
         val username = "user_${System.currentTimeMillis()}"
         val registration = client.post("/api/register") {
@@ -33,12 +71,12 @@ class ApplicationTest {
     }
 
     @Test
-    fun debugUsernameAuthenticatesWithoutSessionCookie() = testApplication {
-        application { module() }
+    fun authenticatedUserCanGetProfile() = testApplication {
+        val component = TestServerComponent::class.create()
+        application { module(component) }
 
-        val response = client.get("/api/me") {
-            header("X-Debug-Username", "test-user")
-        }
+        val authClient = createAuthenticatedClient(component, "test-user")
+        val response = authClient.get("/api/me")
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("test-user", response.bodyAsText())
@@ -46,7 +84,8 @@ class ApplicationTest {
 
     @Test
     fun listingGamesRequiresAuthentication() = testApplication {
-        application { module() }
+        val component = TestServerComponent::class.create()
+        application { module(component) }
 
         val response = client.get("/api/games")
 
@@ -55,10 +94,12 @@ class ApplicationTest {
 
     @Test
     fun createsContactsGameForAuthenticatedUser() = testApplication {
-        application { module() }
+        val component = TestServerComponent::class.create()
+        application { module(component) }
 
-        val response = client.post("/api/games") {
-            header("X-Debug-Username", "test-user")
+        val authClient = createAuthenticatedClient(component, "test-user")
+
+        val response = authClient.post("/api/games") {
             contentType(ContentType.Application.Json)
             setBody("{\"type\":\"contacts\",\"players\":[\"alice\",\"bob\"], \"config\":\"{}\"}")
         }
@@ -70,9 +111,7 @@ class ApplicationTest {
 
         // listsRunningGamesForAuthenticatedUser
 
-        val response2 = client.get("/api/games") {
-            header("X-Debug-Username", "test-user")
-        }
+        val response2 = authClient.get("/api/games")
 
         assertEquals(HttpStatusCode.OK, response2.status)
         val body = response2.bodyAsText()
@@ -85,10 +124,12 @@ class ApplicationTest {
 
     @Test
     fun creatingUnsupportedGameTypeReturnsBadRequest() = testApplication {
-        application { module() }
+        val component = TestServerComponent::class.create()
+        application { module(component) }
 
-        val response = client.post("/api/games") {
-            header("X-Debug-Username", "test-user")
+        val authClient = createAuthenticatedClient(component, "test-user")
+
+        val response = authClient.post("/api/games") {
             contentType(ContentType.Application.Json)
             setBody("{\"type\":\"future-game\",\"players\":[\"alice\"]}")
         }
@@ -98,10 +139,12 @@ class ApplicationTest {
 
     @Test
     fun gameSpecificActionRouteReturnsNotFoundForUnknownGame() = testApplication {
-        application { module() }
+        val component = TestServerComponent::class.create()
+        application { module(component) }
 
-        val response = client.post("/api/games/missing/contacts/actions") {
-            header("X-Debug-Username", "test-user")
+        val authClient = createAuthenticatedClient(component, "test-user")
+
+        val response = authClient.post("/api/games/missing/contacts/actions") {
             contentType(ContentType.Application.Json)
             setBody("{}")
         }
@@ -110,3 +153,4 @@ class ApplicationTest {
         assertEquals("Game not found", response.bodyAsText())
     }
 }
+
