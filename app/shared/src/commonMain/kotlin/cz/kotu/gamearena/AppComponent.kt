@@ -4,6 +4,9 @@ import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.tools.MultiPlayerViewModel
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.Provides
@@ -25,6 +28,14 @@ abstract class AppComponent {
     // username parameter removed — ContactsGameViewModel now injects AuthManager directly
     abstract val contactsGameViewModelFactory: (String) -> ContactsGameViewModel
     abstract val gamesViewModelFactory: () -> GamesViewModel
+
+    /**
+     * Application-wide coroutine scope used by [AuthManager] for background work
+     * (observing 401 events, [kotlinx.coroutines.flow.stateIn]).
+     */
+    @Provides
+    @AppScope
+    fun provideAppScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
      * Single shared event flow: the Ktor 401 interceptor emits into it, and

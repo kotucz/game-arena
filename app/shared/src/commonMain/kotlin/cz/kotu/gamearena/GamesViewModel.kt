@@ -9,9 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
@@ -23,7 +23,8 @@ class GamesViewModel(
     private val gamesClient: GamesClient,
     private val authManager: AuthManager,
 ) : ViewModel() {
-    val username = authManager.currentUsername
+    val username: StateFlow<String?> = authManager.currentUsername
+
     private val _games = MutableStateFlow<List<RunningGame>?>(null)
     val games: StateFlow<List<RunningGame>?> = _games.asStateFlow()
 
@@ -49,7 +50,12 @@ class GamesViewModel(
     val configText: StateFlow<String> = _configText.asStateFlow()
 
     init {
+        // Trigger the lazy /me check so the username appears as soon as the screen loads.
+        viewModelScope.launch { authManager.ensureLoaded() }
+
         authManager.currentUsername
+//        authManager.authState
+//            .map { (it as? AuthState.Authorized)?.username }
             .onEach { _playersText.value = it ?: "" }
             .launchIn(viewModelScope)
     }
@@ -57,27 +63,38 @@ class GamesViewModel(
     suspend fun observeLobby() {
         gamesClient.observeGames()
             .retryWhen { cause, attempt ->
-                // Log exception if needed
-                _error.value = cause.message ?: "Could not observe games"
-                // exponential delay (1s, 2s, 4s, capped at 10s)
-                val delay = (1.seconds * 2.0.pow(attempt.toDouble())).coerceAtMost(10.seconds)
-                delay(delay)
+                when {
+                    cause is UnauthorizedException -> {
+                        // Session expired: surface the error and wait for the user to log in.
+                        // The Ktor interceptor has already emitted to unauthorizedEvents which
+                        // shows the login modal; we just suspend here until it completes.
+                        _error.value = "Session expired — please log in again"
+                        authManager.awaitLogin()
+                        _error.value = null
+                        true
+                    }
 
-                // Returning true tells Kotlin Flow to retry executing the channelFlow block
-                true
+                    else -> {
+                        // Network / server error: exponential back-off capped at 30 s.
+                        _error.value = cause.message ?: "Could not observe games"
+                        val backoff = minOf(30.seconds, 1.seconds * 2.0.pow(attempt.toInt()))
+                        delay(backoff)
+                        true
+                    }
+                }
             }
-            .collect {
+            .collect { games ->
                 _error.value = null
-                _games.value = it
+                _games.value = games
             }
     }
 
     fun updatePlayersText(text: String) {
-        _playersText.update { text }
+        _playersText.value = text
     }
 
     fun updateConfigText(text: String) {
-        _configText.update { text }
+        _configText.value = text
     }
 
     fun logout() {
@@ -86,6 +103,7 @@ class GamesViewModel(
         }
     }
 
+    /** Called by the "Try again" button to clear a displayed error and let the collector retry. */
     fun loadGames() {
         _error.value = null
     }
