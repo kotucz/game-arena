@@ -4,9 +4,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.header
 
 actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(OkHttp) {
     install(HttpCookies) {
@@ -33,15 +32,30 @@ actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Uni
     configure()
 }
 
-/** Creates a desktop test client that authenticates as [username] via a debug header. */
-fun createDebugAuthHttpClient(username: String): HttpClient =
-    createPlatformAuthHttpClient {
-        defaultRequest {
-            header(DEBUG_USERNAME_HEADER, username)
-        }
-        commonHttpClientConfig(onUnauthorized = {})
+/**
+ * Creates an in-memory HTTP client (using [AcceptAllCookiesStorage]) isolated from the global
+ * desktop [PreferencesCookieStorage]. Useful for multi-player testing or isolated sessions.
+ */
+fun createInMemoryAuthHttpClient(onUnauthorized: () -> Unit = {}): HttpClient = HttpClient(OkHttp) {
+    install(HttpCookies) {
+        storage = AcceptAllCookiesStorage()
     }
+    install(HttpTimeout) {
+        requestTimeoutMillis = 15_000
+        connectTimeoutMillis = 10_000
+    }
+    engine {
+        preconfigured = okhttp3.OkHttpClient.Builder()
+            .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            .build()
+        config {
+            readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+            connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+        }
+    }
+    commonHttpClientConfig(onUnauthorized)
+}
 
 actual fun authBaseUrl(): String = System.getenv("GAMEARENA_API_URL") ?: "http://localhost:8080"
 
-private const val DEBUG_USERNAME_HEADER = "X-Debug-Username"
