@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cz.kotu.game.contacts.formatLocalUi
 import cz.kotu.gamearena.model.RunningGame
 
 @Composable
@@ -108,7 +109,8 @@ fun GamesScreen(
             }
 
             games!!.isEmpty() -> Text("There are no running multiplayer games.")
-            else -> games!!.forEach { game -> RunningGameCard(game, onClick = { onGameClick(game) }) }
+            else -> games!!.sortedByDescending { it.createdAt }
+                .forEach { game -> RunningGameCard(game, onClick = { onGameClick(game) }) }
         }
     }
 }
@@ -125,7 +127,7 @@ private fun RunningGameCard(game: RunningGame, onClick: () -> Unit) {
                 Text("  ${game.id}")
             }
             Text("Players: ${game.players.joinToString()}")
-            Text("Created: ${game.createdAt}")
+            Text("Created: ${game.createdAt.formatLocalUi()}")
         }
     }
 }

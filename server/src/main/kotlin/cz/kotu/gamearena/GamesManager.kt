@@ -9,13 +9,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class GamesManager(
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
-    private val clock: () -> Instant = Instant::now,
+    private val clock: () -> Instant = Clock.System::now,
     private val gameDao: GameDao? = null,
 ) {
     private val games = ConcurrentHashMap<String, ManagedGame>()
@@ -70,10 +71,10 @@ class GamesManager(
                     id = game.metadata.id,
                     type = game.metadata.type,
                     playersJson = json.encodeToString(game.metadata.players),
-                    createdAtMillis = game.metadata.createdAt.toEpochMilli(),
+                    createdAtMillis = game.metadata.createdAt.toEpochMilliseconds(),
                     stateJson = json.encodeToString(state),
                     logsJson = json.encodeToString(logs),
-                    updatedAtMillis = clock().toEpochMilli(),
+                    updatedAtMillis = clock().toEpochMilliseconds(),
                 )
                 dao.upsert(record)
             }
@@ -91,7 +92,7 @@ class GamesManager(
                             id = record.id,
                             type = record.type,
                             players = json.decodeFromString<List<String>>(record.playersJson),
-                            createdAt = Instant.ofEpochMilli(record.createdAtMillis),
+                            createdAt = Instant.fromEpochMilliseconds(record.createdAtMillis),
                         )
                         val game = ContactsGame(
                             metadata = metadata,
@@ -116,7 +117,7 @@ class GamesManager(
         id = id,
         type = type,
         players = players,
-        createdAt = createdAt.toString(),
+        createdAt = createdAt,
     )
 
     private fun newMetadata(players: List<String>): GameMetadata {

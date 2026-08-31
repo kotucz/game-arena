@@ -4,12 +4,12 @@ import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.time.Instant
 
 class GamesManagerTest {
 

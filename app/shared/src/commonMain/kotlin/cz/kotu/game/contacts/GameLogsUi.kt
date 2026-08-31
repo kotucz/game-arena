@@ -26,12 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import cz.kotu.game.contacts.model.GameLogEntry
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
-import kotlinx.datetime.format.DateTimeFormat
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
 
 @Composable
 fun GameLogsCollapsedView(
@@ -155,8 +149,7 @@ private fun GameLogsList(logs: List<GameLogEntry>) {
                     fontSize = 13.sp,
                 )
                 Text(
-                    text = Instant.fromEpochMilliseconds(log.timestamp)
-                        .toLocalDateTime(TimeZone.currentSystemDefault()).time.format(LocalTime.Formats.ISO),
+                    text = log.timestamp.formatLocalUi(),
                     color = Color.DarkGray,
                     fontSize = 13.sp,
                 )

@@ -167,7 +167,7 @@ class NetworkContactsGameFacade(
     }
 
     private fun logLocal(text: String) {
-        _logs.value += GameLogEntry(Clock.System.now().toEpochMilliseconds(), text)
+        _logs.value += GameLogEntry(Clock.System.now(), text)
         lastSentLogIndex = _logs.value.lastIndex
     }
 

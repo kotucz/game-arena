@@ -213,7 +213,7 @@ class ContactsGameFacadeImpl(
 
     private fun addGameLog(text: String) {
         _logs.value += GameLogEntry(
-            Clock.System.now().toEpochMilliseconds(),
+            Clock.System.now(),
             text,
         )
     }
