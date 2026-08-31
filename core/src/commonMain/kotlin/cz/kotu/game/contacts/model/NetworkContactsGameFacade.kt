@@ -1,11 +1,13 @@
 package cz.kotu.game.contacts.model
 
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.sse.SSEClientException
 import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +34,8 @@ class NetworkContactsGameFacade(
     initialState: ContactsBoardState,
     private val scope: CoroutineScope,
     private val json: Json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" },
+    private val onGameNotFound: (() -> Unit)? = null,
+    private val awaitLogin: (suspend () -> Unit)? = null,
 ) : ContactsGameFacade {
 
     private val gameEndpoint: String = endpoint.trimEnd('/') + "/games/" + gameId + "/contacts"
@@ -71,11 +75,44 @@ class NetworkContactsGameFacade(
                     )
                 )
             }
+            if (response.status == HttpStatusCode.NotFound) {
+                onGameNotFound?.invoke()
+                error("Game not found")
+            }
             if (!response.status.isSuccess()) {
                 val detail = response.bodyAsText().ifBlank { "Action failed: ${response.status}" }
                 error(detail)
             }
         }.onFailure(::onError)
+    }
+
+    private suspend fun handleSseError(error: Throwable): Boolean {
+        if (error is SSEClientException) {
+            when (error.response?.status) {
+                HttpStatusCode.NotFound -> {
+                    logLocal("Game not found (404)")
+                    onGameNotFound?.invoke()
+                    return false
+                }
+                HttpStatusCode.Unauthorized -> {
+                    logLocal("Session unauthorized (401)")
+                    if (awaitLogin != null) {
+                        awaitLogin.invoke()
+                    } else {
+                        delay(1000.milliseconds)
+                    }
+                    return true
+                }
+                else -> {
+                    onError(error)
+                    delay(1000.milliseconds)
+                    return true
+                }
+            }
+        }
+        onError(error)
+        delay(1000.milliseconds)
+        return true
     }
 
     private fun gameLogs(): Flow<Unit> = flow {
@@ -99,8 +136,8 @@ class NetworkContactsGameFacade(
                 }
                 logLocal("Incoming logs finished unexpectedly")
             } catch (error: Throwable) {
-                onError(error)
-                delay(1000.milliseconds)
+                val shouldRetry = handleSseError(error)
+                if (!shouldRetry) return@flow
             }
         }
     }
@@ -118,8 +155,8 @@ class NetworkContactsGameFacade(
                 }
                 logLocal("Incoming game events finished unexpectedly")
             } catch (error: Throwable) {
-                onError(error)
-                delay(1000.milliseconds)
+                val shouldRetry = handleSseError(error)
+                if (!shouldRetry) return@flow
             }
         }
     }

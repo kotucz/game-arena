@@ -11,6 +11,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 
@@ -24,12 +27,17 @@ class ContactsGameViewModel(
 
     val username = authManager.currentUsername
 
+    private val _gameNotFound = MutableStateFlow(false)
+    val gameNotFound: StateFlow<Boolean> = _gameNotFound.asStateFlow()
+
     val gameFacade: ContactsGameFacade = NetworkContactsGameFacade(
         httpClient = httpClient,
         endpoint = authBaseUrl().trimEnd('/') + "/api",
         gameId = gameId,
         initialState = ContactsBoardState.empty(),
         scope = networkScope,
+        onGameNotFound = { _gameNotFound.value = true },
+        awaitLogin = { authManager.awaitLogin() },
     )
 
     override fun onCleared() {

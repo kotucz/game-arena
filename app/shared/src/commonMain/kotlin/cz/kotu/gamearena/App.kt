@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -129,8 +130,16 @@ private fun ContactsGameScreen(
     Column {
         TextButton(onClick = onBack) { Text("Back to games") }
 
+        val gameNotFound = gameViewModel.gameNotFound.collectAsState().value
         val username = gameViewModel.username.collectAsState().value
-        if (username == null) {
+
+        if (gameNotFound) {
+            Text(
+                text = "Game '$gameId' was not found or has ended.",
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.error,
+            )
+        } else if (username == null) {
             Text("Not logged in")
         } else {
             val playerViewModel: ContactsPlayerViewModel = viewModel {
