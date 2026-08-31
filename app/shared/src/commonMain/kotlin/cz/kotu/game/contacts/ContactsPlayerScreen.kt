@@ -38,6 +38,8 @@ import cz.kotu.game.contacts.model.GameLogEntry
 
 private const val phi = 1.618f
 
+val hintBackgroundColor = Color(0xFFCCDDCC)
+
 @Composable
 fun ContactsPlayerScreen(
     viewModel: ContactsPlayerViewModel,
@@ -53,6 +55,8 @@ fun ContactsPlayerScreen(
     val resolutionTargetContacts = viewModel.resolutionTargetContacts()
     val resolutionClickableContacts = viewModel.resolutionClickableContacts()
 
+    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, gameState, player) }
+
     LaunchedEffect(resolution) {
         viewModel.resetActionSelection()
     }
@@ -67,6 +71,7 @@ fun ContactsPlayerScreen(
         if (isLogsExpanded && !isDualPane) {
             GameLogsDialog(
                 logs = logs,
+                logItemContent = logItemContent,
                 onClose = { viewModel.isLogsExpanded = false },
             )
         }
@@ -99,6 +104,7 @@ fun ContactsPlayerScreen(
 
                     GameLogsCollapsedView(
                         logs = logs,
+                        logItemContent = logItemContent,
                         onExpand = { viewModel.isLogsExpanded = true },
                     )
 
@@ -134,6 +140,7 @@ fun ContactsPlayerScreen(
                 if (isLogsExpanded && isDualPane) {
                     GameLogsSidePane(
                         logs = logs,
+                        logItemContent = logItemContent,
                         onClose = { viewModel.isLogsExpanded = false },
                         modifier = Modifier
                             .fillMaxHeight()
@@ -314,7 +321,7 @@ private fun RackView(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color(0xFFCCDDCC), RoundedCornerShape(8.dp))
+                                        .background(hintBackgroundColor, RoundedCornerShape(8.dp))
                                         .border(1.dp, color = Color.Black, RoundedCornerShape(8.dp)),
                                 )
                                 Text(

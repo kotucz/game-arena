@@ -204,6 +204,14 @@ data class ContactsBoardState internal constructor(
         return racks.any { it.owner != player && contact.id in it.contactIds }
     }
 
+    fun isContactVisibleToPlayer(contact: Contact, player: Player): Boolean {
+        return isOwnedBy(player, contact) || isSolved(contact)
+    }
+
+    fun getHint(contact: Contact): String? {
+        return racks.firstNotNullOfOrNull { it.hint(contact) }
+    }
+
     fun contactsMatch(first: Contact, second: Contact): Boolean {
         return first.matchKey == second.matchKey
     }

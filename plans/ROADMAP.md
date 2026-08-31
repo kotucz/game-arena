@@ -89,7 +89,7 @@
 
 ## 6. Observability & Logging
 
-- [ ] **Structured Game Logs**:
+- [x] **Structured Game Logs**:
   - Format: `timestamp`, `model`, `toString(...)`.
   - Player-dependent visibility: mask secrets, perspective (you vs opponent), player color.
 - [ ] **Client Error Logging**: Visible error console / log viewer in app for easier diagnostics.

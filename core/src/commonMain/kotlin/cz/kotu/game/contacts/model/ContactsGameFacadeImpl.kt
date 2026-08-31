@@ -3,6 +3,7 @@ package cz.kotu.game.contacts.model
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 class ContactsGameFacadeImpl(
@@ -48,17 +49,36 @@ class ContactsGameFacadeImpl(
         }
 
         if (!gameState.contactsMatch(playerContact, otherContact)) {
-            if (otherContact.type == ContactsBoardState.ContactType.Red) {
-                addGameLog("${player.username}: Red Connected! [Game Over]")
-            }
+            val boom = otherContact.type == ContactsBoardState.ContactType.Red
+
             _gameState.value = gameState.withFaultFor(otherContact)
+
+            addRichGameLog {
+                player(player);
+                text("mismatched")
+                contact(playerContact)
+                text("with")
+                contact(otherContact)
+                if (boom)
+                    text("BOOM! Red Connected! [Game Over]")
+                else
+                    text("FAILURE!")
+            }
+
             return Result.success(Unit)
         }
 
-        if (otherContact.type == ContactsBoardState.ContactType.Red) {
-            addGameLog("${player.username}: Connected successfully!")
-        }
         _gameState.value = gameState.withSolvedContacts(playerContact, otherContact)
+
+        addRichGameLog {
+            player(player);
+            text("connected")
+            contact(playerContact)
+            text("with")
+            contact(otherContact)
+            text("SUCCESS!")
+        }
+
         return Result.success(Unit)
     }
 
@@ -67,7 +87,8 @@ class ContactsGameFacadeImpl(
         targetContact: ContactsBoardState.Contact,
     ): Result<Unit> {
         val gameState = this@ContactsGameFacadeImpl.gameState.value
-        val resolution = gameState.resolveMultiConnect ?: return Result.failure(IllegalStateException("No multi connect to resolve"))
+        val resolution =
+            gameState.resolveMultiConnect ?: return Result.failure(IllegalStateException("No multi connect to resolve"))
 
         if (resolution.targetPlayer != player || targetContact.id !in resolution.targetContacts) {
             return Result.failure(IllegalStateException("Invalid multi connect target"))
@@ -87,6 +108,7 @@ class ContactsGameFacadeImpl(
         _gameState.value = this@ContactsGameFacadeImpl.gameState.value.copy(
             resolveMultiConnect = null,
         )
+        // logged in connect
         return Result.success(Unit)
     }
 
@@ -129,7 +151,6 @@ class ContactsGameFacadeImpl(
             otherContacts.all { it.id in rack.contactIds }
         }
 
-        addGameLog("${targetRack.owner.username} has to resolve multi connect")
         _gameState.value = gameState.copy(
             resolveMultiConnect = ContactsBoardState.ResolveMultiConnect(
                 targetPlayer = targetRack.owner,
@@ -137,6 +158,18 @@ class ContactsGameFacadeImpl(
                 targetContacts = otherContacts.map { it.id }.toSet(),
             ),
         )
+
+        addRichGameLog {
+            player(player)
+            text("connecting")
+            contact(playerContact)
+            text("with")
+            contacts(otherContacts)
+            text("from")
+            player(targetRack.owner)
+            text("chooses")
+        }
+
         return Result.success(Unit)
     }
 
@@ -146,14 +179,6 @@ class ContactsGameFacadeImpl(
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
     ): Result<Unit> {
-        addGameLog(
-            "${player.username}: $actionType ${
-                playerContacts.joinToString { "[${it.number}]" }
-            } other: ${
-//                otherContacts.joinToString { "[${ it.number }]" } // TODO only visible to owner. position may be
-                otherContacts.joinToString { "[?]" }
-            }"
-        )
 
         val gameState = this@ContactsGameFacadeImpl.gameState.value
 
@@ -172,7 +197,13 @@ class ContactsGameFacadeImpl(
 
         return when (actionType) {
             ContactsBoardState.ActionType.AddHint -> {
-                _gameState.value = gameState.withHintFor(playerContacts.single())
+                val playerContact = playerContacts.single()
+                _gameState.value = gameState.withHintFor(playerContact)
+                addRichGameLog {
+                    player(player)
+                    text("hinted")
+                    contact(playerContact)
+                }
                 Result.success(Unit)
             }
 
@@ -199,11 +230,21 @@ class ContactsGameFacadeImpl(
 
             ContactsBoardState.ActionType.SoloConnectRest -> {
                 _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
+                addRichGameLog {
+                    player(player)
+                    text("solo connected")
+                    contacts(playerContacts)
+                }
                 Result.success(Unit)
             }
 
             ContactsBoardState.ActionType.FinishReds -> {
                 _gameState.value = gameState.withSolvedContacts(*playerContacts.toTypedArray())
+                addRichGameLog {
+                    player(player)
+                    text("finished reds")
+                    contacts(playerContacts)
+                }
                 Result.success(Unit)
             }
 
@@ -215,6 +256,14 @@ class ContactsGameFacadeImpl(
         _logs.value += GameLogEntry(
             Clock.System.now(),
             text,
+        )
+    }
+
+    private fun addRichGameLog(block: LogBuilder.() -> Unit) {
+        val logTokens = LogBuilder().apply(block).build()
+        _logs.value += GameLogEntry(
+            Clock.System.now(),
+            Json.encodeToString(logTokens),
         )
     }
 }

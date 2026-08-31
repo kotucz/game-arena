@@ -30,6 +30,7 @@ import cz.kotu.game.contacts.model.GameLogEntry
 @Composable
 fun GameLogsCollapsedView(
     logs: List<GameLogEntry>,
+    logItemContent: LogItemContent = ::DefaultItemRenderer,
     onExpand: () -> Unit,
 ) {
     if (logs.isEmpty()) return
@@ -61,13 +62,14 @@ fun GameLogsCollapsedView(
             )
         }
 
-        GameLogsList(logs)
+        GameLogsList(logs, logItemContent)
     }
 }
 
 @Composable
 fun GameLogsDialog(
     logs: List<GameLogEntry>,
+    logItemContent: LogItemContent = ::DefaultItemRenderer,
     onClose: () -> Unit,
 ) {
     Dialog(onDismissRequest = onClose) {
@@ -79,6 +81,7 @@ fun GameLogsDialog(
         ) {
             GameLogsFullView(
                 logs = logs,
+                logItemContent = logItemContent,
                 onClose = onClose,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -91,6 +94,7 @@ fun GameLogsSidePane(
     logs: List<GameLogEntry>,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    logItemContent: LogItemContent = ::DefaultItemRenderer,
 ) {
     Surface(
         modifier = modifier,
@@ -98,6 +102,7 @@ fun GameLogsSidePane(
     ) {
         GameLogsFullView(
             logs = logs,
+            logItemContent = logItemContent,
             onClose = onClose,
             modifier = Modifier.fillMaxSize(),
         )
@@ -107,8 +112,9 @@ fun GameLogsSidePane(
 @Composable
 fun GameLogsFullView(
     logs: List<GameLogEntry>,
-    onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    logItemContent: LogItemContent = ::DefaultItemRenderer,
+    onClose: () -> Unit,
 ) {
     Column(
         modifier = modifier.padding(12.dp),
@@ -129,31 +135,38 @@ fun GameLogsFullView(
             }
         }
 
-        GameLogsList(logs)
+        GameLogsList(logs, logItemContent)
     }
 }
 
 @Composable
-private fun GameLogsList(logs: List<GameLogEntry>) {
+private fun GameLogsList(logs: List<GameLogEntry>, logItemContent: LogItemContent = ::DefaultItemRenderer) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         reverseLayout = true,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         items(items = logs.asReversed()) { log ->
-            Row {
-                Text(
-                    text = log.text,
-                    modifier = Modifier.weight(1f),
-                    color = Color.DarkGray,
-                    fontSize = 13.sp,
-                )
-                Text(
-                    text = log.timestamp.formatLocalUi(),
-                    color = Color.DarkGray,
-                    fontSize = 13.sp,
-                )
-            }
+            logItemContent(log)
         }
     }
 }
+
+typealias LogItemContent = @Composable (log: GameLogEntry) -> Unit
+@Composable
+private fun DefaultItemRenderer(log: GameLogEntry) {
+    Row {
+        Text(
+            text = log.text,
+            modifier = Modifier.weight(1f),
+            color = Color.DarkGray,
+            fontSize = 13.sp,
+        )
+        Text(
+            text = log.timestamp.formatLocalUi(),
+            color = Color.DarkGray,
+            fontSize = 13.sp,
+        )
+    }
+}
+
