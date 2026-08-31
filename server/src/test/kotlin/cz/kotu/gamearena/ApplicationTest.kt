@@ -152,5 +152,20 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertEquals("Game not found", response.bodyAsText())
     }
-}
 
+    @Test
+    fun gameSpecificSseRoutesReturnNotFoundForUnknownGame() = testApplication {
+        val component = TestServerComponent::class.create()
+        application { module(component) }
+
+        val authClient = createAuthenticatedClient(component, "test-user")
+
+        val eventsResponse = authClient.get("/api/games/missing/contacts/events")
+        assertEquals(HttpStatusCode.NotFound, eventsResponse.status)
+        assertEquals("Game not found", eventsResponse.bodyAsText())
+
+        val logsResponse = authClient.get("/api/games/missing/logs")
+        assertEquals(HttpStatusCode.NotFound, logsResponse.status)
+        assertEquals("Game not found", logsResponse.bodyAsText())
+    }
+}
