@@ -51,6 +51,8 @@ class GamesViewModel(
 
     val createGameDialogVisible = mutableStateOf(false)
 
+    val gameFilterMyAll = mutableStateOf(GameFilterTab.My)
+
     init {
         // Trigger the lazy /me check so the username appears as soon as the screen loads.
         viewModelScope.launch { authManager.ensureLoaded() }

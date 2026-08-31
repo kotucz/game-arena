@@ -59,15 +59,17 @@
     - *Decision*: Single game instance per request/player vs per game?
     - *Current*: Temporary in-memory instance per game.
 - [ ] **Matchmaking & Lobby**:
-  - [ ] Create table.
-  - [ ] Join table.
-  - [ ] View "My tables".
+  - [x] Create game.
+  - [x] Join game.
+  - [x] View "My games".
   - [ ] Game selector in app (potentially initial rollout as hidden / debug option).
+  - [ ] sorting last created, last modified, my turn
 - [ ] **Turn Notifications**: "Your turn" notifications (push or in-app).
 - [ ] Players take turns
 - [ ] Game concluded 
   -  [ ] Terminate event streams
 - [ ] Multiplayer testing - multiple clients simultaneously on desktop/browser  
+- [ ] Themes/redesign - (light/dark)
     
 ---
 
@@ -84,6 +86,8 @@
   - [x] Yellow
   - [x] Red
 - [ ] **Screen Refinements**: `ContactsPlayerScreen` UI & interactions.
+  - [ ] Animation of changes (flipping tiles)
+  - [ ] Rich logs - highlight contacts when hover on logs
 
 ---
 
