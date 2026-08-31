@@ -14,7 +14,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,13 +33,18 @@ fun GamesScreen(
 ) {
     val games by viewModel.games.collectAsState()
     val error by viewModel.error.collectAsState()
-    val creatingGame by viewModel.creatingGame.collectAsState()
-    val playersText by viewModel.playersText.collectAsState()
-    val configText by viewModel.configText.collectAsState()
     val username by viewModel.username.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.observeLobby()
+    }
+
+    if (viewModel.createGameDialogVisible.value) {
+        CreateGameDialog(
+            viewModel = viewModel,
+            onGameCreated = onGameClick,
+            onClose = { viewModel.createGameDialogVisible.value = false },
+        )
     }
 
     Column(
@@ -62,44 +66,20 @@ fun GamesScreen(
             }
         }
 
-        Text("Running games")
-        Text("Join a game already in progress, or start a game just for yourself.")
-
         Button(onClick = onStartGotFive, modifier = Modifier.fillMaxWidth()) {
             Text("Start Got Five")
         }
 
-        HorizontalDivider()
-
-        TextField(
-            value = playersText,
-            onValueChange = viewModel::updatePlayersText,
-            label = { Text("Players (one username per line)") },
-            placeholder = { Text("Enter player usernames\none per line") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 10,
-        )
-
-        TextField(
-            value = configText,
-            onValueChange = viewModel::updateConfigText,
-            label = { Text("Contacts config") },
-            placeholder = { Text("ContactsGameConfig") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 10,
-        )
-
         Button(
-            onClick = { viewModel.createGame(onSuccess = onGameClick) },
-            enabled = !creatingGame,
+            onClick = { viewModel.createGameDialogVisible.value = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (creatingGame) "Creating game…" else "Create Contacts game")
+            Text("Create Contacts game")
         }
 
         HorizontalDivider()
+
+        Text("Running games")
 
         when {
             games == null && error == null -> CircularProgressIndicator()
@@ -114,6 +94,7 @@ fun GamesScreen(
         }
     }
 }
+
 
 @Composable
 private fun RunningGameCard(game: RunningGame, onClick: () -> Unit) {

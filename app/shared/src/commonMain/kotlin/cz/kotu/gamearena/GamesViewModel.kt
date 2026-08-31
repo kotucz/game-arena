@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
@@ -9,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
@@ -48,6 +48,8 @@ class GamesViewModel(
         )
     )
     val configText: StateFlow<String> = _configText.asStateFlow()
+
+    val createGameDialogVisible = mutableStateOf(false)
 
     init {
         // Trigger the lazy /me check so the username appears as soon as the screen loads.
