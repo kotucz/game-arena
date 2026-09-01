@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
@@ -222,7 +223,6 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
             val spacing = 4.dp
             val poolTileWidth = (((maxWidth - spacing * groups.size) / groups.size)).coerceAtMost(40.dp)
             val poolTileHeight = poolTileWidth * phi
-            val poolFontSize = (18f * (poolTileWidth / 30.dp).coerceIn(0.55f, 1f)).sp
 
             Row(
                 modifier = Modifier
@@ -236,15 +236,15 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                         verticalArrangement = Arrangement.spacedBy(spacing),
                     ) {
                         contacts.forEach { contact ->
-                            ContactTileView(
+                            FlippableContactTile(
                                 contact = contact,
-                                tileWidth = poolTileWidth,
-                                tileHeight = poolTileHeight,
-                                backgroundColor = if (gameState.isSolved(contact)) Color(0xFF4CAF50) else Color(0xFFBDBDBD),
-                                isSecret = false,
-                                fontSize = poolFontSize,
-                                fontWeight = FontWeight.Bold,
-                                textColor = if (gameState.isSolved(contact)) Color.White else Color.Black,
+                                size = DpSize(poolTileWidth, poolTileHeight),
+                                isSolved = gameState.isSolved(contact),
+                                isOwned = true,
+                                solvedBackgroundColor = Color(0xFF4CAF50),
+                                unsolvedBackgroundColor = Color(0xFFBDBDBD),
+                                solvedTextColor = Color.White,
+                                unsolvedTextColor = Color.Black,
                             )
                         }
                     }
@@ -273,7 +273,6 @@ private fun RackView(
             val spacing = 8.dp
             val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(64.dp)
             val tileHeight = tileWidth * phi
-            val numberFontSize = (24f * (tileWidth / 50.dp).coerceIn(0.55f, 1f)).sp
 
             Row(
                 modifier = Modifier
@@ -287,19 +286,17 @@ private fun RackView(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        ContactTileView(
+                        FlippableContactTile(
                             contact = contact,
-                            tileWidth = tileWidth,
-                            tileHeight = tileHeight,
-                            backgroundColor = when {
-                                gameState.isSolved(contact) -> Color(0xFF808080)
+                            size = DpSize(tileWidth, tileHeight),
+                            isSolved = gameState.isSolved(contact),
+                            isOwned = isOwner,
+                            solvedBackgroundColor = Color(0xFF808080),
+                            unsolvedBackgroundColor = when {
                                 contact in selectedContacts -> Color(0xFF1976D2)
                                 contact in highlightedContacts -> Color(0xFFFFB300)
                                 else -> Color(0xFF4A4A4A)
                             },
-                            isSecret = !isOwner && !gameState.isSolved(contact),
-                            fontSize = numberFontSize,
-                            fontWeight = if (isOwner || gameState.isSolved(contact)) FontWeight.Bold else FontWeight.Normal,
                             modifier = Modifier
                                 .shadow(
                                     elevation = if (contact in highlightedContacts) 8.dp else 0.dp,
@@ -327,7 +324,7 @@ private fun RackView(
                                 Text(
                                     text = hint,
                                     color = Color.DarkGray,
-                                    fontSize = numberFontSize,
+                                    fontSize = (tileHeight / 4.dp).sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
                                     maxLines = 1,
@@ -342,28 +339,68 @@ private fun RackView(
 }
 
 @Composable
+private fun FlippableContactTile(
+    contact: ContactsBoardState.Contact,
+    size: DpSize,
+    isSolved: Boolean,
+    isOwned: Boolean,
+    solvedBackgroundColor: Color,
+    unsolvedBackgroundColor: Color,
+    modifier: Modifier = Modifier,
+    solvedTextColor: Color = Color.White,
+    unsolvedTextColor: Color = Color.White,
+) {
+
+    Flippable(
+        isFlipped = !isSolved,
+        modifier = modifier.size(size),
+        durationMillis = 1000,
+        cameraDistanceDp = 12.dp,
+        front = {
+            // solved
+            ContactTileView(
+                contact = contact,
+                size = size,
+                backgroundColor = solvedBackgroundColor,
+                isSecret = false,
+                modifier = modifier,
+                textColor = solvedTextColor,
+            )
+        },
+        back = {
+            // unsolved
+            ContactTileView(
+                contact = contact,
+                size = size,
+                backgroundColor = unsolvedBackgroundColor,
+                isSecret = !isOwned,
+                modifier = modifier,
+                textColor = unsolvedTextColor,
+            )
+        }
+    )
+}
+
+@Composable
 private fun ContactTileView(
     contact: ContactsBoardState.Contact,
-    tileWidth: androidx.compose.ui.unit.Dp,
-    tileHeight: androidx.compose.ui.unit.Dp,
-    backgroundColor: Color,
+    size: DpSize,
     isSecret: Boolean,
-    fontSize: androidx.compose.ui.unit.TextUnit,
-    fontWeight: FontWeight,
+    backgroundColor: Color,
+    textColor: Color,
     modifier: Modifier = Modifier,
-    textColor: Color = Color.White,
 ) {
-    val cornerRadius = tileWidth / 8
+    val cornerRadius = size.width / 8
     val shape = RoundedCornerShape(cornerRadius)
 
     Box(
-        modifier = modifier.size(tileWidth, tileHeight).background(backgroundColor, shape),
+        modifier = modifier.size(size).background(backgroundColor, shape),
         contentAlignment = Alignment.Center,
     ) {
         if (!isSecret) {
             Box(
                 modifier = Modifier
-                    .size(tileWidth, tileHeight / 5)
+                    .size(size.width, size.height / 5)
                     .align(Alignment.TopCenter)
                     .background(
                         color = when (contact.type) {
@@ -378,8 +415,8 @@ private fun ContactTileView(
         Text(
             text = if (isSecret) "?" else contact.number.toString(),
             color = textColor,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
+            fontSize = (size.height / 3.dp).sp,
+            fontWeight = if (isSecret) FontWeight.Normal else FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
     }

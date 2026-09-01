@@ -86,7 +86,7 @@
   - [x] Yellow
   - [x] Red
 - [ ] **Screen Refinements**: `ContactsPlayerScreen` UI & interactions.
-  - [ ] Animation of changes (flipping tiles)
+  - [x] Animation of changes (flipping tiles)
   - [ ] Rich logs - highlight contacts when hover on logs
 
 ---
