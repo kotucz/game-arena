@@ -35,8 +35,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.GameLogEntry
+import cz.kotu.game.contacts.model.PlayerViewState
 
 private const val phi = 1.618f
 
@@ -47,12 +47,12 @@ fun ContactsPlayerScreen(
     viewModel: ContactsPlayerViewModel,
 ) {
     val actionSelectionState = viewModel.actionSelectionState
-    val gameState: ContactsGameState by viewModel.gameFacade.gameState.collectAsState()
+    val gameState: PlayerViewState = viewModel.gameState.collectAsState().value
     val boardState = gameState.board
     val player = viewModel.player
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
-    val resolution = boardState.resolveMultiConnect
+    val resolution = gameState.resolveMultiConnect
     val availableActionTypes = viewModel.availableActionTypes()
     val selectedActionType = viewModel.selectedActionType
     val resolutionTargetContacts = viewModel.resolutionTargetContacts()
@@ -205,7 +205,7 @@ fun ContactsPlayerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(text = "Player on turn: " + gameState.activePlayer)
+                        // TODO Text(text = "Player on turn: " + gameState.activePlayer)
 
                         Button(
                             enabled = viewModel.validAction(),

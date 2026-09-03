@@ -1,9 +1,10 @@
 package cz.kotu.game.contacts.model
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 interface ContactsPlayerFacade {
-    val gameState: StateFlow<ContactsGameState>
+    val gameState: Flow<PlayerViewState>
 
     val logs: StateFlow<List<GameLogEntry>>
 

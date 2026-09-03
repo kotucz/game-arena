@@ -226,7 +226,7 @@ fun ContactsBoardState.handleResolveMultiConnect(
     }
 }
 
-fun ContactsBoardState.applyAction1(
+fun ContactsBoardState.applyActionIds(
     player: ContactsBoardState.Player,
     actionType: ContactsBoardState.ActionType,
     playerContacts: Set<ContactsBoardState.ContactId>,

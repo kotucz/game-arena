@@ -43,8 +43,8 @@ class NetworkContactsGameFacade(
     private val logsEndpoint: String = gameEndpoint.removeSuffix("/contacts") + "/logs"
     private val actionsEndpoint: String = gameEndpoint + "/actions"
 
-    override val gameState: StateFlow<ContactsGameState> =
-        gameEvents().stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), initialState)
+    override val gameState: Flow<PlayerViewState> =
+        gameEvents()
 
     private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
     private var lastSentLogIndex: Int = -1
@@ -141,14 +141,14 @@ class NetworkContactsGameFacade(
         }
     }
 
-    private fun gameEvents(): Flow<ContactsGameState> = flow {
+    private fun gameEvents(): Flow<PlayerViewState> = flow {
         while (currentCoroutineContext().isActive) {
             try {
                 httpClient.sse(eventsEndpoint) {
                     logLocal("Game events connected")
                     incoming.collect { event ->
                         event.data?.let { data ->
-                            emit(json.decodeFromString<ContactsGameState>(data))
+                            emit(json.decodeFromString<PlayerViewState>(data))
                         }
                     }
                 }

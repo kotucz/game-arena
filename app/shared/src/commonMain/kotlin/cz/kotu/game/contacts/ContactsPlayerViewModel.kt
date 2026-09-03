@@ -8,10 +8,12 @@ import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ActionExecutionResult
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
-import cz.kotu.game.contacts.model.applyAction
-import cz.kotu.game.contacts.model.applyAction1
+import cz.kotu.game.contacts.model.PlayerViewState
+import cz.kotu.game.contacts.model.applyActionIds
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
@@ -19,11 +21,14 @@ class ContactsPlayerViewModel(
     val username: String,
 ) : ViewModel() {
 
-    val gameState: ContactsGameState
-        get() = gameFacade.gameState.value
+    val gameState: StateFlow<PlayerViewState> = gameFacade.gameState.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = PlayerViewState.empty(),
+    )
 
-    val player: ContactsBoardState.Player?
-        get() = gameState.board.racks.map { it.owner }.firstOrNull { it.username == username }
+    val player: ContactsBoardState.Player
+        get() = gameState.value.you
 
     var actionSelectionState by mutableStateOf<ActionSelectionState>(ActionSelectionState.None)
         private set
@@ -80,7 +85,7 @@ class ContactsPlayerViewModel(
 
     fun updateActionSelectionForSolved() {
         dismissActionResultError()
-        val currentGameState = gameState.board
+        val currentGameState = gameState.value.board
         val state = actionSelectionState
         val newPlayerContacts = state.playerContacts.filter { !currentGameState.isSolved(it) }.toSet()
         val newOtherContacts = state.otherContacts.filter { !currentGameState.isSolved(it) }.toSet()
@@ -90,29 +95,29 @@ class ContactsPlayerViewModel(
             } else {
                 ActionSelectionState.MultiConnect(
                     playerContacts = newPlayerContacts,
-                    otherContacts = newOtherContacts
+                    otherContacts = newOtherContacts,
                 )
             }
         }
     }
 
     fun availableActionTypes(): Set<ContactsBoardState.ActionType> {
-        val resolution = gameState.board.resolveMultiConnect
+        val resolution = gameState.value.board.resolveMultiConnect
         return when {
-            resolution == null -> gameState.board.allowedActionTypes
+            resolution == null -> gameState.value.board.allowedActionTypes
             resolution.targetPlayer == player -> setOf(ContactsBoardState.ActionType.ResolveMultiConnect)
             else -> emptySet()
         }
     }
 
     fun resolutionTargetContacts(): Set<ContactsBoardState.ContactId>? {
-        val resolution = gameState.board.resolveMultiConnect ?: return null
+        val resolution = gameState.value.board.resolveMultiConnect ?: return null
         if (resolution.targetPlayer != player) return null
         return resolution.targetContacts.toSet()
     }
 
     fun resolutionClickableContacts(): Set<ContactsBoardState.ContactId>? {
-        if (gameState.board.resolveMultiConnect == null) return null
+        if (gameState.value.board.resolveMultiConnect == null) return null
         val targetContacts = resolutionTargetContacts() ?: return emptySet()
         return when {
             selectedActionType == ContactsBoardState.ActionType.ResolveMultiConnect -> targetContacts
@@ -135,7 +140,7 @@ class ContactsPlayerViewModel(
     fun validationError(): String? {
         val actionType = selectedActionType ?: return null
         val currentPlayer = player ?: return null
-        return (gameState.board.applyAction1(
+        return (gameState.value.board.applyActionIds(
             currentPlayer,
             actionType,
             actionSelectionState.playerContacts,

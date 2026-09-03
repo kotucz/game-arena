@@ -43,7 +43,7 @@ class ContactsGameFacadeImpl(
         otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
         val gameState: ContactsGameState = this@ContactsGameFacadeImpl.gameState.value
-        val result = gameState.board.applyAction1(player, actionType, playerContacts, otherContacts)
+        val result = gameState.board.applyActionIds(player, actionType, playerContacts, otherContacts)
         return when (result) {
             is ActionExecutionResult.Failure -> Result.failure(IllegalStateException(result.message))
             is ActionExecutionResult.Success -> {
