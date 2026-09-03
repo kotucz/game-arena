@@ -22,7 +22,9 @@ class ContactsGameFacadeImplTest {
                 ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
             ),
             solved = emptySet(),
-        )
+        ),
+        players = listOf(alice, bob),
+        activePlayer = alice,
     )
 
     @Test

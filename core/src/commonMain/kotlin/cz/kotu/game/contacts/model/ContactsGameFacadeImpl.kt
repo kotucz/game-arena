@@ -19,7 +19,9 @@ class ContactsGameFacadeImpl(
                 ContactsBoardState.create(
                     players,
                     config,
-                )
+                ),
+                players = players,
+                activePlayer = players[0],
             )
         ),
         MutableStateFlow(listOf()),

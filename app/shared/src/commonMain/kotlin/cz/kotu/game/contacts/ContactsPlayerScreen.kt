@@ -201,6 +201,12 @@ fun ContactsPlayerScreen(
                         )
                     }
 
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "Player on turn: " + gameState.activePlayer)
+
                         Button(
                             enabled = viewModel.validAction(),
                             onClick = {
@@ -208,6 +214,7 @@ fun ContactsPlayerScreen(
                             },
                         ) {
                             Text("Confirm selection")
+                        }
                     }
                 }
         }

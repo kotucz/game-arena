@@ -140,7 +140,13 @@ class ContactsPlayerViewModelTest {
     private class TestContactsGameFacade(
         initialState: ContactsBoardState,
     ) : ContactsGameFacade {
-        private val delegate = ContactsGameFacadeImpl(ContactsGameState(initialState))
+        private val delegate = ContactsGameFacadeImpl(
+            ContactsGameState(
+                board = initialState,
+                players = listOf(),
+                activePlayer = ContactsBoardState.Player("alice"),
+            ),
+        )
         override val gameState = delegate.gameState
         override val logs = delegate.logs
 
