@@ -32,7 +32,12 @@ class ContactsGameFacadeImplTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         val result =
-            facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
+            facade.action(
+                alice,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(aliceContact.id),
+                setOf(bobContact.id),
+            )
 
         assertTrue(result.isSuccess)
         assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.board.solved)
@@ -43,7 +48,12 @@ class ContactsGameFacadeImplTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
         val result =
-            facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(bobContact), setOf(aliceContact))
+            facade.action(
+                alice,
+                ContactsBoardState.ActionType.StandardConnect,
+                setOf(bobContact.id),
+                setOf(aliceContact.id),
+            )
 
         assertTrue(result.isFailure)
         assertEquals("Player does not own the selected contact", result.exceptionOrNull()?.message)
@@ -57,8 +67,8 @@ class ContactsGameFacadeImplTest {
         val result = facade.action(
             alice,
             ContactsBoardState.ActionType.StandardConnect,
-            setOf(aliceContact),
-            setOf(bobOtherContact)
+            setOf(aliceContact.id),
+            setOf(bobOtherContact.id),
         )
 
         assertTrue(result.isSuccess)

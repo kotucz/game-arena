@@ -268,10 +268,10 @@ private fun RackView(
     board: ContactsBoardState,
     rack: ContactsBoardState.Rack,
     isOwner: Boolean,
-    selectedContacts: Set<ContactsBoardState.Contact>,
-    clickableContacts: Set<ContactsBoardState.Contact>?,
-    highlightedContacts: Set<ContactsBoardState.Contact>,
-    onContactClick: (ContactsBoardState.Contact) -> Unit,
+    selectedContacts: Set<ContactsBoardState.ContactId>,
+    clickableContacts: Set<ContactsBoardState.ContactId>?,
+    highlightedContacts: Set<ContactsBoardState.ContactId>,
+    onContactClick: (ContactsBoardState.ContactId) -> Unit,
 ) {
     Column {
         Text(text = "Owner: " + rack.owner.username)
@@ -302,19 +302,19 @@ private fun RackView(
                             isOwned = isOwner,
                             solvedBackgroundColor = Color(0xFF808080),
                             unsolvedBackgroundColor = when {
-                                contact in selectedContacts -> Color(0xFF1976D2)
-                                contact in highlightedContacts -> Color(0xFFFFB300)
+                                contact.id in selectedContacts -> Color(0xFF1976D2)
+                                contact.id in highlightedContacts -> Color(0xFFFFB300)
                                 else -> Color(0xFF4A4A4A)
                             },
                             modifier = Modifier
                                 .shadow(
-                                    elevation = if (contact in highlightedContacts) 8.dp else 0.dp,
+                                    elevation = if (contact.id in highlightedContacts) 8.dp else 0.dp,
                                     shape = RoundedCornerShape(8.dp),
                                 )
                                 .clickable(
                                     enabled = !board.isSolved(contact) &&
-                                            (clickableContacts == null || contact in clickableContacts),
-                                    onClick = { onContactClick(contact) },
+                                            (clickableContacts == null || contact.id in clickableContacts),
+                                    onClick = { onContactClick(contact.id) },
                                 ),
                         )
 

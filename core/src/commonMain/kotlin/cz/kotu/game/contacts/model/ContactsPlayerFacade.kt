@@ -9,7 +9,7 @@ interface ContactsPlayerFacade {
 
     suspend fun action(
         actionType: ContactsBoardState.ActionType,
-        playerContacts: Set<ContactsBoardState.Contact>,
-        otherContacts: Set<ContactsBoardState.Contact>,
+        playerContacts: Set<ContactsBoardState.ContactId>,
+        otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit>
 }

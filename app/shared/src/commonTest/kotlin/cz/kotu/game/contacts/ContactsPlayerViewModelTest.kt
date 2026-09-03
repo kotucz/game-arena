@@ -6,7 +6,7 @@ import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -35,14 +35,14 @@ class ContactsPlayerViewModelTest {
             "alice",
         )
 
-        val (playerContact, otherContact) = matchingContacts(state)
+        val (playerContactId, otherContactId) = matchingContacts(state)
         viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
 
-        viewModel.onPlayerContactClick(playerContact)
-        viewModel.onOtherContactClick(otherContact)
+        viewModel.onPlayerContactClick(playerContactId)
+        viewModel.onOtherContactClick(otherContactId)
 
-        assertEquals(setOf(playerContact), viewModel.actionSelectionState.playerContacts)
-        assertEquals(setOf(otherContact), viewModel.actionSelectionState.otherContacts)
+        assertEquals(setOf(playerContactId), viewModel.actionSelectionState.playerContacts)
+        assertEquals(setOf(otherContactId), viewModel.actionSelectionState.otherContacts)
         assertNull(viewModel.validationError())
     }
 
@@ -54,10 +54,10 @@ class ContactsPlayerViewModelTest {
             ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade), "alice",
         )
 
-        val (playerContact, otherContact) = matchingContacts(state)
+        val (playerContactId, otherContactId) = matchingContacts(state)
         viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
-        viewModel.onPlayerContactClick(playerContact)
-        viewModel.onOtherContactClick(otherContact)
+        viewModel.onPlayerContactClick(playerContactId)
+        viewModel.onOtherContactClick(otherContactId)
 
         assertTrue(!viewModel.clientValidationEnabled)
         assertTrue(viewModel.validAction())
@@ -74,16 +74,16 @@ class ContactsPlayerViewModelTest {
         val aliceRack = state.racks.first { it.owner == alice }
         val bobRack = state.racks.first { it.owner == bob }
 
-        val playerContact = aliceRack.contactIds.map(state::requireContact).first()
-        val targetContacts = bobRack.contactIds.map(state::requireContact).take(2).toSet()
+        val playerContactId = aliceRack.contactIds.first()
+        val targetContactIds = bobRack.contactIds.take(2).toSet()
 
         val facade = TestContactsGameFacade(state)
-        runBlocking {
+        runTest {
             facade.action(
                 player = alice,
                 actionType = ContactsBoardState.ActionType.DoubleConnect,
-                playerContacts = setOf(playerContact),
-                otherContacts = targetContacts,
+                playerContacts = setOf(playerContactId),
+                otherContacts = targetContactIds,
             )
         }
 
@@ -92,29 +92,29 @@ class ContactsPlayerViewModelTest {
         )
         val resolution = facade.gameState.value.board.resolveMultiConnect
 
-        assertEquals(targetContacts, resolution?.targetContacts?.map(state::requireContact)?.toSet())
+        assertEquals(targetContactIds, resolution?.targetContacts)
         assertEquals(emptySet(), viewModel.resolutionClickableContacts())
 
         viewModel.selectedActionType = ContactsBoardState.ActionType.ResolveMultiConnect
-        assertEquals(targetContacts, viewModel.resolutionClickableContacts())
-        assertEquals(targetContacts, viewModel.resolutionTargetContacts())
+        assertEquals(targetContactIds, viewModel.resolutionClickableContacts())
+        assertEquals(targetContactIds, viewModel.resolutionTargetContacts())
     }
 
     @Test
     fun solvedSelectionsAreClearedFromCurrentActionState() {
         val state = createState()
+        val (playerContactId, otherContactId) = matchingContacts(state)
         val solvedState = state.withSolvedContacts(
-            matchingContacts(state).first,
-            matchingContacts(state).second,
+            state.requireContact(playerContactId),
+            state.requireContact(otherContactId),
         )
         val facade = TestContactsGameFacade(solvedState)
         val viewModel = ContactsPlayerViewModel(
             ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade), "alice",
         )
 
-        val (playerContact, otherContact) = matchingContacts(state)
-        viewModel.onPlayerContactClick(playerContact)
-        viewModel.onOtherContactClick(otherContact)
+        viewModel.onPlayerContactClick(playerContactId)
+        viewModel.onOtherContactClick(otherContactId)
         viewModel.updateActionSelectionForSolved()
 
         assertEquals(ActionSelectionState.None, viewModel.actionSelectionState)
@@ -136,7 +136,7 @@ class ContactsPlayerViewModelTest {
 
     private fun matchingContacts(
         state: ContactsBoardState,
-    ): Pair<ContactsBoardState.Contact, ContactsBoardState.Contact> {
+    ): Pair<ContactsBoardState.ContactId, ContactsBoardState.ContactId> {
         val aliceRack = state.racks.first { it.owner.username == "alice" }
         val bobRack = state.racks.first { it.owner.username == "bob" }
 
@@ -145,9 +145,9 @@ class ContactsPlayerViewModelTest {
             .intersect(state.rackContacts(bobRack).map { it.number }.toSet())
             .first()
 
-        val playerContact = state.rackContacts(aliceRack).first { it.number == sharedNumber }
-        val otherContact = state.rackContacts(bobRack).first { it.number == sharedNumber }
-        return playerContact to otherContact
+        val playerContactId = state.rackContacts(aliceRack).first { it.number == sharedNumber }.id
+        val otherContactId = state.rackContacts(bobRack).first { it.number == sharedNumber }.id
+        return playerContactId to otherContactId
     }
 
     private class TestContactsGameFacade(
@@ -166,8 +166,8 @@ class ContactsPlayerViewModelTest {
         override suspend fun action(
             player: ContactsBoardState.Player,
             actionType: ContactsBoardState.ActionType,
-            playerContacts: Set<ContactsBoardState.Contact>,
-            otherContacts: Set<ContactsBoardState.Contact>,
+            playerContacts: Set<ContactsBoardState.ContactId>,
+            otherContacts: Set<ContactsBoardState.ContactId>,
         ): Result<Unit> {
             return delegate.action(player, actionType, playerContacts, otherContacts)
         }

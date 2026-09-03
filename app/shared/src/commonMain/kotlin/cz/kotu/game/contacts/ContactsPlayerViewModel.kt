@@ -11,6 +11,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.applyAction
+import cz.kotu.game.contacts.model.applyAction1
 import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
@@ -44,7 +45,7 @@ class ContactsPlayerViewModel(
         actionResultError = null
     }
 
-    fun onPlayerContactClick(contact: ContactsBoardState.Contact) {
+    fun onPlayerContactClick(contact: ContactsBoardState.ContactId) {
         dismissActionResultError()
         val state = actionSelectionState
         val newPlayerContacts = if (contact in state.playerContacts) {
@@ -58,7 +59,7 @@ class ContactsPlayerViewModel(
         )
     }
 
-    fun onOtherContactClick(contact: ContactsBoardState.Contact) {
+    fun onOtherContactClick(contact: ContactsBoardState.ContactId) {
         dismissActionResultError()
         val state = actionSelectionState
         val newOtherContacts = if (contact in state.otherContacts) {
@@ -104,13 +105,13 @@ class ContactsPlayerViewModel(
         }
     }
 
-    fun resolutionTargetContacts(): Set<ContactsBoardState.Contact>? {
+    fun resolutionTargetContacts(): Set<ContactsBoardState.ContactId>? {
         val resolution = gameState.board.resolveMultiConnect ?: return null
         if (resolution.targetPlayer != player) return null
-        return resolution.targetContacts.mapNotNull(gameState.board::contact).toSet()
+        return resolution.targetContacts.toSet()
     }
 
-    fun resolutionClickableContacts(): Set<ContactsBoardState.Contact>? {
+    fun resolutionClickableContacts(): Set<ContactsBoardState.ContactId>? {
         if (gameState.board.resolveMultiConnect == null) return null
         val targetContacts = resolutionTargetContacts() ?: return emptySet()
         return when {
@@ -134,7 +135,7 @@ class ContactsPlayerViewModel(
     fun validationError(): String? {
         val actionType = selectedActionType ?: return null
         val currentPlayer = player ?: return null
-        return (gameState.board.applyAction(
+        return (gameState.board.applyAction1(
             currentPlayer,
             actionType,
             actionSelectionState.playerContacts,

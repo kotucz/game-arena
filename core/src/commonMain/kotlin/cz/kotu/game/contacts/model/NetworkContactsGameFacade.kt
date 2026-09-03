@@ -57,8 +57,8 @@ class NetworkContactsGameFacade(
 
     override suspend fun action(
         actionType: ContactsBoardState.ActionType,
-        playerContacts: Set<ContactsBoardState.Contact>,
-        otherContacts: Set<ContactsBoardState.Contact>,
+        playerContacts: Set<ContactsBoardState.ContactId>,
+        otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
         return runCatching {
             val response = httpClient.post(actionsEndpoint) {
@@ -68,8 +68,8 @@ class NetworkContactsGameFacade(
                         ContactsNetworkAction.serializer(),
                         ContactsNetworkAction.Action(
                             actionType = actionType,
-                            playerContacts = playerContacts.map { it.id }.toSet(),
-                            otherContacts = otherContacts.map { it.id }.toSet(),
+                            playerContacts = playerContacts,
+                            otherContacts = otherContacts,
                         )
                     )
                 )

@@ -13,8 +13,8 @@ class ContactsPlayerGameAdapter(
 
     override suspend fun action(
         actionType: ContactsBoardState.ActionType,
-        playerContacts: Set<ContactsBoardState.Contact>,
-        otherContacts: Set<ContactsBoardState.Contact>,
+        playerContacts: Set<ContactsBoardState.ContactId>,
+        otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
         return gameFacade.action(
             player = player,

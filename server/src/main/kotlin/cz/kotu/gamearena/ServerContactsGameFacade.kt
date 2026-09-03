@@ -36,11 +36,10 @@ class ServerContactsGameFacade(
             val action = json.decodeFromString<ContactsNetworkAction>(payload)
             when (action) {
                 is ContactsNetworkAction.Action -> {
-                    val state = delegate.gameState.value
                     delegate.action(
                         actionType = action.actionType,
-                        playerContacts = action.playerContacts.map { state.board.requireContact(it) }.toSet(),
-                        otherContacts = action.otherContacts.map { state.board.requireContact(it) }.toSet(),
+                        playerContacts = action.playerContacts,
+                        otherContacts = action.otherContacts,
                     )
                 }
             }
