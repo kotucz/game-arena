@@ -236,6 +236,225 @@ class ContactsBoardStateTest {
         assertEquals("Selected contacts must have the same number or all yellow", result.message)
     }
 
+    @Test
+    fun myDoubleConnectSolvesWhenEitherPlayerContactMatches() {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7)
+        val aliceOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8)
+        val bobContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7)
+        val state = ContactsBoardState(
+            pool = listOf(aliceContact, aliceOtherContact, bobContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceContact.id, aliceOtherContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.MyDoubleConnect,
+            setOf(aliceOtherContact, aliceContact),
+            setOf(bobContact),
+        )
+
+        assertIs<ActionExecutionResult.Success>(result)
+        assertEquals(setOf(aliceContact.id, bobContact.id), result.state.solved)
+        assertEquals(0, result.state.faults)
+    }
+
+    @Test
+    fun myDoubleConnectUsesStandardConnectResultWhenNeitherContactMatches() {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8)
+        val aliceMatchingContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(5), 7)
+        val bobOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(4), 9)
+        val state = ContactsBoardState(
+            pool = listOf(aliceOtherContact, aliceMatchingContact, bobOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceOtherContact.id, aliceMatchingContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobOtherContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.MyDoubleConnect,
+            setOf(aliceOtherContact, aliceMatchingContact),
+            setOf(bobOtherContact),
+        )
+
+        assertIs<ActionExecutionResult.Success>(result)
+        assertEquals(emptySet(), result.state.solved)
+        assertEquals(1, result.state.faults)
+        assertEquals(bobOtherContact.number.toString(), result.state.racks[1].hint(bobOtherContact))
+    }
+
+    @Test
+    fun targetPlayerResolvesMultiConnectUsingStandardConnectResult() {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7)
+        val bobContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7)
+        val bobOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(4), 9)
+        val state = ContactsBoardState(
+            pool = listOf(aliceContact, bobContact, bobOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val first = state.applyAction(alice, ContactsBoardState.ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
+        assertIs<ActionExecutionResult.Success>(first)
+
+        val second = first.state.applyAction(bob, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
+
+        assertIs<ActionExecutionResult.Success>(second)
+        assertEquals(setOf(aliceContact.id, bobContact.id), second.state.solved)
+        assertEquals(null, second.state.resolveMultiConnect)
+    }
+
+    @Test
+    fun targetPlayerResolvesMismatchUsingStandardConnectResult() {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7)
+        val bobContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7)
+        val bobOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(4), 9)
+        val state = ContactsBoardState(
+            pool = listOf(aliceContact, bobContact, bobOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val first = state.applyAction(alice, ContactsBoardState.ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
+        assertIs<ActionExecutionResult.Success>(first)
+
+        val second = first.state.applyAction(bob, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobOtherContact), emptySet())
+
+        assertIs<ActionExecutionResult.Success>(second)
+        assertEquals(emptySet(), second.state.solved)
+        assertEquals(1, second.state.faults)
+        assertEquals(bobOtherContact.number.toString(), second.state.racks[1].hint(bobOtherContact))
+        assertEquals(null, second.state.resolveMultiConnect)
+    }
+
+    @Test
+    fun onlyTargetPlayerCanResolveMultiConnect() {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7)
+        val bobContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7)
+        val bobOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(4), 9)
+        val state = ContactsBoardState(
+            pool = listOf(aliceContact, bobContact, bobOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val first = state.applyAction(alice, ContactsBoardState.ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
+        assertIs<ActionExecutionResult.Success>(first)
+
+        val second = first.state.applyAction(alice, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
+
+        assertIs<ActionExecutionResult.Failure>(second)
+        assertEquals("Only the target player can resolve the multi-connect", second.message)
+        assertEquals(2, first.state.resolveMultiConnect?.targetContacts?.size)
+    }
+
+    @Test
+    fun soloConnectRestSolvesAllRemainingSameNumberContactsAcrossRacks() {
+        val alice = ContactsBoardState.Player("alice")
+        val aliceContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7)
+        val aliceOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8)
+        val aliceMatchingContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(5), 7)
+        val aliceMatchingSoloContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(6), 8)
+        val bob = ContactsBoardState.Player("bob")
+        val bobContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7)
+        val bobOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(4), 9)
+        val state = ContactsBoardState(
+            pool = listOf(aliceContact, aliceOtherContact, aliceMatchingContact, aliceMatchingSoloContact, bobContact, bobOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(aliceContact.id, aliceOtherContact.id, aliceMatchingSoloContact.id)),
+                ContactsBoardState.Rack(alice, listOf(aliceMatchingContact.id)),
+                ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.SoloConnectRest,
+            setOf(aliceOtherContact, aliceMatchingSoloContact),
+            emptySet(),
+        )
+
+        assertIs<ActionExecutionResult.Success>(result)
+        assertEquals(setOf(aliceOtherContact.id, aliceMatchingSoloContact.id), result.state.solved)
+    }
+
+    @Test
+    fun finishRedsSolvesAllRemainingRedContacts() {
+        val alice = ContactsBoardState.Player("alice")
+        val bob = ContactsBoardState.Player("bob")
+        val aliceOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8)
+        val redContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Red)
+        val otherRedContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(3), 7, ContactsBoardState.ContactType.Red)
+        val state = ContactsBoardState(
+            pool = listOf(redContact, otherRedContact, aliceOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(redContact.id, otherRedContact.id)),
+                ContactsBoardState.Rack(bob, listOf(aliceOtherContact.id)),
+            ),
+            solved = setOf(aliceOtherContact.id),
+        )
+
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.FinishReds,
+            setOf(redContact, otherRedContact),
+            emptySet(),
+        )
+
+        assertIs<ActionExecutionResult.Success>(result)
+        assertEquals(setOf(aliceOtherContact.id, redContact.id, otherRedContact.id), result.state.solved)
+    }
+
+    @Test
+    fun finishRedsRejectsWhenAnyOtherUnsolvedContactRemains() {
+        val alice = ContactsBoardState.Player("alice")
+        val aliceOtherContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(2), 8)
+        val redContact = ContactsBoardState.Contact(ContactsBoardState.ContactId(1), 7, ContactsBoardState.ContactType.Red)
+        val state = ContactsBoardState(
+            pool = listOf(redContact, aliceOtherContact),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(redContact.id, aliceOtherContact.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.FinishReds,
+            setOf(redContact),
+            emptySet(),
+        )
+
+        assertIs<ActionExecutionResult.Failure>(result)
+        assertEquals("All other contacts must be solved", result.message)
+    }
+
     private fun validationState(): ValidationState {
         val alice = ContactsBoardState.Player("alice")
         val bob = ContactsBoardState.Player("bob")
