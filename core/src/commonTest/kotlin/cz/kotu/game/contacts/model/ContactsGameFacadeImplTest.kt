@@ -26,19 +26,19 @@ class ContactsGameFacadeImplTest {
     )
 
     @Test
-    fun connectSolvesMatchingContactsOwnedByDifferentPlayers() {
+    fun connectSolvesMatchingContactsOwnedByDifferentPlayers() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.connect(alice, aliceContact, bobContact)
+        facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
 
         assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
     }
 
     @Test
-    fun connectRejectsContactNotOwnedByActingPlayer() {
+    fun connectRejectsContactNotOwnedByActingPlayer() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        val result = facade.connect(alice, bobContact, aliceContact)
+        val result = facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(bobContact), setOf(aliceContact))
 
         assertTrue(result.isFailure)
         assertEquals("Player does not own the selected contact", result.exceptionOrNull()?.message)
@@ -46,19 +46,19 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun connectRejectsOtherContactOwnedByTheSamePlayer() {
+    fun connectRejectsOtherContactOwnedByTheSamePlayer() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.connect(alice, aliceContact, aliceMatchingContact)
+        facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(aliceMatchingContact))
 
         assertEquals(emptySet(), facade.gameState.value.solved)
     }
 
     @Test
-    fun connectRejectsContactsWithDifferentNumbers() {
+    fun connectRejectsContactsWithDifferentNumbers() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.connect(alice, aliceContact, bobOtherContact)
+        facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobOtherContact))
 
         assertEquals(emptySet(), facade.gameState.value.solved)
         assertEquals(1, facade.gameState.value.faults)
@@ -69,11 +69,11 @@ class ContactsGameFacadeImplTest {
     }
 
     @Test
-    fun connectRejectsAlreadySolvedContacts() {
+    fun connectRejectsAlreadySolvedContacts() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.connect(alice, aliceContact, bobContact)
-        facade.connect(alice, aliceContact, bobContact)
+        facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
+        facade.action(alice, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
 
         assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
     }
@@ -116,12 +116,7 @@ class ContactsGameFacadeImplTest {
     fun targetPlayerResolvesMultiConnectUsingStandardConnectResult() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.multiConnect(
-            player = alice,
-            actionType = ContactsBoardState.ActionType.DoubleConnect,
-            playerContact = aliceContact,
-            otherContacts = setOf(bobContact, bobOtherContact),
-        )
+        facade.action(alice, ContactsBoardState.ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
         facade.action(bob, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
 
         assertEquals(setOf(aliceContact.id, bobContact.id), facade.gameState.value.solved)
@@ -132,12 +127,7 @@ class ContactsGameFacadeImplTest {
     fun targetPlayerResolvesMismatchUsingStandardConnectResult() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.multiConnect(
-            player = alice,
-            actionType = ContactsBoardState.ActionType.DoubleConnect,
-            playerContact = aliceContact,
-            otherContacts = setOf(bobContact, bobOtherContact),
-        )
+        facade.action(alice, ContactsBoardState.ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
         facade.action(bob, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobOtherContact), emptySet())
 
         assertEquals(emptySet(), facade.gameState.value.solved)
@@ -150,12 +140,7 @@ class ContactsGameFacadeImplTest {
     fun onlyTargetPlayerCanResolveMultiConnect() = runTest {
         val facade = ContactsGameFacadeImpl(initialState)
 
-        facade.multiConnect(
-            player = alice,
-            actionType = ContactsBoardState.ActionType.DoubleConnect,
-            playerContact = aliceContact,
-            otherContacts = setOf(bobContact, bobOtherContact),
-        )
+        facade.action(alice, ContactsBoardState.ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
         facade.action(alice, ContactsBoardState.ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
 
         assertEquals(emptySet(), facade.gameState.value.solved)
