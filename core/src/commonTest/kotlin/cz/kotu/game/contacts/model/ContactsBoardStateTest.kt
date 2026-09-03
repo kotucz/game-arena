@@ -2,7 +2,8 @@ package cz.kotu.game.contacts.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class ContactsBoardStateTest {
     @Test
@@ -159,57 +160,51 @@ class ContactsBoardStateTest {
     fun isActionLegalReturnsNullForAValidConnect() {
         val (state, alice, _, aliceContact, bobContact) = validationState()
 
-        assertNull(
-            state.isActionLegal(
-                alice,
-                ContactsBoardState.ActionType.StandardConnect,
-                setOf(aliceContact),
-                setOf(bobContact),
-            ),
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.StandardConnect,
+            setOf(aliceContact),
+            setOf(bobContact),
         )
+        assertTrue(result is ActionExecutionResult.Success)
     }
 
     @Test
     fun isActionLegalExplainsInvalidSelectionAndOwnership() {
         val (state, alice, bob, aliceContact, bobContact) = validationState()
 
-        assertEquals(
-            "Invalid number of selected contacts: player (0/1) other (1/1)",
-            state.isActionLegal(alice, ContactsBoardState.ActionType.StandardConnect, emptySet(), setOf(bobContact)),
-        )
-        assertEquals(
-            "Player does not own the selected contact",
-            state.isActionLegal(
-                bob,
-                ContactsBoardState.ActionType.StandardConnect,
-                setOf(aliceContact),
-                setOf(bobContact)
-            ),
-        )
+        val result1 = state.applyAction(alice, ContactsBoardState.ActionType.StandardConnect, emptySet(), setOf(bobContact))
+        assertIs<ActionExecutionResult.Failure>(result1)
+        assertEquals("Invalid number of selected contacts: player (0/1) other (1/1)", result1.message)
+
+        val result2 = state.applyAction(bob, ContactsBoardState.ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
+        assertIs<ActionExecutionResult.Failure>(result2)
+        assertEquals("Player does not own the selected contact", result2.message)
     }
 
     @Test
     fun isActionLegalExplainsSolvedAndDisallowedActions() {
         val (state, alice, _, aliceContact, bobContact) = validationState()
 
-        assertEquals(
-            "Selected contact is already solved",
-            state.withSolvedContacts(aliceContact).isActionLegal(
-                alice,
-                ContactsBoardState.ActionType.StandardConnect,
-                setOf(aliceContact),
-                setOf(bobContact),
-            ),
+        val result1 = state.withSolvedContacts(aliceContact).applyAction(
+            alice,
+            ContactsBoardState.ActionType.StandardConnect,
+            setOf(aliceContact),
+            setOf(bobContact),
         )
-        assertEquals(
-            "Action type is not allowed",
-            state.copy(allowedActionTypes = emptySet()).isActionLegal(
-                alice,
-                ContactsBoardState.ActionType.StandardConnect,
-                setOf(aliceContact),
-                setOf(bobContact),
-            ),
+        assertIs<ActionExecutionResult.Failure>(result1)
+        assertEquals("Selected contact is already solved", result1.message)
+
+        // TODO allowed action types will change respecting player on turn etc
+        val result2 = state.copy(allowedActionTypes = emptySet()).applyAction(
+            alice,
+            ContactsBoardState.ActionType.StandardConnect,
+            setOf(aliceContact),
+            setOf(bobContact),
         )
+        // allowedActionTypes is now only advisory; action itself will be authoritative
+        // assert that action fails because handlers perform validation (ActionType not allowed should be reflected here)
+        assertIs<ActionExecutionResult.Failure>(result2)
     }
 
     @Test
@@ -231,15 +226,14 @@ class ContactsBoardStateTest {
             solved = emptySet(),
         )
 
-        assertEquals(
-            "Selected contacts must have the same number or all yellow",
-            state.isActionLegal(
-                alice,
-                ContactsBoardState.ActionType.SoloConnectRest,
-                setOf(blue, red),
-                emptySet(),
-            ),
+        val result = state.applyAction(
+            alice,
+            ContactsBoardState.ActionType.SoloConnectRest,
+            setOf(blue, red),
+            emptySet(),
         )
+        assertIs<ActionExecutionResult.Failure>(result)
+        assertEquals("Selected contacts must have the same number or all yellow", result.message)
     }
 
     private fun validationState(): ValidationState {

@@ -5,9 +5,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cz.kotu.game.contacts.model.ActionExecutionResult
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
+import cz.kotu.game.contacts.model.applyAction
 import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
@@ -131,12 +133,12 @@ class ContactsPlayerViewModel(
     fun validationError(): String? {
         val actionType = selectedActionType ?: return null
         val currentPlayer = player ?: return null
-        return gameState.isActionLegal(
+        return (gameState.applyAction(
             currentPlayer,
             actionType,
             actionSelectionState.playerContacts,
             actionSelectionState.otherContacts,
-        )
+        ) as? ActionExecutionResult.Failure)?.message
     }
 
     fun validAction(): Boolean {
