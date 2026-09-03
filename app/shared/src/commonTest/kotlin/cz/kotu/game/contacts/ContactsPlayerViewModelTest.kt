@@ -4,6 +4,7 @@ import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
+import cz.kotu.game.contacts.model.ContactsGameState
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,7 +19,7 @@ class ContactsPlayerViewModelTest {
         val viewModel = ContactsPlayerViewModel(facade, "alice")
 
         assertEquals("alice", viewModel.player?.username)
-        assertEquals(facade.gameState.value.allowedActionTypes, viewModel.availableActionTypes())
+        assertEquals(facade.gameState.value.board.allowedActionTypes, viewModel.availableActionTypes())
     }
 
     @Test
@@ -78,7 +79,7 @@ class ContactsPlayerViewModelTest {
         }
 
         val viewModel = ContactsPlayerViewModel(facade, "bob")
-        val resolution = facade.gameState.value.resolveMultiConnect
+        val resolution = facade.gameState.value.board.resolveMultiConnect
 
         assertEquals(targetContacts, resolution?.targetContacts?.map(state::requireContact)?.toSet())
         assertEquals(emptySet(), viewModel.resolutionClickableContacts())
@@ -139,7 +140,7 @@ class ContactsPlayerViewModelTest {
     private class TestContactsGameFacade(
         initialState: ContactsBoardState,
     ) : ContactsGameFacade {
-        private val delegate = ContactsGameFacadeImpl(initialState)
+        private val delegate = ContactsGameFacadeImpl(ContactsGameState(initialState))
         override val gameState = delegate.gameState
         override val logs = delegate.logs
 

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.GameLogEntry
 
 private const val phi = 1.618f
@@ -46,17 +47,18 @@ fun ContactsPlayerScreen(
     viewModel: ContactsPlayerViewModel,
 ) {
     val actionSelectionState = viewModel.actionSelectionState
-    val gameState: ContactsBoardState by viewModel.gameFacade.gameState.collectAsState()
+    val gameState: ContactsGameState by viewModel.gameFacade.gameState.collectAsState()
+    val boardState = gameState.board
     val player = viewModel.player
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
-    val resolution = gameState.resolveMultiConnect
+    val resolution = boardState.resolveMultiConnect
     val availableActionTypes = viewModel.availableActionTypes()
     val selectedActionType = viewModel.selectedActionType
     val resolutionTargetContacts = viewModel.resolutionTargetContacts()
     val resolutionClickableContacts = viewModel.resolutionClickableContacts()
 
-    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, gameState, player) }
+    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, boardState, player) }
 
     LaunchedEffect(resolution) {
         viewModel.resetActionSelection()
@@ -78,7 +80,7 @@ fun ContactsPlayerScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            LaunchedEffect(gameState.solved) {
+            LaunchedEffect(boardState.solved) {
                 viewModel.updateActionSelectionForSolved()
             }
 
@@ -94,10 +96,10 @@ fun ContactsPlayerScreen(
                 ) {
                     Text(text = "Player: " + player?.username)
 
-                    SolvedContactsPool(gameState)
+                    SolvedContactsPool(boardState)
 
                     Text(
-                        text = "Faults: " + if (gameState.faults == 0) "0" else "X".repeat(gameState.faults),
+                        text = "Faults: " + if (boardState.faults == 0) "0" else "X".repeat(boardState.faults),
                         color = Color(0xFFCC0000),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -109,9 +111,9 @@ fun ContactsPlayerScreen(
                         onExpand = { viewModel.isLogsExpanded = true },
                     )
 
-                    gameState.racks.filter { it.owner != player }.forEach { rack ->
+                    boardState.racks.filter { it.owner != player }.forEach { rack ->
                         RackView(
-                            gameState = gameState,
+                            board = boardState,
                             rack = rack,
                             isOwner = false,
                             selectedContacts = actionSelectionState.otherContacts,
@@ -123,9 +125,9 @@ fun ContactsPlayerScreen(
                         )
                     }
 
-                    gameState.racks.filter { it.owner == player }.forEach { rack ->
+                    boardState.racks.filter { it.owner == player }.forEach { rack ->
                         RackView(
-                            gameState = gameState,
+                            board = boardState,
                             rack = rack,
                             isOwner = true,
                             selectedContacts = actionSelectionState.playerContacts,
@@ -183,7 +185,7 @@ fun ContactsPlayerScreen(
 
                     if (resolution != null) {
                         if (resolution.targetPlayer == player) {
-                            Text("Original contact: ${gameState.contact(resolution.originalContact)?.number ?: "?"}")
+                            Text("Original contact: ${boardState.contact(resolution.originalContact)?.number ?: "?"}")
                         } else {
                             Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
                         }
@@ -199,13 +201,13 @@ fun ContactsPlayerScreen(
                         )
                     }
 
-                    Button(
-                        enabled = viewModel.validAction(),
-                        onClick = {
-                            viewModel.confirmAction()
-                        },
-                    ) {
-                        Text("Confirm selection")
+                        Button(
+                            enabled = viewModel.validAction(),
+                            onClick = {
+                                viewModel.confirmAction()
+                            },
+                        ) {
+                            Text("Confirm selection")
                     }
                 }
         }
@@ -214,11 +216,11 @@ fun ContactsPlayerScreen(
 
 /* Sorted contacts pool with solved tiles highlighted */
 @Composable
-private fun SolvedContactsPool(gameState: ContactsBoardState) {
+private fun SolvedContactsPool(board: ContactsBoardState) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(text = "Contacts Pool")
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val groups = gameState.pool.groupBy { it.number to it.type }.entries.sortedBy { it.value.first() }
+            val groups = board.pool.groupBy { it.number to it.type }.entries.sortedBy { it.value.first() }
 
             val spacing = 4.dp
             val poolTileWidth = (((maxWidth - spacing * groups.size) / groups.size)).coerceAtMost(40.dp)
@@ -239,7 +241,7 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
                             FlippableContactTile(
                                 contact = contact,
                                 size = DpSize(poolTileWidth, poolTileHeight),
-                                isSolved = gameState.isSolved(contact),
+                                isSolved = board.isSolved(contact),
                                 isOwned = true,
                                 solvedBackgroundColor = Color(0xFF4CAF50),
                                 unsolvedBackgroundColor = Color(0xFFBDBDBD),
@@ -256,7 +258,7 @@ private fun SolvedContactsPool(gameState: ContactsBoardState) {
 
 @Composable
 private fun RackView(
-    gameState: ContactsBoardState,
+    board: ContactsBoardState,
     rack: ContactsBoardState.Rack,
     isOwner: Boolean,
     selectedContacts: Set<ContactsBoardState.Contact>,
@@ -268,7 +270,7 @@ private fun RackView(
         Text(text = "Owner: " + rack.owner.username)
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val maxContacts = gameState.racks.maxOf { it.contactIds.size }
+            val maxContacts = board.racks.maxOf { it.contactIds.size }
 
             val spacing = 8.dp
             val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(64.dp)
@@ -280,7 +282,7 @@ private fun RackView(
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(spacing, alignment = Alignment.CenterHorizontally),
             ) {
-                gameState.rackContacts(rack).forEach { contact ->
+                board.rackContacts(rack).forEach { contact ->
                     Column(
                         modifier = Modifier.wrapContentSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -289,7 +291,7 @@ private fun RackView(
                         FlippableContactTile(
                             contact = contact,
                             size = DpSize(tileWidth, tileHeight),
-                            isSolved = gameState.isSolved(contact),
+                            isSolved = board.isSolved(contact),
                             isOwned = isOwner,
                             solvedBackgroundColor = Color(0xFF808080),
                             unsolvedBackgroundColor = when {
@@ -303,7 +305,7 @@ private fun RackView(
                                     shape = RoundedCornerShape(8.dp),
                                 )
                                 .clickable(
-                                    enabled = !gameState.isSolved(contact) &&
+                                    enabled = !board.isSolved(contact) &&
                                             (clickableContacts == null || contact in clickableContacts),
                                     onClick = { onContactClick(contact) },
                                 ),

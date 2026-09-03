@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 class ContactsGameFacadeImpl(
-    private val _gameState: MutableStateFlow<ContactsBoardState>,
+    private val _gameState: MutableStateFlow<ContactsGameState>,
     private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf()),
 ) : ContactsGameFacade {
     constructor(
@@ -15,20 +15,22 @@ class ContactsGameFacadeImpl(
         config: ContactsBoardState.ContactsGameConfig,
     ) : this(
         MutableStateFlow(
-            ContactsBoardState.create(
-                players,
-                config,
+            ContactsGameState(
+                ContactsBoardState.create(
+                    players,
+                    config,
+                )
             )
         ),
         MutableStateFlow(listOf()),
     )
 
-    constructor(initialState: ContactsBoardState, initialLogs: List<GameLogEntry> = emptyList()) : this(
+    constructor(initialState: ContactsGameState, initialLogs: List<GameLogEntry> = emptyList()) : this(
         MutableStateFlow(initialState),
         MutableStateFlow(initialLogs),
     )
 
-    override val gameState: StateFlow<ContactsBoardState> = _gameState.asStateFlow()
+    override val gameState: StateFlow<ContactsGameState> = _gameState.asStateFlow()
     override val logs: StateFlow<List<GameLogEntry>> = _logs.asStateFlow()
 
 
@@ -38,12 +40,12 @@ class ContactsGameFacadeImpl(
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
     ): Result<Unit> {
-        val gameState = this@ContactsGameFacadeImpl.gameState.value
-        val result = gameState.applyAction(player, actionType, playerContacts, otherContacts)
+        val gameState: ContactsGameState = this@ContactsGameFacadeImpl.gameState.value
+        val result = gameState.board.applyAction(player, actionType, playerContacts, otherContacts)
         return when (result) {
             is ActionExecutionResult.Failure -> Result.failure(IllegalStateException(result.message))
             is ActionExecutionResult.Success -> {
-                _gameState.value = result.state
+                _gameState.value = gameState.copy(board = result.state)
                 addRichGameLog(result.logBuilder)
                 Result.success(Unit)
             }

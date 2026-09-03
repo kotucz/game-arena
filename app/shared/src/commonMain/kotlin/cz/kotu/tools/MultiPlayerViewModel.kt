@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
+import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
 import cz.kotu.gamearena.AuthClient
 import cz.kotu.gamearena.authBaseUrl
@@ -75,7 +76,7 @@ class MultiPlayerViewModel(
             httpClient = getOrCreateClient(username),
             endpoint = authBaseUrl().trimEnd('/') + "/api",
             gameId = remoteGameId,
-            initialState = ContactsBoardState.empty(),
+            initialState = ContactsGameState(ContactsBoardState.empty()),
             scope = networkScope,
         )
     } else {

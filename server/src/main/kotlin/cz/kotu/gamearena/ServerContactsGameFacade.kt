@@ -2,6 +2,7 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
+import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsNetworkAction
 import cz.kotu.game.contacts.model.GameLogEntry
 import io.ktor.server.sse.ServerSSESession
@@ -13,7 +14,7 @@ class ServerContactsGameFacade(
     private val delegate: ContactsGameFacade,
     private val json: Json = Json { classDiscriminator = "type" },
 ) {
-    val gameState: StateFlow<ContactsBoardState> = delegate.gameState
+    val gameState: StateFlow<ContactsGameState> = delegate.gameState
     val logs: StateFlow<List<GameLogEntry>> = delegate.logs
     suspend fun handleEvents(session: ServerSSESession, username: String) {
         delegate.gameState.collect { state ->
@@ -45,8 +46,8 @@ class ServerContactsGameFacade(
                     delegate.action(
                         player = ContactsBoardState.Player(username),
                         actionType = action.actionType,
-                        playerContacts = action.playerContacts.map { state.requireContact(it) }.toSet(),
-                        otherContacts = action.otherContacts.map { state.requireContact(it) }.toSet(),
+                        playerContacts = action.playerContacts.map { state.board.requireContact(it) }.toSet(),
+                        otherContacts = action.otherContacts.map { state.board.requireContact(it) }.toSet(),
                     )
                 }
             }

@@ -2,6 +2,7 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
+import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.flow.MutableStateFlow

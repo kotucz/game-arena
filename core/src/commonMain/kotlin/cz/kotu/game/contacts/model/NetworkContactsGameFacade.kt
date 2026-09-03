@@ -31,7 +31,7 @@ class NetworkContactsGameFacade(
     private val httpClient: HttpClient,
     private val endpoint: String,
     private val gameId: String,
-    initialState: ContactsBoardState,
+    initialState: ContactsGameState,
     private val scope: CoroutineScope,
     private val json: Json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" },
     private val onGameNotFound: (() -> Unit)? = null,
@@ -43,7 +43,7 @@ class NetworkContactsGameFacade(
     private val logsEndpoint: String = gameEndpoint.removeSuffix("/contacts") + "/logs"
     private val actionsEndpoint: String = gameEndpoint + "/actions"
 
-    override val gameState: StateFlow<ContactsBoardState> =
+    override val gameState: StateFlow<ContactsGameState> =
         gameEvents().stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), initialState)
 
     private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
@@ -142,14 +142,14 @@ class NetworkContactsGameFacade(
         }
     }
 
-    private fun gameEvents(): Flow<ContactsBoardState> = flow {
+    private fun gameEvents(): Flow<ContactsGameState> = flow {
         while (currentCoroutineContext().isActive) {
             try {
                 httpClient.sse(eventsEndpoint) {
                     logLocal("Game events connected")
                     incoming.collect { event ->
                         event.data?.let { data ->
-                            emit(json.decodeFromString<ContactsBoardState>(data))
+                            emit(json.decodeFromString<ContactsGameState>(data))
                         }
                     }
                 }
