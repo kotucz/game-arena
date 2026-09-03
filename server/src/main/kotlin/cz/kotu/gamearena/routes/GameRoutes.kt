@@ -120,13 +120,13 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                     event = ServerSentEvent(comments = "heartbeat")
                 }
                 val principal = call.principal<UserPrincipal>()!!
-                call.contactsGame.contacts.handleEvents(this, principal.username)
+                call.contactsGame.forUser(principal.username).handleEvents(this)
             }
 
             post("/contacts/actions") {
                 val principal = call.principal<UserPrincipal>()!!
                 val game = call.contactsGame
-                val result = game.contacts.handleAction(call.receiveText(), principal.username)
+                val result = game.forUser(principal.username).handleAction(call.receiveText())
                 if (result.isSuccess) {
                     gamesManager.persist(game)
                     call.respond(HttpStatusCode.Accepted)
@@ -142,7 +142,7 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                 }
                 val principal = call.principal<UserPrincipal>()!!
                 val lastSentLogIndex = call.request.queryParameters["lastSentLogIndex"]?.toIntOrNull() ?: -1
-                call.contactsGame.contacts.handleLogs(this, principal.username, lastSentLogIndex)
+                call.contactsGame.forUser(principal.username).handleLogs(this, lastSentLogIndex)
             }
         }
     }

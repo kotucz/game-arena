@@ -1,8 +1,10 @@
 package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,11 +34,9 @@ class GamesManager(
     ): ContactsGame = gamesMutex.withLock {
         val game = ContactsGame(
             metadata = newMetadata(players),
-            contacts = ServerContactsGameFacade(
-                ContactsGameFacadeImpl(
-                    players.map(ContactsBoardState::Player),
-                    config,
-                ),
+            contactsGameFacade = ContactsGameFacadeImpl(
+                players.map(ContactsBoardState::Player),
+                config,
             ),
         )
         games[game.metadata.id] = game
@@ -66,8 +66,8 @@ class GamesManager(
         val dao = gameDao ?: return
         when (game) {
             is ContactsGame -> {
-                val state = game.contacts.gameState.value
-                val logs = game.contacts.logs.value
+                val state = game.contactsGameFacade.gameState.value
+                val logs = game.contactsGameFacade.logs.value
                 val record = StoredGame(
                     id = game.metadata.id,
                     type = game.metadata.type,
@@ -144,5 +144,14 @@ interface ManagedGame {
 
 data class ContactsGame(
     override val metadata: GameMetadata,
-    val contacts: ServerContactsGameFacade,
-) : ManagedGame
+    val contactsGameFacade: ContactsGameFacade,
+) : ManagedGame {
+    fun forUser(username: String): ServerContactsGameFacade {
+        return ServerContactsGameFacade(
+            ContactsPlayerGameAdapter(
+                player = ContactsBoardState.Player(username),
+                gameFacade = contactsGameFacade,
+            ),
+        )
+    }
+}

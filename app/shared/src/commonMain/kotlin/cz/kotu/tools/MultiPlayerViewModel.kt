@@ -3,9 +3,10 @@ package cz.kotu.tools
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerFacade
+import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
 import cz.kotu.gamearena.AuthClient
 import cz.kotu.gamearena.authBaseUrl
@@ -71,7 +72,7 @@ class MultiPlayerViewModel(
         }
     }
 
-    fun gameFacadeForPlayer(username: String): ContactsGameFacade = if (remoteGameId.isNotBlank()) {
+    fun gameFacadeForPlayer(username: String): ContactsPlayerFacade = if (remoteGameId.isNotBlank()) {
         NetworkContactsGameFacade(
             httpClient = getOrCreateClient(username),
             endpoint = authBaseUrl().trimEnd('/') + "/api",
@@ -80,7 +81,11 @@ class MultiPlayerViewModel(
             scope = networkScope,
         )
     } else {
-        localFacade
+        ContactsPlayerGameAdapter(
+            players.first { it.username == username },
+            localFacade,
+        )
+
     }
 
     override fun onCleared() {

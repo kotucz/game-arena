@@ -62,7 +62,7 @@ class GamesManagerTest {
         )
 
         assertNotSame(first, second)
-        assertNotSame(first.contacts, second.contacts)
+        assertNotSame(first.contactsGameFacade, second.contactsGameFacade)
         assertSame(first, manager.game("game-1"))
         assertSame(second, manager.game("game-2"))
         assertNull(manager.game("missing"))

@@ -1,8 +1,8 @@
 package cz.kotu.game.contacts
 
 import androidx.lifecycle.ViewModel
-import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
 import cz.kotu.gamearena.AuthManager
 import cz.kotu.gamearena.authBaseUrl
@@ -30,7 +30,7 @@ class ContactsGameViewModel(
     private val _gameNotFound = MutableStateFlow(false)
     val gameNotFound: StateFlow<Boolean> = _gameNotFound.asStateFlow()
 
-    val gameFacade: ContactsGameFacade = NetworkContactsGameFacade(
+    val gameFacade: ContactsPlayerFacade = NetworkContactsGameFacade(
         httpClient = httpClient,
         endpoint = authBaseUrl().trimEnd('/') + "/api",
         gameId = gameId,

@@ -8,13 +8,13 @@ import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ActionExecutionResult
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.applyAction
 import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
-    val gameFacade: ContactsGameFacade,
+    val gameFacade: ContactsPlayerFacade,
     val username: String,
 ) : ViewModel() {
 
@@ -150,7 +150,6 @@ class ContactsPlayerViewModel(
     fun confirmAction() {
         if (actionInProgress) return
 
-        val currentPlayer = player ?: return
         val actionType = selectedActionType ?: return
         if (clientValidationEnabled && validationError() != null) return
 
@@ -159,7 +158,6 @@ class ContactsPlayerViewModel(
 
         viewModelScope.launch {
             val result = gameFacade.action(
-                player = currentPlayer,
                 actionType = actionType,
                 playerContacts = actionSelectionState.playerContacts,
                 otherContacts = actionSelectionState.otherContacts,

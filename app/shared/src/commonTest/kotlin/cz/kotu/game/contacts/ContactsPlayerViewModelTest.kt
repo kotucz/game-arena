@@ -5,6 +5,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,7 +17,10 @@ class ContactsPlayerViewModelTest {
     @Test
     fun playerIsResolvedFromUsernameAndDefaultActionsAreAvailable() {
         val facade = TestContactsGameFacade(createState())
-        val viewModel = ContactsPlayerViewModel(facade, "alice")
+        val viewModel = ContactsPlayerViewModel(
+            ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade),
+            "alice",
+        )
 
         assertEquals("alice", viewModel.player?.username)
         assertEquals(facade.gameState.value.board.allowedActionTypes, viewModel.availableActionTypes())
@@ -26,7 +30,10 @@ class ContactsPlayerViewModelTest {
     fun togglingContactsBuildsSelectionStateAndValidatesSuccessfully() {
         val state = createState()
         val facade = TestContactsGameFacade(state)
-        val viewModel = ContactsPlayerViewModel(facade, "alice")
+        val viewModel = ContactsPlayerViewModel(
+            ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade),
+            "alice",
+        )
 
         val (playerContact, otherContact) = matchingContacts(state)
         viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
@@ -43,7 +50,9 @@ class ContactsPlayerViewModelTest {
     fun clientValidationCanBeDisabledToUseBackendOnlyChecks() {
         val state = createState()
         val facade = TestContactsGameFacade(state)
-        val viewModel = ContactsPlayerViewModel(facade, "alice")
+        val viewModel = ContactsPlayerViewModel(
+            ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade), "alice",
+        )
 
         val (playerContact, otherContact) = matchingContacts(state)
         viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
@@ -78,7 +87,9 @@ class ContactsPlayerViewModelTest {
             )
         }
 
-        val viewModel = ContactsPlayerViewModel(facade, "bob")
+        val viewModel = ContactsPlayerViewModel(
+            ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade), "bob",
+        )
         val resolution = facade.gameState.value.board.resolveMultiConnect
 
         assertEquals(targetContacts, resolution?.targetContacts?.map(state::requireContact)?.toSet())
@@ -97,7 +108,9 @@ class ContactsPlayerViewModelTest {
             matchingContacts(state).second,
         )
         val facade = TestContactsGameFacade(solvedState)
-        val viewModel = ContactsPlayerViewModel(facade, "alice")
+        val viewModel = ContactsPlayerViewModel(
+            ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade), "alice",
+        )
 
         val (playerContact, otherContact) = matchingContacts(state)
         viewModel.onPlayerContactClick(playerContact)

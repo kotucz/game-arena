@@ -36,7 +36,7 @@ class NetworkContactsGameFacade(
     private val json: Json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" },
     private val onGameNotFound: (() -> Unit)? = null,
     private val awaitLogin: (suspend () -> Unit)? = null,
-) : ContactsGameFacade {
+) : ContactsPlayerFacade {
 
     private val gameEndpoint: String = endpoint.trimEnd('/') + "/games/" + gameId + "/contacts"
     private val eventsEndpoint: String = gameEndpoint + "/events"
@@ -56,7 +56,6 @@ class NetworkContactsGameFacade(
         .stateIn(scope, SharingStarted.WhileSubscribed(5.seconds), _logs.value)
 
     override suspend fun action(
-        player: ContactsBoardState.Player,
         actionType: ContactsBoardState.ActionType,
         playerContacts: Set<ContactsBoardState.Contact>,
         otherContacts: Set<ContactsBoardState.Contact>,
