@@ -1,5 +1,7 @@
 package cz.kotu.game.contacts
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,11 +27,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.DefaultShadowColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
@@ -306,6 +310,29 @@ private fun RackView(
                             else -> null
                         }
 
+                        val shakeOffset = remember { Animatable(0f) }
+
+                        val isError = lastActionResult.errorContacts.contains(contact.id)
+
+                        LaunchedEffect(isError) {
+                            if (isError) {
+                                shakeOffset.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = keyframes {
+                                        durationMillis = 400
+                                        0f at 0
+                                        -12f at 50
+                                        12f at 100
+                                        -9f at 150
+                                        9f at 200
+                                        -5f at 250
+                                        5f at 300
+                                        0f at 400
+                                    }
+                                )
+                            }
+                        }
+
                         FlippableContactTile(
                             contact = contact.value,
                             size = DpSize(tileWidth, tileHeight),
@@ -318,6 +345,9 @@ private fun RackView(
                                 else -> Color(0xFF4A4A4A)
                             },
                             modifier = Modifier
+                                .graphicsLayer {
+                                    translationX = shakeOffset.value
+                                }
                                 .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
                                 .shadow(
                                     elevation = if (contact.id in highlightedContacts || shadowColor != null) 8.dp else 0.dp,
@@ -329,7 +359,8 @@ private fun RackView(
                                     enabled = !contact.solved &&
                                             (clickableContacts == null || contact.id in clickableContacts),
                                     onClick = { onContactClick(contact.id) },
-                                ),
+                                )
+                            ,
                         )
 
                         Box(
