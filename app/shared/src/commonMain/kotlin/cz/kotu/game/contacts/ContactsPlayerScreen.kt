@@ -96,7 +96,7 @@ fun ContactsPlayerScreen(
                 ) {
                     Text(text = "Player: " + player?.username)
 
-                    SolvedContactsPool(boardState)
+                    SolvedContactsPool(gameState.pool)
 
                     Text(
                         text = "Faults: " + if (boardState.faults == 0) "0" else "X".repeat(boardState.faults),
@@ -111,9 +111,9 @@ fun ContactsPlayerScreen(
                         onExpand = { viewModel.isLogsExpanded = true },
                     )
 
-                    boardState.racks.filter { it.owner != player }.forEach { rack ->
+                    gameState.racks.filter { it.owner != player }.forEach { rack ->
                         RackView(
-                            board = boardState,
+                            gameState = gameState,
                             rack = rack,
                             isOwner = false,
                             selectedContacts = actionSelectionState.otherContacts,
@@ -125,9 +125,9 @@ fun ContactsPlayerScreen(
                         )
                     }
 
-                    boardState.racks.filter { it.owner == player }.forEach { rack ->
+                    gameState.racks.filter { it.owner == player }.forEach { rack ->
                         RackView(
-                            board = boardState,
+                            gameState = gameState,
                             rack = rack,
                             isOwner = true,
                             selectedContacts = actionSelectionState.playerContacts,
@@ -161,13 +161,13 @@ fun ContactsPlayerScreen(
                         .background(Color(0xFFE8E8E8))
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         availableActionTypes.forEach { actionType ->
                             val isSelected = actionType == selectedActionType
@@ -175,8 +175,8 @@ fun ContactsPlayerScreen(
                                 onClick = { viewModel.selectActionType(actionType) },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
-                                    contentColor = if (isSelected) Color.White else Color.Black
-                                )
+                                    contentColor = if (isSelected) Color.White else Color.Black,
+                                ),
                             ) {
                                 Text(actionType.name)
                             }
@@ -223,11 +223,11 @@ fun ContactsPlayerScreen(
 
 /* Sorted contacts pool with solved tiles highlighted */
 @Composable
-private fun SolvedContactsPool(board: ContactsBoardState) {
+private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(text = "Contacts Pool")
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val groups = board.pool.groupBy { it.number to it.type }.entries.sortedBy { it.value.first() }
+            val groups = pool.groupBy { it.value }.entries.sortedBy { it.value.first().value }
 
             val spacing = 4.dp
             val poolTileWidth = (((maxWidth - spacing * groups.size) / groups.size)).coerceAtMost(40.dp)
@@ -246,9 +246,9 @@ private fun SolvedContactsPool(board: ContactsBoardState) {
                     ) {
                         contacts.forEach { contact ->
                             FlippableContactTile(
-                                contact = contact,
+                                contact = contact.value,
                                 size = DpSize(poolTileWidth, poolTileHeight),
-                                isSolved = board.isSolved(contact),
+                                isSolved = contact.solved,
                                 isOwned = true,
                                 solvedBackgroundColor = Color(0xFF4CAF50),
                                 unsolvedBackgroundColor = Color(0xFFBDBDBD),
@@ -265,8 +265,8 @@ private fun SolvedContactsPool(board: ContactsBoardState) {
 
 @Composable
 private fun RackView(
-    board: ContactsBoardState,
-    rack: ContactsBoardState.Rack,
+    gameState: PlayerViewState,
+    rack: PlayerViewState.Rack,
     isOwner: Boolean,
     selectedContacts: Set<ContactsBoardState.ContactId>,
     clickableContacts: Set<ContactsBoardState.ContactId>?,
@@ -277,7 +277,7 @@ private fun RackView(
         Text(text = "Owner: " + rack.owner.username)
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val maxContacts = board.racks.maxOf { it.contactIds.size }
+            val maxContacts = gameState.racks.maxOf { it.contacts.size }
 
             val spacing = 8.dp
             val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(64.dp)
@@ -289,16 +289,16 @@ private fun RackView(
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(spacing, alignment = Alignment.CenterHorizontally),
             ) {
-                board.rackContacts(rack).forEach { contact ->
+                rack.contacts.forEach { contact ->
                     Column(
                         modifier = Modifier.wrapContentSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         FlippableContactTile(
-                            contact = contact,
+                            contact = contact.value,
                             size = DpSize(tileWidth, tileHeight),
-                            isSolved = board.isSolved(contact),
+                            isSolved = contact.solved,
                             isOwned = isOwner,
                             solvedBackgroundColor = Color(0xFF808080),
                             unsolvedBackgroundColor = when {
@@ -312,7 +312,7 @@ private fun RackView(
                                     shape = RoundedCornerShape(8.dp),
                                 )
                                 .clickable(
-                                    enabled = !board.isSolved(contact) &&
+                                    enabled = !contact.solved &&
                                             (clickableContacts == null || contact.id in clickableContacts),
                                     onClick = { onContactClick(contact.id) },
                                 ),
@@ -323,7 +323,7 @@ private fun RackView(
                                 .size(width = tileWidth, height = tileWidth / phi),
                             contentAlignment = Alignment.Center,
                         ) {
-                            rack.hint(contact)?.let { hint ->
+                            contact.hint?.let { hint ->
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -349,7 +349,7 @@ private fun RackView(
 
 @Composable
 private fun FlippableContactTile(
-    contact: ContactsBoardState.Contact,
+    contact: ContactsBoardState.ContactValue?,
     size: DpSize,
     isSolved: Boolean,
     isOwned: Boolean,
@@ -371,7 +371,6 @@ private fun FlippableContactTile(
                 contact = contact,
                 size = size,
                 backgroundColor = solvedBackgroundColor,
-                isSecret = false,
                 modifier = modifier,
                 textColor = solvedTextColor,
             )
@@ -379,22 +378,20 @@ private fun FlippableContactTile(
         back = {
             // unsolved
             ContactTileView(
-                contact = contact,
+                contact = if (isOwned) contact else null, // keep hidden for animation
                 size = size,
                 backgroundColor = unsolvedBackgroundColor,
-                isSecret = !isOwned,
                 modifier = modifier,
                 textColor = unsolvedTextColor,
             )
-        }
+        },
     )
 }
 
 @Composable
 private fun ContactTileView(
-    contact: ContactsBoardState.Contact,
+    contact: ContactsBoardState.ContactValue?,
     size: DpSize,
-    isSecret: Boolean,
     backgroundColor: Color,
     textColor: Color,
     modifier: Modifier = Modifier,
@@ -406,7 +403,7 @@ private fun ContactTileView(
         modifier = modifier.size(size).background(backgroundColor, shape),
         contentAlignment = Alignment.Center,
     ) {
-        if (!isSecret) {
+        if (contact != null) {
             Box(
                 modifier = Modifier
                     .size(size.width, size.height / 5)
@@ -422,10 +419,10 @@ private fun ContactTileView(
             )
         }
         Text(
-            text = if (isSecret) "?" else contact.number.toString(),
+            text = contact?.number?.toString() ?: "?",
             color = textColor,
             fontSize = (size.height / 3.dp).sp,
-            fontWeight = if (isSecret) FontWeight.Normal else FontWeight.Bold,
+            fontWeight = if (contact == null) FontWeight.Normal else FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
     }

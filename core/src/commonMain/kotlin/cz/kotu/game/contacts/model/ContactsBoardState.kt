@@ -81,6 +81,18 @@ data class ContactsBoardState internal constructor(
         override fun compareTo(other: Contact): Int {
             return compareValuesBy(this, other, Contact::number, { it.type.ordinal })
         }
+
+        val value get() = ContactValue(number, type)
+    }
+
+    @Serializable
+    data class ContactValue(
+        val number: Int,
+        val type: ContactType,
+    ) : Comparable<ContactValue> {
+        override fun compareTo(other: ContactValue): Int {
+            return compareValuesBy(this, other, ContactValue::number, { it.type.ordinal })
+        }
     }
 
     @Serializable

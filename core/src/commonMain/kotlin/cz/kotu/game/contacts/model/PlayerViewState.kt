@@ -2,7 +2,6 @@ package cz.kotu.game.contacts.model
 
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
-import cz.kotu.game.contacts.model.ContactsBoardState.ContactType
 import cz.kotu.game.contacts.model.ContactsBoardState.Player
 import cz.kotu.game.contacts.model.ContactsBoardState.ResolveMultiConnect
 import kotlinx.serialization.Serializable
@@ -10,17 +9,23 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PlayerViewState(
     val you: Player,
-    val pool: List<Contact>,
+    val pool: List<PoolContact>,
     val racks: List<Rack>,
     val board: ContactsBoardState,
     val allowedActionTypes: Set<ActionType>,
     val resolveMultiConnect: ResolveMultiConnect?,
 ) {
     @Serializable
-    data class Contact(
-        val id: ContactId?,
-        val number: Int?,
-        val type: ContactType?,
+    data class PoolContact(
+        val value: ContactsBoardState.ContactValue?,
+        val solved: Boolean,
+    )
+
+
+    @Serializable
+    data class RackContact(
+        val id: ContactId,
+        val value: ContactsBoardState.ContactValue?,
         val solved: Boolean,
         val hint: String?,
     )
@@ -28,7 +33,7 @@ data class PlayerViewState(
     @Serializable
     data class Rack(
         val owner: Player,
-        val contacts: List<Contact>,
+        val contacts: List<RackContact>,
     )
 
 
@@ -50,12 +55,9 @@ data class PlayerViewState(
 fun ContactsGameState.sanitizedPlayerView(player: Player): PlayerViewState {
 
     val pool = board.pool.map { c ->
-        PlayerViewState.Contact(
-            id = null, // no position reference
-            number = c.number,
-            type = c.type,
+        PlayerViewState.PoolContact(
+            value = c.value,
             solved = board.isSolved(c),
-            hint = board.getHint(c),
         )
     }
 
@@ -66,10 +68,9 @@ fun ContactsGameState.sanitizedPlayerView(player: Player): PlayerViewState {
 
             val hint = rack.hint(c)
 
-            PlayerViewState.Contact(
+            PlayerViewState.RackContact(
                 id = c.id,
-                number = if (visible) c.number else null,
-                type = if (visible) c.type else null,
+                value = if (visible) c.value else null,
                 solved = board.isSolved(c),
                 hint = hint,
             )
