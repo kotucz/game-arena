@@ -14,6 +14,7 @@ data class PlayerViewState(
     val board: ContactsBoardState,
     val allowedActionTypes: Set<ActionType>,
     val resolveMultiConnect: ResolveMultiConnect?,
+    val lastActionResult: ContactsBoardState.ActionResult,
 ) {
     @Serializable
     data class PoolContact(
@@ -45,6 +46,7 @@ data class PlayerViewState(
             board = ContactsBoardState.empty(),
             allowedActionTypes = setOf(),
             resolveMultiConnect = null,
+            lastActionResult = ContactsBoardState.ActionResult(),
         )
     }
 }
@@ -89,5 +91,6 @@ fun ContactsGameState.sanitizedPlayerView(player: Player): PlayerViewState {
         board = board,
         allowedActionTypes = board.allowedActionTypes,
         resolveMultiConnect = board.resolveMultiConnect,
+        lastActionResult = board.lastActionResult,
     )
 }

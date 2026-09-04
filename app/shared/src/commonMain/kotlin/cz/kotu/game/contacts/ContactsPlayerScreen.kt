@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.DefaultShadowColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
@@ -116,6 +117,7 @@ fun ContactsPlayerScreen(
                             gameState = gameState,
                             rack = rack,
                             isOwner = false,
+                            lastActionResult = gameState.lastActionResult,
                             selectedContacts = actionSelectionState.otherContacts,
                             clickableContacts = resolutionClickableContacts,
                             highlightedContacts = resolutionTargetContacts.orEmpty(),
@@ -130,6 +132,7 @@ fun ContactsPlayerScreen(
                             gameState = gameState,
                             rack = rack,
                             isOwner = true,
+                            lastActionResult = gameState.lastActionResult,
                             selectedContacts = actionSelectionState.playerContacts,
                             clickableContacts = resolutionClickableContacts,
                             highlightedContacts = resolutionTargetContacts.orEmpty(),
@@ -268,6 +271,7 @@ private fun RackView(
     gameState: PlayerViewState,
     rack: PlayerViewState.Rack,
     isOwner: Boolean,
+    lastActionResult: ContactsBoardState.ActionResult,
     selectedContacts: Set<ContactsBoardState.ContactId>,
     clickableContacts: Set<ContactsBoardState.ContactId>?,
     highlightedContacts: Set<ContactsBoardState.ContactId>,
@@ -282,6 +286,8 @@ private fun RackView(
             val spacing = 8.dp
             val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(64.dp)
             val tileHeight = tileWidth * phi
+            val cornerRadius = tileWidth / 8
+            val cornerShape = RoundedCornerShape(cornerRadius)
 
             Row(
                 modifier = Modifier
@@ -295,6 +301,11 @@ private fun RackView(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        val shadowColor = when {
+                            lastActionResult.errorContacts.contains(contact.id) -> Color.Red
+                            else -> null
+                        }
+
                         FlippableContactTile(
                             contact = contact.value,
                             size = DpSize(tileWidth, tileHeight),
@@ -307,9 +318,12 @@ private fun RackView(
                                 else -> Color(0xFF4A4A4A)
                             },
                             modifier = Modifier
+                                .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
                                 .shadow(
-                                    elevation = if (contact.id in highlightedContacts) 8.dp else 0.dp,
-                                    shape = RoundedCornerShape(8.dp),
+                                    elevation = if (contact.id in highlightedContacts || shadowColor != null) 8.dp else 0.dp,
+                                    shape = cornerShape,
+                                    ambientColor = shadowColor ?: DefaultShadowColor,
+                                    spotColor = shadowColor ?: DefaultShadowColor,
                                 )
                                 .clickable(
                                     enabled = !contact.solved &&
@@ -327,8 +341,8 @@ private fun RackView(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(hintBackgroundColor, RoundedCornerShape(8.dp))
-                                        .border(1.dp, color = Color.Black, RoundedCornerShape(8.dp)),
+                                        .background(hintBackgroundColor, cornerShape)
+                                        .border(1.dp, color = Color.Black, cornerShape),
                                 )
                                 Text(
                                     text = hint,

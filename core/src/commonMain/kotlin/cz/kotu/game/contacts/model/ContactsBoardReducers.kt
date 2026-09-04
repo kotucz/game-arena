@@ -15,6 +15,7 @@ fun ContactsBoardState.handleAddHint(
     ) return ActionExecutionResult.Failure("Player does not own the selected contact")
     if (isSolved(playerContact)) return ActionExecutionResult.Failure("Selected contact is already solved")
     val newState = this.withHintFor(playerContact)
+        .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState) {
         player(player)
         text("hinted")
@@ -45,6 +46,7 @@ fun ContactsBoardState.handleStandardConnect(
     if (!contactsMatch(playerContact, otherContact)) {
         val boom = otherContact.type == ContactsBoardState.ContactType.Red
         val newState = withFaultFor(otherContact)
+            .withLastActionResult(ContactsBoardState.ActionResult(errorContacts = setOf(otherContact.id)))
         return ActionExecutionResult.Success(newState) {
             player(player)
             text("mismatched")
@@ -56,6 +58,7 @@ fun ContactsBoardState.handleStandardConnect(
     }
 
     val newState = withSolvedContacts(playerContact, otherContact)
+        .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState) {
         player(player)
         text("connected")
@@ -164,6 +167,7 @@ fun ContactsBoardState.handleSoloConnectRest(
     if (playerContacts != remainingOwnedContacts) return ActionExecutionResult.Failure("All remaining contacts with the number must be selected")
 
     val newState = withSolvedContacts(*playerContacts.toTypedArray())
+        .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState) {
         player(player)
         text("solo connected")
@@ -192,6 +196,7 @@ fun ContactsBoardState.handleFinishReds(
     if (playerContacts != unsolvedPlayerContacts) return ActionExecutionResult.Failure("All remaining red contacts must be selected")
 
     val newState = withSolvedContacts(*playerContacts.toTypedArray())
+        .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState) {
         player(player)
         text("finished reds")

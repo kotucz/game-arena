@@ -25,6 +25,8 @@ data class ContactsBoardState internal constructor(
     ),
 
     val resolveMultiConnect: ResolveMultiConnect? = null,
+
+    val lastActionResult: ActionResult = ActionResult(),
 ) {
     @Serializable
     data class Player(
@@ -116,6 +118,11 @@ data class ContactsBoardState internal constructor(
         val targetContacts: Set<ContactId>,
     )
 
+    @Serializable
+    data class ActionResult(
+        val errorContacts: Set<ContactId> = emptySet(),
+    )
+
     companion object {
         fun empty(): ContactsBoardState = ContactsBoardState(
             pool = emptyList(),
@@ -179,7 +186,7 @@ data class ContactsBoardState internal constructor(
                 solved = setOf(),
                 allowedActionTypes = ActionType.entries
                     .filterNot { it == ActionType.ResolveMultiConnect }
-                    .toSet()
+                    .toSet(),
             )
         }
     }
@@ -251,6 +258,10 @@ data class ContactsBoardState internal constructor(
         return copy(
             racks = racks.toMutableList().also { it[rackIndex] = updatedRack },
         )
+    }
+
+    fun withLastActionResult(actionResult: ActionResult): ContactsBoardState {
+        return copy(lastActionResult = actionResult)
     }
 
 }
