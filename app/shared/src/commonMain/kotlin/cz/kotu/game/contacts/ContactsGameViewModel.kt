@@ -1,7 +1,6 @@
 package cz.kotu.game.contacts
 
 import androidx.lifecycle.ViewModel
-import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
 import cz.kotu.gamearena.AuthManager
@@ -34,7 +33,6 @@ class ContactsGameViewModel(
         httpClient = httpClient,
         endpoint = authBaseUrl().trimEnd('/') + "/api",
         gameId = gameId,
-        initialState = ContactsGameState.empty(),
         scope = networkScope,
         onGameNotFound = { _gameNotFound.value = true },
         awaitLogin = { authManager.awaitLogin() },

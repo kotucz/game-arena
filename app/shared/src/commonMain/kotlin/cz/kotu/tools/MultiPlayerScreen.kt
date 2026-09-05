@@ -35,7 +35,6 @@ fun MultiPlayerScreen(
                 initializer = {
                     ContactsPlayerViewModel(
                         gameFacade = viewModel.gameFacadeForPlayer(player.username),
-                        username = player.username,
                     )
                 },
             )

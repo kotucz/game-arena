@@ -77,7 +77,6 @@ class MultiPlayerViewModel(
             httpClient = getOrCreateClient(username),
             endpoint = authBaseUrl().trimEnd('/') + "/api",
             gameId = remoteGameId,
-            initialState = ContactsGameState.empty(),
             scope = networkScope,
         )
     } else {

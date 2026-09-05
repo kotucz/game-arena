@@ -14,22 +14,28 @@ import cz.kotu.game.contacts.model.applyActionIds
 import cz.kotu.game.contacts.model.isSolved
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
     val gameFacade: ContactsPlayerFacade,
-    val username: String,
 ) : ViewModel() {
 
-    val gameState: StateFlow<PlayerViewState> = gameFacade.gameState.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = PlayerViewState.empty(),
-    )
+    private var previousResolution: ContactsBoardState.ResolveMultiConnect? = null
 
-    val player: ContactsBoardState.Player
-        get() = gameState.value.you
+    val gameState: StateFlow<PlayerViewState?> = gameFacade.gameState
+        .onEach { newState ->
+            onGameStateChanged(newState)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = null,
+        )
+
+    val player: ContactsBoardState.Player?
+        get() = gameState.value?.you
 
     var actionSelectionState by mutableStateOf<ActionSelectionState>(ActionSelectionState.None)
         private set
@@ -44,6 +50,20 @@ class ContactsPlayerViewModel(
 
     // keep validation on backend only for now
     var clientValidationEnabled by mutableStateOf(false)
+
+    private fun onGameStateChanged(newState: PlayerViewState) {
+        if (newState.resolveMultiConnect != previousResolution) {
+            previousResolution = newState.resolveMultiConnect
+            resetActionSelection()
+        }
+
+        actionSelectionState = actionSelectionState.copy(
+            playerContacts = actionSelectionState.playerContacts.filterNot(newState::isSolved).toSet(),
+            otherContacts = actionSelectionState.otherContacts.filterNot(newState::isSolved).toSet(),
+        )
+
+        updateSelectedActionTypeIfNeeded(availableActionTypes(newState))
+    }
 
     fun actionError(): String? = actionResultError ?: validationError()
 
@@ -78,30 +98,34 @@ class ContactsPlayerViewModel(
 
     fun updateActionSelectionForSolved() {
         dismissActionResultError()
-        val playerViewState = gameState.value
+        val playerViewState = gameState.value ?: return
         actionSelectionState = actionSelectionState.copy(
             playerContacts = actionSelectionState.playerContacts.filterNot(playerViewState::isSolved).toSet(),
             otherContacts = actionSelectionState.otherContacts.filterNot(playerViewState::isSolved).toSet(),
         )
     }
 
-    fun availableActionTypes(): Set<ContactsBoardState.ActionType> {
-        val resolution = gameState.value.board.resolveMultiConnect
+    fun availableActionTypes(state: PlayerViewState? = gameState.value): Set<ContactsBoardState.ActionType> {
+        if (state == null) return emptySet()
+        val player = state.you
+        val resolution = state.resolveMultiConnect
         return when {
-            resolution == null -> gameState.value.board.allowedActionTypes
+            resolution == null -> state.allowedActionTypes
             resolution.targetPlayer == player -> setOf(ContactsBoardState.ActionType.ResolveMultiConnect)
             else -> emptySet()
         }
     }
 
     fun resolutionTargetContacts(): Set<ContactsBoardState.ContactId>? {
-        val resolution = gameState.value.board.resolveMultiConnect ?: return null
-        if (resolution.targetPlayer != player) return null
+        val state = gameState.value ?: return null
+        val resolution = state.resolveMultiConnect ?: return null
+        if (resolution.targetPlayer != state.you) return null
         return resolution.targetContacts.toSet()
     }
 
     fun resolutionClickableContacts(): Set<ContactsBoardState.ContactId>? {
-        if (gameState.value.board.resolveMultiConnect == null) return null
+        val state = gameState.value ?: return null
+        if (state.resolveMultiConnect == null) return null
         val targetContacts = resolutionTargetContacts() ?: return emptySet()
         return when {
             selectedActionType == ContactsBoardState.ActionType.ResolveMultiConnect -> targetContacts
@@ -123,8 +147,9 @@ class ContactsPlayerViewModel(
 
     fun validationError(): String? {
         val actionType = selectedActionType ?: return null
-        val currentPlayer = player ?: return null
-        return (gameState.value.board.applyActionIds(
+        val state = gameState.value ?: return null
+        val currentPlayer = state.you
+        return (state.board.applyActionIds(
             currentPlayer,
             actionType,
             actionSelectionState.playerContacts,

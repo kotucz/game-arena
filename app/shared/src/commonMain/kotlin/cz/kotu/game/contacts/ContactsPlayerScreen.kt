@@ -51,10 +51,22 @@ val hintBackgroundColor = Color(0xFFCCDDCC)
 fun ContactsPlayerScreen(
     viewModel: ContactsPlayerViewModel,
 ) {
+    val currentGameState by viewModel.gameState.collectAsState()
+
+    if (currentGameState == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("Connecting to game...")
+        }
+        return
+    }
+
+    val gameState = currentGameState!!
     val actionSelectionState = viewModel.actionSelectionState
-    val gameState: PlayerViewState = viewModel.gameState.collectAsState().value
     val boardState = gameState.board
-    val player = viewModel.player
+    val player = gameState.you
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
     val resolution = gameState.resolveMultiConnect
@@ -64,14 +76,6 @@ fun ContactsPlayerScreen(
     val resolutionClickableContacts = viewModel.resolutionClickableContacts()
 
     val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, boardState, player) }
-
-    LaunchedEffect(resolution) {
-        viewModel.resetActionSelection()
-    }
-
-    LaunchedEffect(availableActionTypes) {
-        viewModel.updateSelectedActionTypeIfNeeded(availableActionTypes)
-    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isDualPane = maxWidth >= 600.dp
@@ -85,10 +89,6 @@ fun ContactsPlayerScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            LaunchedEffect(boardState.solved) {
-                viewModel.updateActionSelectionForSolved()
-            }
-
             Row(
                 modifier = Modifier
                     .weight(1f)
@@ -99,7 +99,7 @@ fun ContactsPlayerScreen(
                         .weight(2f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    Text(text = "Player: " + player?.username)
+                    Text(text = "Player: " + player.username)
 
                     SolvedContactsPool(gameState.pool)
 
@@ -160,70 +160,68 @@ fun ContactsPlayerScreen(
                 }
             }
 
-            if (player != null)
-
-                Column(
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFE8E8E8))
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFE8E8E8))
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        availableActionTypes.forEach { actionType ->
-                            val isSelected = actionType == selectedActionType
-                            Button(
-                                onClick = { viewModel.selectActionType(actionType) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
-                                    contentColor = if (isSelected) Color.White else Color.Black,
-                                ),
-                            ) {
-                                Text(actionType.name)
-                            }
-                        }
-                    }
-
-                    if (resolution != null) {
-                        if (resolution.targetPlayer == player) {
-                            Text("Original contact: ${boardState.contact(resolution.originalContact)?.number ?: "?"}")
-                        } else {
-                            Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
-                        }
-                    }
-
-                    val validationError = viewModel.actionError()
-
-                    validationError?.let { error ->
-                        Text(
-                            text = error,
-                            color = Color(0xFFCC0000),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // TODO Text(text = "Player on turn: " + gameState.activePlayer)
-
+                    availableActionTypes.forEach { actionType ->
+                        val isSelected = actionType == selectedActionType
                         Button(
-                            enabled = viewModel.validAction(),
-                            onClick = {
-                                viewModel.confirmAction()
-                            },
+                            onClick = { viewModel.selectActionType(actionType) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
+                                contentColor = if (isSelected) Color.White else Color.Black,
+                            ),
                         ) {
-                            Text("Confirm selection")
+                            Text(actionType.name)
                         }
                     }
                 }
+
+                if (resolution != null) {
+                    if (resolution.targetPlayer == player) {
+                        Text("Original contact: ${boardState.contact(resolution.originalContact)?.number ?: "?"}")
+                    } else {
+                        Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
+                    }
+                }
+
+                val validationError = viewModel.actionError()
+
+                validationError?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color(0xFFCC0000),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // TODO Text(text = "Player on turn: " + gameState.activePlayer)
+
+                    Button(
+                        enabled = viewModel.validAction(),
+                        onClick = {
+                            viewModel.confirmAction()
+                        },
+                    ) {
+                        Text("Confirm selection")
+                    }
+                }
+            }
         }
     }
 }

@@ -31,7 +31,6 @@ class NetworkContactsGameFacade(
     private val httpClient: HttpClient,
     private val endpoint: String,
     private val gameId: String,
-    initialState: ContactsGameState,
     private val scope: CoroutineScope,
     private val json: Json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" },
     private val onGameNotFound: (() -> Unit)? = null,

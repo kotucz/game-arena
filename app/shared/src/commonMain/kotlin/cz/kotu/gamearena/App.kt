@@ -143,7 +143,7 @@ private fun ContactsGameScreen(
             Text("Not logged in")
         } else {
             val playerViewModel: ContactsPlayerViewModel = viewModel {
-                ContactsPlayerViewModel(gameViewModel.gameFacade, username)
+                ContactsPlayerViewModel(gameViewModel.gameFacade)
             }
             ContactsPlayerScreen(viewModel = playerViewModel)
         }
