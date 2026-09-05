@@ -21,6 +21,7 @@ data class PlayerViewState(
     data class PoolContact(
         val value: ContactsBoardState.ContactValue?,
         val solved: Boolean,
+        val help: String?,
     )
 
 
@@ -64,6 +65,7 @@ fun ContactsGameState.sanitizedPlayerView(player: Player, actions: ContactsGameS
         PlayerViewState.PoolContact(
             value = c.value,
             solved = board.isSolved(c),
+            help = if (!board.isContactVisibleToPlayer(c, player)) "?" else null,
         )
     }
 

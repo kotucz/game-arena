@@ -244,16 +244,34 @@ private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
                         verticalArrangement = Arrangement.spacedBy(spacing),
                     ) {
                         contacts.forEach { contact ->
-                            FlippableContactTile(
-                                contact = contact.value,
-                                size = DpSize(poolTileWidth, poolTileHeight),
-                                isSolved = contact.solved,
-                                isOwned = true,
-                                solvedBackgroundColor = Color(0xFF4CAF50),
-                                unsolvedBackgroundColor = Color(0xFFBDBDBD),
-                                solvedTextColor = Color.White,
-                                unsolvedTextColor = Color.Black,
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .wrapContentSize(),
+                            ) {
+
+                                FlippableContactTile(
+                                    contact = contact.value,
+                                    size = DpSize(poolTileWidth, poolTileHeight),
+                                    isSolved = contact.solved,
+                                    isOwned = true,
+                                    solvedBackgroundColor = Color(0xFF4CAF50),
+                                    unsolvedBackgroundColor = Color(0xFFBDBDBD),
+                                    solvedTextColor = Color.White,
+                                    unsolvedTextColor = Color.Black,
+                                )
+
+                                contact.help?.let { hint ->
+                                    Text(
+                                        text = hint,
+                                        modifier = Modifier.align(Alignment.BottomCenter),
+                                        color = Color.DarkGray,
+                                        fontSize = (poolTileHeight / 5.dp).sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
