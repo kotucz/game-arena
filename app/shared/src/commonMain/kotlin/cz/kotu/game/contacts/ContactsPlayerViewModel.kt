@@ -36,8 +36,6 @@ class ContactsPlayerViewModel(
     // keep validation on backend only for now
     var clientValidationEnabled by mutableStateOf(false)
 
-    private var previousResolution: ContactsBoardState.ResolveMultiConnect? = null
-
     val gameState: StateFlow<PlayerViewState?> = gameFacade.gameState
         .onEach { newState ->
             onGameStateChanged(newState)
@@ -52,17 +50,23 @@ class ContactsPlayerViewModel(
         get() = gameState.value?.you
 
     private fun onGameStateChanged(newState: PlayerViewState) {
-        if (newState.actions.resolveMultiConnect != previousResolution) {
-            previousResolution = newState.actions.resolveMultiConnect
-            resetActionSelection()
-        }
 
+        // unselect solved contacts
         actionSelectionState = actionSelectionState.copy(
             playerContacts = actionSelectionState.playerContacts.filterNot(newState::isSolved).toSet(),
             otherContacts = actionSelectionState.otherContacts.filterNot(newState::isSolved).toSet(),
         )
 
-        updateSelectedActionTypeIfNeeded(availableActionTypes(newState))
+        // update if action is no more available
+        val availableActionTypes = newState.actions.allowedActionTypes
+        if (selectedActionType !in availableActionTypes) {
+            selectedActionType = availableActionTypes.firstOrNull()
+        }
+
+        // clear selection when player resolves multi-connect
+        if (newState.actions.resolveMultiConnectContacts != null) {
+            actionSelectionState = ActionSelectionState.None
+        }
     }
 
     fun actionError(): String? = actionResultError ?: validationError()
@@ -89,55 +93,6 @@ class ContactsPlayerViewModel(
         contact: ContactsBoardState.ContactId,
     ): Set<ContactsBoardState.ContactId> {
         return if (contact in this) this - contact else this + contact
-    }
-
-    fun resetActionSelection() {
-        dismissActionResultError()
-        actionSelectionState = ActionSelectionState.None
-    }
-
-    fun updateActionSelectionForSolved() {
-        dismissActionResultError()
-        val playerViewState = gameState.value ?: return
-        actionSelectionState = actionSelectionState.copy(
-            playerContacts = actionSelectionState.playerContacts.filterNot(playerViewState::isSolved).toSet(),
-            otherContacts = actionSelectionState.otherContacts.filterNot(playerViewState::isSolved).toSet(),
-        )
-    }
-
-    fun availableActionTypes(state: PlayerViewState? = gameState.value): Set<ContactsBoardState.ActionType> {
-        if (state == null) return emptySet()
-        val player = state.you
-        val resolution = state.actions.resolveMultiConnect
-        return when {
-            resolution == null -> state.actions.allowedActionTypes
-            resolution.targetPlayer == player -> setOf(ContactsBoardState.ActionType.ResolveMultiConnect)
-            else -> emptySet()
-        }
-    }
-
-    fun resolutionTargetContacts(): Set<ContactsBoardState.ContactId>? {
-        val state = gameState.value ?: return null
-        val resolution = state.actions.resolveMultiConnect ?: return null
-        if (resolution.targetPlayer != state.you) return null
-        return resolution.targetContacts.toSet()
-    }
-
-    fun resolutionClickableContacts(): Set<ContactsBoardState.ContactId>? {
-        val state = gameState.value ?: return null
-        if (state.actions.resolveMultiConnect == null) return null
-        val targetContacts = resolutionTargetContacts() ?: return emptySet()
-        return when {
-            selectedActionType == ContactsBoardState.ActionType.ResolveMultiConnect -> targetContacts
-            else -> emptySet()
-        }
-    }
-
-    fun updateSelectedActionTypeIfNeeded(availableActionTypes: Set<ContactsBoardState.ActionType>) {
-        if (selectedActionType !in availableActionTypes) {
-            dismissActionResultError()
-            selectedActionType = availableActionTypes.firstOrNull()
-        }
     }
 
     fun selectActionType(actionType: ContactsBoardState.ActionType) {

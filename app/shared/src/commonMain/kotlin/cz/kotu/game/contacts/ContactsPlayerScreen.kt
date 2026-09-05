@@ -47,6 +47,9 @@ private const val phi = 1.618f
 
 val hintBackgroundColor = Color(0xFFCCDDCC)
 
+val selectedContactColor = Color(0xFF1976D2)
+val highlightedContactColor = Color(0xFFFFB300)
+
 @Composable
 fun ContactsPlayerScreen(
     viewModel: ContactsPlayerViewModel,
@@ -69,10 +72,6 @@ fun ContactsPlayerScreen(
     val player = gameState.you
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
-    val availableActionTypes = viewModel.availableActionTypes()
-    val selectedActionType = viewModel.selectedActionType
-    val resolutionTargetContacts = viewModel.resolutionTargetContacts()
-    val resolutionClickableContacts = viewModel.resolutionClickableContacts()
 
     val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, boardState, player) }
 
@@ -122,8 +121,6 @@ fun ContactsPlayerScreen(
                             isOwner = false,
                             lastActionResult = gameState.lastActionResult,
                             selectedContacts = actionSelectionState.otherContacts,
-                            clickableContacts = resolutionClickableContacts,
-                            highlightedContacts = resolutionTargetContacts.orEmpty(),
                             onContactClick = { contact ->
                                 viewModel.onOtherContactClick(contact)
                             },
@@ -137,8 +134,6 @@ fun ContactsPlayerScreen(
                             isOwner = true,
                             lastActionResult = gameState.lastActionResult,
                             selectedContacts = actionSelectionState.playerContacts,
-                            clickableContacts = resolutionClickableContacts,
-                            highlightedContacts = resolutionTargetContacts.orEmpty(),
                             onContactClick = { contact ->
                                 viewModel.onPlayerContactClick(contact)
                             },
@@ -173,7 +168,8 @@ fun ContactsPlayerScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    availableActionTypes.forEach { actionType ->
+                    val selectedActionType = viewModel.selectedActionType
+                    gameState.actions.allowedActionTypes.forEach { actionType ->
                         val isSelected = actionType == selectedActionType
                         Button(
                             onClick = { viewModel.selectActionType(actionType) },
@@ -273,8 +269,6 @@ private fun RackView(
     isOwner: Boolean,
     lastActionResult: ContactsBoardState.ActionResult,
     selectedContacts: Set<ContactsBoardState.ContactId>,
-    clickableContacts: Set<ContactsBoardState.ContactId>?,
-    highlightedContacts: Set<ContactsBoardState.ContactId>,
     onContactClick: (ContactsBoardState.ContactId) -> Unit,
 ) {
     Column {
@@ -301,7 +295,11 @@ private fun RackView(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        val resolveMultiConnectContacts = gameState.actions.resolveMultiConnectContacts
+                        val isResolutionContact = resolveMultiConnectContacts?.contains(contact.id) ?: false
+
                         val shadowColor = when {
+                            isResolutionContact -> highlightedContactColor
                             lastActionResult.errorContacts.contains(contact.id) -> Color.Red
                             else -> null
                         }
@@ -336,8 +334,8 @@ private fun RackView(
                             isOwned = isOwner,
                             solvedBackgroundColor = Color(0xFF808080),
                             unsolvedBackgroundColor = when {
-                                contact.id in selectedContacts -> Color(0xFF1976D2)
-                                contact.id in highlightedContacts -> Color(0xFFFFB300)
+                                contact.id in selectedContacts -> selectedContactColor
+                                isResolutionContact -> highlightedContactColor
                                 else -> Color(0xFF4A4A4A)
                             },
                             modifier = Modifier
@@ -346,14 +344,14 @@ private fun RackView(
                                 }
                                 .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
                                 .shadow(
-                                    elevation = if (contact.id in highlightedContacts || shadowColor != null) 8.dp else 0.dp,
+                                    elevation = if (shadowColor != null) 8.dp else 0.dp,
                                     shape = cornerShape,
                                     ambientColor = shadowColor ?: DefaultShadowColor,
                                     spotColor = shadowColor ?: DefaultShadowColor,
                                 )
                                 .clickable(
                                     enabled = !contact.solved &&
-                                            (clickableContacts == null || contact.id in clickableContacts),
+                                            (resolveMultiConnectContacts == null || isResolutionContact),
                                     onClick = { onContactClick(contact.id) },
                                 ),
                         )

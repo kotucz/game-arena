@@ -1,7 +1,6 @@
 package cz.kotu.game.contacts.model
 
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
-import cz.kotu.game.contacts.model.ContactsBoardState.ResolveMultiConnect
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -17,7 +16,7 @@ data class ContactsGameState(
     data class PlayerActions(
         val actionStatusText: String? = null,
         val allowedActionTypes: Set<ActionType> = setOf(),
-        val resolveMultiConnect: ResolveMultiConnect? = null,
+        val resolveMultiConnectContacts: Set<ContactsBoardState.ContactId>? = null,
     )
 
     fun getAvailablePlayerActions(player: ContactsBoardState.Player): PlayerActions {
@@ -27,12 +26,11 @@ data class ContactsGameState(
                 PlayerActions(
                     actionStatusText = "Original contact: ${board.requireContact(resolveMultiConnect.originalContact).matchKey}",
                     allowedActionTypes = setOf(ActionType.ResolveMultiConnect),
-                    resolveMultiConnect = resolveMultiConnect,
+                    resolveMultiConnectContacts = resolveMultiConnect.targetContacts,
                 )
             } else {
                 PlayerActions(
                     actionStatusText = "Waiting for ${resolveMultiConnect.targetPlayer.username} to resolve the multi-connect",
-                    resolveMultiConnect = resolveMultiConnect,
                 )
             }
         } else {

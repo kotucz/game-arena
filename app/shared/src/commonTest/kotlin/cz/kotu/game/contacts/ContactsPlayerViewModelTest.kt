@@ -24,29 +24,6 @@ class ContactsPlayerViewModelTest {
     }
 
     @Test
-    fun playerIsResolvedFromUsernameAndDefaultActionsAreAvailable() = runTest {
-        val facade = TestContactsGameFacade(createState())
-        val viewModel = ContactsPlayerViewModel(
-            ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade),
-        )
-        waitForGameState(viewModel)
-
-        assertEquals("alice", viewModel.player?.username)
-        assertEquals(
-            setOf(
-                ActionType.StandardConnect,
-                ActionType.DoubleConnect,
-                ActionType.TripleConnect,
-                ActionType.MyDoubleConnect,
-                ActionType.SoloConnectRest,
-                ActionType.FinishReds,
-                ActionType.AddHint,
-            ),
-            viewModel.availableActionTypes(),
-        )
-    }
-
-    @Test
     fun togglingContactsBuildsSelectionStateAndValidatesSuccessfully() = runTest {
         val state = createState()
         val facade = TestContactsGameFacade(state)
@@ -116,26 +93,15 @@ class ContactsPlayerViewModelTest {
         assertEquals(targetContactIds, resolution?.targetContacts)
         // ResolveMultiConnect is automatically selected since it's the only available action for Bob
         assertEquals(ActionType.ResolveMultiConnect, viewModel.selectedActionType)
-        assertEquals(targetContactIds, viewModel.resolutionClickableContacts())
-        assertEquals(targetContactIds, viewModel.resolutionTargetContacts())
-
-        // When another or no action is selected, targets are not clickable
-        viewModel.selectedActionType = null
-        assertEquals(emptySet(), viewModel.resolutionClickableContacts())
-
-        viewModel.selectedActionType = ActionType.ResolveMultiConnect
-        assertEquals(targetContactIds, viewModel.resolutionClickableContacts())
+        assertEquals(targetContactIds, viewModel.gameState.value!!.actions.resolveMultiConnectContacts)
     }
 
     @Test
     fun solvedSelectionsAreClearedFromCurrentActionState() = runTest {
         val state = createState()
         val (playerContactId, otherContactId) = matchingContacts(state)
-        val solvedState = state.board.withSolvedContacts(
-            state.board.requireContact(playerContactId),
-            state.board.requireContact(otherContactId),
-        )
-        val facade = TestContactsGameFacade(state.copy(board = solvedState))
+
+        val facade = TestContactsGameFacade(state)
         val viewModel = ContactsPlayerViewModel(
             ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade),
         )
@@ -143,7 +109,14 @@ class ContactsPlayerViewModelTest {
 
         viewModel.onPlayerContactClick(playerContactId)
         viewModel.onOtherContactClick(otherContactId)
-        viewModel.updateActionSelectionForSolved()
+
+        // solve contacts from other player
+        facade.action(
+            ContactsBoardState.Player("bob"), ActionType.StandardConnect,
+            playerContacts = setOf(otherContactId),
+            otherContacts = setOf(playerContactId),
+        )
+        waitForGameState(viewModel)
 
         assertEquals(ActionSelectionState.None, viewModel.actionSelectionState)
     }
