@@ -2,6 +2,7 @@ package cz.kotu.game.contacts
 
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
@@ -31,7 +32,18 @@ class ContactsPlayerViewModelTest {
         waitForGameState(viewModel)
 
         assertEquals("alice", viewModel.player?.username)
-        assertEquals(facade.gameState.value.board.allowedActionTypes, viewModel.availableActionTypes())
+        assertEquals(
+            setOf(
+                ActionType.StandardConnect,
+                ActionType.DoubleConnect,
+                ActionType.TripleConnect,
+                ActionType.MyDoubleConnect,
+                ActionType.SoloConnectRest,
+                ActionType.FinishReds,
+                ActionType.AddHint,
+            ),
+            viewModel.availableActionTypes(),
+        )
     }
 
     @Test
@@ -44,7 +56,7 @@ class ContactsPlayerViewModelTest {
         waitForGameState(viewModel)
 
         val (playerContactId, otherContactId) = matchingContacts(state)
-        viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
+        viewModel.selectedActionType = ActionType.StandardConnect
 
         viewModel.onPlayerContactClick(playerContactId)
         viewModel.onOtherContactClick(otherContactId)
@@ -64,7 +76,7 @@ class ContactsPlayerViewModelTest {
         waitForGameState(viewModel)
 
         val (playerContactId, otherContactId) = matchingContacts(state)
-        viewModel.selectedActionType = ContactsBoardState.ActionType.StandardConnect
+        viewModel.selectedActionType = ActionType.StandardConnect
         viewModel.onPlayerContactClick(playerContactId)
         viewModel.onOtherContactClick(otherContactId)
 
@@ -78,10 +90,10 @@ class ContactsPlayerViewModelTest {
     @Test
     fun resolutionTargetsAreOnlyClickableWhenResolvingAMultiConnect() = runTest {
         val state = createState()
-        val alice = state.racks.first { it.owner.username == "alice" }.owner
-        val bob = state.racks.first { it.owner.username == "bob" }.owner
-        val aliceRack = state.racks.first { it.owner == alice }
-        val bobRack = state.racks.first { it.owner == bob }
+        val alice = state.board.racks.first { it.owner.username == "alice" }.owner
+        val bob = state.board.racks.first { it.owner.username == "bob" }.owner
+        val aliceRack = state.board.racks.first { it.owner == alice }
+        val bobRack = state.board.racks.first { it.owner == bob }
 
         val playerContactId = aliceRack.contactIds.first()
         val targetContactIds = bobRack.contactIds.take(2).toSet()
@@ -89,7 +101,7 @@ class ContactsPlayerViewModelTest {
         val facade = TestContactsGameFacade(state)
         facade.action(
             player = alice,
-            actionType = ContactsBoardState.ActionType.DoubleConnect,
+            actionType = ActionType.DoubleConnect,
             playerContacts = setOf(playerContactId),
             otherContacts = targetContactIds,
         )
@@ -103,7 +115,7 @@ class ContactsPlayerViewModelTest {
 
         assertEquals(targetContactIds, resolution?.targetContacts)
         // ResolveMultiConnect is automatically selected since it's the only available action for Bob
-        assertEquals(ContactsBoardState.ActionType.ResolveMultiConnect, viewModel.selectedActionType)
+        assertEquals(ActionType.ResolveMultiConnect, viewModel.selectedActionType)
         assertEquals(targetContactIds, viewModel.resolutionClickableContacts())
         assertEquals(targetContactIds, viewModel.resolutionTargetContacts())
 
@@ -111,7 +123,7 @@ class ContactsPlayerViewModelTest {
         viewModel.selectedActionType = null
         assertEquals(emptySet(), viewModel.resolutionClickableContacts())
 
-        viewModel.selectedActionType = ContactsBoardState.ActionType.ResolveMultiConnect
+        viewModel.selectedActionType = ActionType.ResolveMultiConnect
         assertEquals(targetContactIds, viewModel.resolutionClickableContacts())
     }
 
@@ -119,11 +131,11 @@ class ContactsPlayerViewModelTest {
     fun solvedSelectionsAreClearedFromCurrentActionState() = runTest {
         val state = createState()
         val (playerContactId, otherContactId) = matchingContacts(state)
-        val solvedState = state.withSolvedContacts(
-            state.requireContact(playerContactId),
-            state.requireContact(otherContactId),
+        val solvedState = state.board.withSolvedContacts(
+            state.board.requireContact(playerContactId),
+            state.board.requireContact(otherContactId),
         )
-        val facade = TestContactsGameFacade(solvedState)
+        val facade = TestContactsGameFacade(state.copy(board = solvedState))
         val viewModel = ContactsPlayerViewModel(
             ContactsPlayerGameAdapter(ContactsBoardState.Player("alice"), facade),
         )
@@ -153,7 +165,7 @@ class ContactsPlayerViewModelTest {
         // Action solving the contacts triggers newState emission
         facade.action(
             player = ContactsBoardState.Player("alice"),
-            actionType = ContactsBoardState.ActionType.StandardConnect,
+            actionType = ActionType.StandardConnect,
             playerContacts = setOf(playerContactId),
             otherContacts = setOf(otherContactId),
         )
@@ -162,52 +174,54 @@ class ContactsPlayerViewModelTest {
         assertEquals(ActionSelectionState.None, viewModel.actionSelectionState)
     }
 
-    private fun createState(): ContactsBoardState {
-        return ContactsBoardState.create(
-            players = listOf(
-                ContactsBoardState.Player("alice"),
-                ContactsBoardState.Player("bob"),
-            ),
+    private fun createState(): ContactsGameState {
+        val players = listOf(
+            ContactsBoardState.Player("alice"),
+            ContactsBoardState.Player("bob"),
+        )
+        val board = ContactsBoardState.create(
+            players = players,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
                 yellowCount = 0,
                 redCount = 0,
             ),
         )
+        return ContactsGameState(
+            board = board,
+            players = players,
+            activePlayer = ContactsBoardState.Player("alice"),
+        )
     }
 
     private fun matchingContacts(
-        state: ContactsBoardState,
+        state: ContactsGameState,
     ): Pair<ContactsBoardState.ContactId, ContactsBoardState.ContactId> {
-        val aliceRack = state.racks.first { it.owner.username == "alice" }
-        val bobRack = state.racks.first { it.owner.username == "bob" }
+        val aliceRack = state.board.racks.first { it.owner.username == "alice" }
+        val bobRack = state.board.racks.first { it.owner.username == "bob" }
 
-        val sharedNumber = state.rackContacts(aliceRack)
+        val sharedNumber = state.board.rackContacts(aliceRack)
             .map { it.number }
-            .intersect(state.rackContacts(bobRack).map { it.number }.toSet())
+            .intersect(state.board.rackContacts(bobRack).map { it.number }.toSet())
             .first()
 
-        val playerContactId = state.rackContacts(aliceRack).first { it.number == sharedNumber }.id
-        val otherContactId = state.rackContacts(bobRack).first { it.number == sharedNumber }.id
+        val playerContactId = state.board.rackContacts(aliceRack).first { it.number == sharedNumber }.id
+        val otherContactId = state.board.rackContacts(bobRack).first { it.number == sharedNumber }.id
         return playerContactId to otherContactId
     }
 
     private class TestContactsGameFacade(
-        initialState: ContactsBoardState,
+        initialState: ContactsGameState,
     ) : ContactsGameFacade {
         private val delegate = ContactsGameFacadeImpl(
-            ContactsGameState(
-                board = initialState,
-                players = listOf(),
-                activePlayer = ContactsBoardState.Player("alice"),
-            ),
+            initialState,
         )
         override val gameState = delegate.gameState
         override val logs = delegate.logs
 
         override suspend fun action(
             player: ContactsBoardState.Player,
-            actionType: ContactsBoardState.ActionType,
+            actionType: ActionType,
             playerContacts: Set<ContactsBoardState.ContactId>,
             otherContacts: Set<ContactsBoardState.ContactId>,
         ): Result<Unit> {

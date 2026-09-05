@@ -69,7 +69,6 @@ fun ContactsPlayerScreen(
     val player = gameState.you
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
-    val resolution = gameState.resolveMultiConnect
     val availableActionTypes = viewModel.availableActionTypes()
     val selectedActionType = viewModel.selectedActionType
     val resolutionTargetContacts = viewModel.resolutionTargetContacts()
@@ -188,12 +187,11 @@ fun ContactsPlayerScreen(
                     }
                 }
 
-                if (resolution != null) {
-                    if (resolution.targetPlayer == player) {
-                        Text("Original contact: ${boardState.contact(resolution.originalContact)?.number ?: "?"}")
-                    } else {
-                        Text("Waiting for ${resolution.targetPlayer.username} to resolve the multi-connect")
-                    }
+                gameState.actions.actionStatusText?.let { text ->
+                    Text(
+                        text = text,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
 
                 val validationError = viewModel.actionError()
@@ -326,7 +324,7 @@ private fun RackView(
                                         -5f at 250
                                         5f at 300
                                         0f at 400
-                                    }
+                                    },
                                 )
                             }
                         }
@@ -357,8 +355,7 @@ private fun RackView(
                                     enabled = !contact.solved &&
                                             (clickableContacts == null || contact.id in clickableContacts),
                                     onClick = { onContactClick(contact.id) },
-                                )
-                            ,
+                                ),
                         )
 
                         Box(

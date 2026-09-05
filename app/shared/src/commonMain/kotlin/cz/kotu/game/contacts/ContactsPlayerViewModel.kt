@@ -22,6 +22,20 @@ class ContactsPlayerViewModel(
     val gameFacade: ContactsPlayerFacade,
 ) : ViewModel() {
 
+    var actionSelectionState by mutableStateOf<ActionSelectionState>(ActionSelectionState.None)
+        private set
+
+    var isLogsExpanded by mutableStateOf(false)
+
+    var selectedActionType by mutableStateOf<ContactsBoardState.ActionType?>(null)
+
+    var actionInProgress by mutableStateOf(false)
+
+    var actionResultError by mutableStateOf<String?>(null)
+
+    // keep validation on backend only for now
+    var clientValidationEnabled by mutableStateOf(false)
+
     private var previousResolution: ContactsBoardState.ResolveMultiConnect? = null
 
     val gameState: StateFlow<PlayerViewState?> = gameFacade.gameState
@@ -37,23 +51,9 @@ class ContactsPlayerViewModel(
     val player: ContactsBoardState.Player?
         get() = gameState.value?.you
 
-    var actionSelectionState by mutableStateOf<ActionSelectionState>(ActionSelectionState.None)
-        private set
-
-    var isLogsExpanded by mutableStateOf(false)
-
-    var selectedActionType by mutableStateOf<ContactsBoardState.ActionType?>(null)
-
-    var actionInProgress by mutableStateOf(false)
-
-    var actionResultError by mutableStateOf<String?>(null)
-
-    // keep validation on backend only for now
-    var clientValidationEnabled by mutableStateOf(false)
-
     private fun onGameStateChanged(newState: PlayerViewState) {
-        if (newState.resolveMultiConnect != previousResolution) {
-            previousResolution = newState.resolveMultiConnect
+        if (newState.actions.resolveMultiConnect != previousResolution) {
+            previousResolution = newState.actions.resolveMultiConnect
             resetActionSelection()
         }
 
@@ -108,9 +108,9 @@ class ContactsPlayerViewModel(
     fun availableActionTypes(state: PlayerViewState? = gameState.value): Set<ContactsBoardState.ActionType> {
         if (state == null) return emptySet()
         val player = state.you
-        val resolution = state.resolveMultiConnect
+        val resolution = state.actions.resolveMultiConnect
         return when {
-            resolution == null -> state.allowedActionTypes
+            resolution == null -> state.actions.allowedActionTypes
             resolution.targetPlayer == player -> setOf(ContactsBoardState.ActionType.ResolveMultiConnect)
             else -> emptySet()
         }
@@ -118,14 +118,14 @@ class ContactsPlayerViewModel(
 
     fun resolutionTargetContacts(): Set<ContactsBoardState.ContactId>? {
         val state = gameState.value ?: return null
-        val resolution = state.resolveMultiConnect ?: return null
+        val resolution = state.actions.resolveMultiConnect ?: return null
         if (resolution.targetPlayer != state.you) return null
         return resolution.targetContacts.toSet()
     }
 
     fun resolutionClickableContacts(): Set<ContactsBoardState.ContactId>? {
         val state = gameState.value ?: return null
-        if (state.resolveMultiConnect == null) return null
+        if (state.actions.resolveMultiConnect == null) return null
         val targetContacts = resolutionTargetContacts() ?: return emptySet()
         return when {
             selectedActionType == ContactsBoardState.ActionType.ResolveMultiConnect -> targetContacts

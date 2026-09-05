@@ -14,16 +14,6 @@ data class ContactsBoardState internal constructor(
 
     val faults: Int = 0,
 
-    val allowedActionTypes: Set<ActionType> = setOf(
-        ActionType.StandardConnect,
-        ActionType.DoubleConnect,
-        ActionType.TripleConnect,
-        ActionType.MyDoubleConnect,
-        ActionType.SoloConnectRest,
-        ActionType.FinishReds,
-        ActionType.AddHint,
-    ),
-
     val resolveMultiConnect: ResolveMultiConnect? = null,
 
     val lastActionResult: ActionResult = ActionResult(),
@@ -128,7 +118,6 @@ data class ContactsBoardState internal constructor(
             pool = emptyList(),
             racks = emptyList(),
             solved = emptySet(),
-            allowedActionTypes = emptySet(),
         )
 
         fun create(players: List<Player>, config: ContactsGameConfig): ContactsBoardState {
@@ -184,9 +173,6 @@ data class ContactsBoardState internal constructor(
                 pool = pool,
                 racks = racks,
                 solved = setOf(),
-                allowedActionTypes = ActionType.entries
-                    .filterNot { it == ActionType.ResolveMultiConnect }
-                    .toSet(),
             )
         }
     }

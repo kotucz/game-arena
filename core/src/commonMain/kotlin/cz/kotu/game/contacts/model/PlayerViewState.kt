@@ -1,9 +1,7 @@
 package cz.kotu.game.contacts.model
 
-import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
 import cz.kotu.game.contacts.model.ContactsBoardState.Player
-import cz.kotu.game.contacts.model.ContactsBoardState.ResolveMultiConnect
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,8 +14,7 @@ data class PlayerViewState(
         level = DeprecationLevel.WARNING,
     )
     val board: ContactsBoardState,
-    val allowedActionTypes: Set<ActionType>,
-    val resolveMultiConnect: ResolveMultiConnect?,
+    val actions: ContactsGameState.PlayerActions,
     val lastActionResult: ContactsBoardState.ActionResult,
 ) {
     @Serializable
@@ -48,8 +45,7 @@ data class PlayerViewState(
             pool = listOf(),
             racks = listOf(),
             board = ContactsBoardState.empty(),
-            allowedActionTypes = setOf(),
-            resolveMultiConnect = null,
+            actions = ContactsGameState.PlayerActions(),
             lastActionResult = ContactsBoardState.ActionResult(),
         )
     }
@@ -62,7 +58,7 @@ fun PlayerViewState.isSolved(contactId: ContactId): Boolean {
 /**
  * Sanitize game state from player's PoV
  */
-fun ContactsGameState.sanitizedPlayerView(player: Player): PlayerViewState {
+fun ContactsGameState.sanitizedPlayerView(player: Player, actions: ContactsGameState.PlayerActions): PlayerViewState {
 
     val pool = board.pool.map { c ->
         PlayerViewState.PoolContact(
@@ -97,8 +93,7 @@ fun ContactsGameState.sanitizedPlayerView(player: Player): PlayerViewState {
         pool = pool,
         racks = racks,
         board = board,
-        allowedActionTypes = board.allowedActionTypes,
-        resolveMultiConnect = board.resolveMultiConnect,
+        actions = actions,
         lastActionResult = board.lastActionResult,
     )
 }

@@ -22,7 +22,7 @@ class ContactsGameFacadeImpl(
                 ),
                 players = players,
                 activePlayer = players[0],
-            )
+            ),
         ),
         MutableStateFlow(listOf()),
     )
@@ -43,14 +43,27 @@ class ContactsGameFacadeImpl(
         otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
         val gameState: ContactsGameState = this@ContactsGameFacadeImpl.gameState.value
-        val result = gameState.board.applyActionIds(player, actionType, playerContacts, otherContacts)
-        return when (result) {
+        return when (val result = gameState.board.applyActionIds(player, actionType, playerContacts, otherContacts)) {
             is ActionExecutionResult.Failure -> Result.failure(IllegalStateException(result.message))
             is ActionExecutionResult.Success -> {
-                _gameState.value = gameState.copy(board = result.state)
+                _gameState.value = gameState.copy(
+                    board = result.state,
+                    activePlayer = gameState.nextActivePlayer(actionType, result.state),
+                )
                 addRichGameLog(result.logBuilder)
                 Result.success(Unit)
             }
+        }
+    }
+
+    private fun ContactsGameState.nextActivePlayer(
+        actionType: ContactsBoardState.ActionType,
+        newBoard: ContactsBoardState,
+    ): ContactsBoardState.Player {
+        return if (newBoard.resolveMultiConnect == null) {
+            players[(players.indexOf(activePlayer) + 1) % players.size]
+        } else {
+            activePlayer
         }
     }
 

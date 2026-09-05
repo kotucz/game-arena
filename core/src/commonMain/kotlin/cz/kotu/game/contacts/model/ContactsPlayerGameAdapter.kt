@@ -9,7 +9,12 @@ class ContactsPlayerGameAdapter(
     val gameFacade: ContactsGameFacade,
 ) : ContactsPlayerFacade {
     override val gameState: Flow<PlayerViewState>
-        get() = gameFacade.gameState.map { it.sanitizedPlayerView(player) }
+        get() = gameFacade.gameState.map { gameState ->
+            gameState.sanitizedPlayerView(
+                player = player,
+                actions = gameState.getAvailablePlayerActions(player),
+            )
+        }
     override val logs: StateFlow<List<GameLogEntry>>
         get() = gameFacade.logs
 
