@@ -87,25 +87,29 @@ class GamesManager(
         val records = dao.list()
         gamesMutex.withLock {
             records.forEach { record ->
-                when (record.type) {
-                    "contacts" -> {
-                        val metadata = GameMetadata(
-                            id = record.id,
-                            type = record.type,
-                            players = json.decodeFromString<List<String>>(record.playersJson),
-                            createdAt = Instant.fromEpochMilliseconds(record.createdAtMillis),
-                        )
-                        val game = ContactsGame(
-                            metadata = metadata,
-                            contacts = ServerContactsGameFacade(
-                                ContactsGameFacadeImpl(
-                                    initialState = json.decodeFromString<ContactsBoardState>(record.stateJson),
+                try {
+                    when (record.type) {
+                        "contacts" -> {
+                            val metadata = GameMetadata(
+                                id = record.id,
+                                type = record.type,
+                                players = json.decodeFromString<List<String>>(record.playersJson),
+                                createdAt = Instant.fromEpochMilliseconds(record.createdAtMillis),
+                            )
+                            val game = ContactsGame(
+                                metadata = metadata,
+                                contactsGameFacade = ContactsGameFacadeImpl(
+                                    initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
                                     initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
                                 ),
-                            ),
-                        )
-                        games[metadata.id] = game
+                            )
+                            games[metadata.id] = game
+                        }
                     }
+                } catch (e: Exception) {
+                    // TODO log properly
+                    println("Failed to load game: $record")
+                    e.printStackTrace()
                 }
             }
             if (games.isNotEmpty()) {
