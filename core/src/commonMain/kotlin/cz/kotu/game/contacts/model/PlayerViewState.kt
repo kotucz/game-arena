@@ -9,11 +9,6 @@ data class PlayerViewState(
     val you: Player,
     val pool: List<PoolContact>,
     val racks: List<Rack>,
-    @Deprecated(
-        message = "PlayerViewState.board is deprecated; use racks/contact solved flags instead.",
-        level = DeprecationLevel.WARNING,
-    )
-    val board: ContactsBoardState,
     val faults: Int,
     val actions: ContactsGameState.PlayerActions,
     val lastActionResult: ContactsBoardState.ActionResult,
@@ -46,7 +41,6 @@ data class PlayerViewState(
             you = Player(""),
             pool = listOf(),
             racks = listOf(),
-            board = ContactsBoardState.empty(),
             faults = 0,
             actions = ContactsGameState.PlayerActions(),
             lastActionResult = ContactsBoardState.ActionResult(),
@@ -102,7 +96,6 @@ fun ContactsGameState.sanitizedPlayerView(player: Player, actions: ContactsGameS
         you = player,
         pool = pool,
         racks = racks,
-        board = board,
         faults = board.faults,
         actions = actions,
         lastActionResult = board.lastActionResult,

@@ -5,12 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cz.kotu.game.contacts.model.ActionExecutionResult
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.PlayerViewState
-import cz.kotu.game.contacts.model.applyActionIds
 import cz.kotu.game.contacts.model.isSolved
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -101,15 +99,8 @@ class ContactsPlayerViewModel(
     }
 
     fun validationError(): String? {
-        val actionType = selectedActionType ?: return null
-        val state = gameState.value ?: return null
-        val currentPlayer = state.you
-        return (state.board.applyActionIds(
-            currentPlayer,
-            actionType,
-            actionSelectionState.playerContacts,
-            actionSelectionState.otherContacts,
-        ) as? ActionExecutionResult.Failure)?.message
+        // TODO client validation on sanitized data
+        return null
     }
 
     fun validAction(): Boolean {
