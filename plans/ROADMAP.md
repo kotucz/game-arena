@@ -1,6 +1,6 @@
 # Project Roadmap & Backlog
 
-## 1. Bugs & Stability
+## Bugs & Stability
 
 - [ ] **Auth Performance**: Auth takes long to load.
 - [ ] **Connection Drops**: Client occasionally disconnects unexpectedly.
@@ -15,7 +15,7 @@
 
 ---
 
-## 2. Server & Infrastructure
+## Server & Infrastructure
 
 - [x] **Persist DB**: Database persistence configured.
 - [x] **Deployment**: Deploy Home Assistant (HA), setup domain `gamearena.kotu.cz` / `garnena`.
@@ -29,10 +29,11 @@
   - [x] Retry SSE on exception with sensible exponential backoff.
   - [x] Implement SSE heartbeat / ping mechanism.
 - [x] Breakdown Application file into logical modules 
+- [x] Client data sanitization - keep client data model free from secret/hidden data
 
 ---
 
-## 3. Authentication & Session Management
+## Authentication & Session Management
 
 - [x] **Auth Flow**: Refine auth flow in App.
 - [ ] **Session & Token Architecture**:
@@ -46,10 +47,11 @@
   - [ ] "Remember me" option.
   - [ ] "Forgot password" flow.
   - [x] Proper logout handling.
+- [ ] Google OAuth login 
 
 ---
 
-## 4. Multiplayer & Networking
+## Multiplayer & Networking
 
 - [ ] **Online Multiplayer Implementation**:
   - [x] Game state serialization.
@@ -68,12 +70,20 @@
 - [ ] Players take turns
 - [ ] Game concluded 
   -  [ ] Terminate event streams
-- [ ] Multiplayer testing - multiple clients simultaneously on desktop/browser  
+- [ ] Multiplayer testing - multiple clients simultaneously on desktop/browser
+
+---
+
+## User experience
+
 - [ ] Themes/redesign - (light/dark)
+- [ ] Sounds
+- [ ] Vibration - haptic feedback
+- [ ] Localization
     
 ---
 
-## 5. Contacts Game Features & Rules
+## Contacts Game Features & Rules
 
 - [ ] **Initial Hints**: Add initial hint generation/display.
 - [x] **OR Connection**:
@@ -87,11 +97,19 @@
   - [x] Red
 - [ ] **Screen Refinements**: `ContactsPlayerScreen` UI & interactions.
   - [x] Animation of changes (flipping tiles)
-  - [ ] Rich logs - highlight contacts when hover on logs
+  - [x] Animation of fault - shake tile
+- [ ] Rich logs
+  - [x] highlight contacts when hover on logs 
+  - show only number when location is not known
+- [ ] pool show which number is owned by which player (if known) e.g. from connection attempt
+- [x] player on turn
+- [ ] skip player with all contacts solved
+- [ ] conclude game - all contacts solved/too many faults/red connected
+- [ ] actions per player
 
 ---
 
-## 6. Observability & Logging
+## Observability & Logging
 
 - [x] **Structured Game Logs**:
   - Format: `timestamp`, `model`, `toString(...)`.
@@ -100,6 +118,6 @@
 
 ---
 
-## 7. Optimization
+## Optimization
 
 - [ ] **Smaller WASM Bundle**: Analyze and optimize Kotlin/WASM binary size.

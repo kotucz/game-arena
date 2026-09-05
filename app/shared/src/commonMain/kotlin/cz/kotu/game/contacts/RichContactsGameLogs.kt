@@ -1,12 +1,18 @@
 package cz.kotu.game.contacts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,17 +28,36 @@ import cz.kotu.game.contacts.model.findContact
 import kotlinx.serialization.json.Json
 
 @Composable
-fun RichGameLogItem(log: GameLogEntry, gameState: PlayerViewState, player: ContactsBoardState.Player) {
+fun RichGameLogItem(
+    log: GameLogEntry,
+    gameState: PlayerViewState,
+    player: ContactsBoardState.Player,
+    hoveredLogs: MutableState<List<LogToken>>,
+) {
     Row {
         // TODO move parsing from UI
-        val logTokens = remember(log.text) {
+        val logTokens: List<LogToken>? = remember(log.text) {
             runCatching {
                 Json.decodeFromString<List<LogToken>>(log.text)
             }.getOrNull()
         }
         if (logTokens != null) {
+            val interactionSource = remember { MutableInteractionSource() }
+            val isHovered by interactionSource.collectIsHoveredAsState()
+
+            LaunchedEffect(isHovered) {
+                if (isHovered) {
+                    hoveredLogs.value = hoveredLogs.value.plus(logTokens)
+                } else {
+                    hoveredLogs.value = hoveredLogs.value.minus(logTokens)
+                }
+            }
+
             FlowRow(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).clickable(
+                    interactionSource = interactionSource,
+                    onClick = {},
+                ),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 logTokens.forEach { token ->

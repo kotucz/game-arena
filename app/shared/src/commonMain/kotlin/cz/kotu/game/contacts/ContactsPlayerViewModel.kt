@@ -1,5 +1,6 @@
 package cz.kotu.game.contacts
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
+import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
 import cz.kotu.game.contacts.model.isSolved
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,6 +45,8 @@ class ContactsPlayerViewModel(
             started = SharingStarted.Eagerly,
             initialValue = null,
         )
+
+    val hoveredLogs: MutableState<List<LogToken>> = mutableStateOf(emptyList())
 
     val player: ContactsBoardState.Player?
         get() = gameState.value?.you

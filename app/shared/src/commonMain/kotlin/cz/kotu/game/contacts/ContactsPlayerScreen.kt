@@ -25,6 +25,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.GameLogEntry
+import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
 
 private const val phi = 1.618f
@@ -49,6 +51,7 @@ val hintBackgroundColor = Color(0xFFCCDDCC)
 
 val selectedContactColor = Color(0xFF1976D2)
 val highlightedContactColor = Color(0xFFFFB300)
+val highlightedLogContactColor = Color(0xFFAA00FF)
 
 @Composable
 fun ContactsPlayerScreen(
@@ -72,7 +75,8 @@ fun ContactsPlayerScreen(
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
 
-    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, gameState, player) }
+    val logItemContent: @Composable (GameLogEntry) -> Unit =
+        { RichGameLogItem(it, gameState, player, viewModel.hoveredLogs) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isDualPane = maxWidth >= 600.dp
@@ -119,6 +123,7 @@ fun ContactsPlayerScreen(
                             rack = rack,
                             isOwner = false,
                             lastActionResult = gameState.lastActionResult,
+                            hoveredLogs = viewModel.hoveredLogs,
                             selectedContacts = actionSelectionState.otherContacts,
                             onContactClick = { contact ->
                                 viewModel.onOtherContactClick(contact)
@@ -132,11 +137,11 @@ fun ContactsPlayerScreen(
                             rack = rack,
                             isOwner = true,
                             lastActionResult = gameState.lastActionResult,
+                            hoveredLogs = viewModel.hoveredLogs,
                             selectedContacts = actionSelectionState.playerContacts,
-                            onContactClick = { contact ->
-                                viewModel.onPlayerContactClick(contact)
-                            },
-                        )
+                        ) { contact ->
+                            viewModel.onPlayerContactClick(contact)
+                        }
                     }
                 }
 
@@ -285,6 +290,7 @@ private fun RackView(
     rack: PlayerViewState.Rack,
     isOwner: Boolean,
     lastActionResult: ContactsBoardState.ActionResult,
+    hoveredLogs: MutableState<List<LogToken>>,
     selectedContacts: Set<ContactsBoardState.ContactId>,
     onContactClick: (ContactsBoardState.ContactId) -> Unit,
 ) {
@@ -316,6 +322,7 @@ private fun RackView(
                         val isResolutionContact = resolveMultiConnectContacts?.contains(contact.id) ?: false
 
                         val shadowColor = when {
+                            hoveredLogs.value.any { it is LogToken.Contact && it.contactId == contact.id } -> highlightedLogContactColor
                             isResolutionContact -> highlightedContactColor
                             lastActionResult.errorContacts.contains(contact.id) -> Color.Red
                             else -> null
