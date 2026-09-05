@@ -11,6 +11,10 @@ data class PlayerViewState(
     val you: Player,
     val pool: List<PoolContact>,
     val racks: List<Rack>,
+    @Deprecated(
+        message = "PlayerViewState.board is deprecated; use racks/contact solved flags instead.",
+        level = DeprecationLevel.WARNING,
+    )
     val board: ContactsBoardState,
     val allowedActionTypes: Set<ActionType>,
     val resolveMultiConnect: ResolveMultiConnect?,
@@ -49,6 +53,10 @@ data class PlayerViewState(
             lastActionResult = ContactsBoardState.ActionResult(),
         )
     }
+}
+
+fun PlayerViewState.isSolved(contactId: ContactId): Boolean {
+    return racks.any { rack -> rack.contacts.any { it.id == contactId && it.solved } }
 }
 
 /**
