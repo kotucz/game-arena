@@ -68,12 +68,11 @@ fun ContactsPlayerScreen(
 
     val gameState = currentGameState!!
     val actionSelectionState = viewModel.actionSelectionState
-    val boardState = gameState.board
     val player = gameState.you
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
 
-    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, boardState, player) }
+    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, gameState.board, player) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isDualPane = maxWidth >= 600.dp
@@ -102,7 +101,7 @@ fun ContactsPlayerScreen(
                     SolvedContactsPool(gameState.pool)
 
                     Text(
-                        text = "Faults: " + if (boardState.faults == 0) "0" else "X".repeat(boardState.faults),
+                        text = "Faults: " + if (gameState.faults == 0) "0" else "X".repeat(gameState.faults),
                         color = Color(0xFFCC0000),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -296,7 +295,7 @@ private fun RackView(
             val maxContacts = gameState.racks.maxOf { it.contacts.size }
 
             val spacing = 8.dp
-            val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(64.dp)
+            val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(48.dp)
             val tileHeight = tileWidth * phi
             val cornerRadius = tileWidth / 8
             val cornerShape = RoundedCornerShape(cornerRadius)

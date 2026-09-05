@@ -58,6 +58,7 @@ class ContactsPlayerViewModelTest {
             pool = emptyList(),
             racks = racks,
             board = ContactsBoardState.empty(),
+            faults = 0,
             actions = ContactsGameState.PlayerActions(
                 allowedActionTypes = allowedActionTypes,
                 resolveMultiConnectContacts = resolveMultiConnectContacts,
