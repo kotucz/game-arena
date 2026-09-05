@@ -17,10 +17,12 @@ import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.LogToken
+import cz.kotu.game.contacts.model.PlayerViewState
+import cz.kotu.game.contacts.model.findContact
 import kotlinx.serialization.json.Json
 
 @Composable
-fun RichGameLogItem(log: GameLogEntry, gameState: ContactsBoardState, player: ContactsBoardState.Player?) {
+fun RichGameLogItem(log: GameLogEntry, gameState: PlayerViewState, player: ContactsBoardState.Player) {
     Row {
         // TODO move parsing from UI
         val logTokens = remember(log.text) {
@@ -37,18 +39,22 @@ fun RichGameLogItem(log: GameLogEntry, gameState: ContactsBoardState, player: Co
                     when (token) {
                         is LogToken.Contact -> {
                             // logs may be loaded but game state not
-                            val contact = gameState.contact(token.contactId)
+                            val contact = gameState.findContact(token.contactId)
+                            val value = contact?.value
                             Text(
-                                text = if (contact != null && player != null &&
-                                    gameState.isContactVisibleToPlayer(contact, player)
-                                ) contact.number.toString() else "?",
-                                modifier = Modifier.background(Color.DarkGray)
-                                    .padding(horizontal = 4.dp),
-                                color = Color.White,
+                                text = value?.number?.toString() ?: "?",
+                                modifier = Modifier.background(
+                                    when (value?.type) {
+                                        ContactsBoardState.ContactType.Yellow -> Color.Yellow
+                                        ContactsBoardState.ContactType.Red -> Color.Red
+                                        else -> Color.LightGray
+                                    },
+                                ).padding(horizontal = 4.dp),
+                                color = Color.Black,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                             )
-                            contact?.let { gameState.getHint(it) }?.let { hint ->
+                            contact?.hint?.let { hint ->
                                 Text(
                                     text = hint,
                                     modifier = Modifier.background(hintBackgroundColor)
@@ -61,7 +67,7 @@ fun RichGameLogItem(log: GameLogEntry, gameState: ContactsBoardState, player: Co
                         }
 
                         is LogToken.Player -> Text(
-                            text = if (token.username == player?.username) "you" else token.username,
+                            text = token.username,
                             color = Color.Black,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,

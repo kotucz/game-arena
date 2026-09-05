@@ -72,7 +72,7 @@ fun ContactsPlayerScreen(
     val logs: List<GameLogEntry> by viewModel.gameFacade.logs.collectAsState()
     val isLogsExpanded = viewModel.isLogsExpanded
 
-    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, gameState.board, player) }
+    val logItemContent: @Composable (GameLogEntry) -> Unit = { RichGameLogItem(it, gameState, player) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isDualPane = maxWidth >= 600.dp

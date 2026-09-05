@@ -50,7 +50,7 @@ fun ContactsBoardState.handleStandardConnect(
         return ActionExecutionResult.Success(newState) {
             player(player)
             text("mismatched")
-            contact(playerContact)
+            text(playerContact.matchKey)
             text("with")
             contact(otherContact)
             if (boom) text("BOOM! Red Connected! [Game Over]") else text("FAILURE!")
@@ -107,7 +107,7 @@ fun ContactsBoardState.handleMultiConnect(
     return ActionExecutionResult.Success(newState) {
         player(player)
         text("connecting")
-        contact(playerContact)
+        text(playerContact.matchKey)
         text("with")
         contacts(otherContacts)
         text("from")

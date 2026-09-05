@@ -58,6 +58,12 @@ fun PlayerViewState.isSolved(contactId: ContactId): Boolean {
     return racks.any { rack -> rack.contacts.any { it.id == contactId && it.solved } }
 }
 
+fun PlayerViewState.findContact(contactId: ContactId): PlayerViewState.RackContact? {
+    return racks.asSequence()
+        .flatMap { it.contacts.asSequence() }
+        .find { it.id == contactId }
+}
+
 /**
  * Sanitize game state from player's PoV
  */
