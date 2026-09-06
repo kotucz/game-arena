@@ -1,0 +1,20 @@
+{
+  "name": "Game Arena",
+  "short_name": "GameArena",
+  "description": "A multiplayer game arena for casual and realtime board games.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -38,6 +38,9 @@ private fun staticAssetCacheControl(resource: File): List<CacheControl> = when {
         ignoreCase = true
     ) -> listOf(CacheControl.NoCache(CacheControl.Visibility.Private))
 
+    resource.name.lowercase() in setOf("manifest.webmanifest", "sw.js", "pwa.js") ->
+        listOf(CacheControl.NoCache(CacheControl.Visibility.Private))
+
     resource.extension.lowercase() in setOf("wasm", "js", "css", "svg", "png", "ico", "woff", "woff2", "ttf", "otf") ->
         listOf(CacheControl.MaxAge(365 * 24 * 60 * 60, visibility = CacheControl.Visibility.Public))
 

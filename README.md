@@ -46,6 +46,11 @@ Open `http://localhost:8080/` and hard-refresh the page after rebuilding if the
 browser has cached an older bundle. Web navigation uses hash URLs such as
 `http://localhost:8080/#game/<gameId>`.
 
+The browser entry point is also configured as a PWA: it ships a
+`manifest.webmanifest`, a service worker for app-shell caching, and an install
+button for browsers that support the install prompt. On supported devices the
+app can be added to the home screen and launched as a standalone app.
+
 ### Running the web app in Docker
 
 Build and start the server with:
