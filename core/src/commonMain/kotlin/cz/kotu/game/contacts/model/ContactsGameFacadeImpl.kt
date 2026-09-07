@@ -42,16 +42,38 @@ class ContactsGameFacadeImpl(
         playerContacts: Set<ContactsBoardState.ContactId>,
         otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
-        val gameState: ContactsGameState = this@ContactsGameFacadeImpl.gameState.value
-        return when (val result = gameState.board.applyActionIds(player, actionType, playerContacts, otherContacts)) {
-            is ActionExecutionResult.Failure -> Result.failure(IllegalStateException(result.message))
+        val currentState = this@ContactsGameFacadeImpl.gameState.value
+        return runCatching {
+            val nextState = currentState.applyAction(
+                player = player,
+                actionType = actionType,
+                playerContacts = playerContacts,
+                otherContacts = otherContacts,
+                addRichGameLog = ::addRichGameLog,
+            )
+            _gameState.value = nextState
+        }.fold(
+            onSuccess = { Result.success(Unit) },
+            onFailure = { Result.failure(it) },
+        )
+    }
+
+    private fun ContactsGameState.applyAction(
+        player: ContactsBoardState.Player,
+        actionType: ContactsBoardState.ActionType,
+        playerContacts: Set<ContactsBoardState.ContactId>,
+        otherContacts: Set<ContactsBoardState.ContactId>,
+        addRichGameLog: (LogBuilder.() -> Unit) -> Unit,
+    ): ContactsGameState {
+        return when (val result = board.applyActionIds(player, actionType, playerContacts, otherContacts)) {
+            is ActionExecutionResult.Failure -> throw IllegalStateException(result.message)
             is ActionExecutionResult.Success -> {
-                _gameState.value = gameState.copy(
+                val nextState = copy(
                     board = result.state,
-                    activePlayer = gameState.nextActivePlayer(actionType, result.state),
+                    activePlayer = nextActivePlayer(actionType, result.state),
                 )
                 addRichGameLog(result.logBuilder)
-                Result.success(Unit)
+                nextState
             }
         }
     }
