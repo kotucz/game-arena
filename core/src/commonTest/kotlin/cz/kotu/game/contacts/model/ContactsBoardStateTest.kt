@@ -7,6 +7,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState.ContactType
 import cz.kotu.game.contacts.model.ContactsBoardState.Player
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -174,12 +175,14 @@ class ContactsBoardStateTest {
     fun isActionLegalExplainsInvalidSelectionAndOwnership() {
         val (state, alice, bob, aliceContact, bobContact) = validationState()
 
-        val result1 = state.applyAction(alice, ActionType.StandardConnect, emptySet(), setOf(bobContact))
-        assertIs<ActionExecutionResult.Failure>(result1)
+        val result1 = assertFailsWith<InvalidActionException> {
+            state.applyAction(alice, ActionType.StandardConnect, emptySet(), setOf(bobContact))
+        }
         assertEquals("Invalid number of selected contacts: player (0/1) other (1/1)", result1.message)
 
-        val result2 = state.applyAction(bob, ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
-        assertIs<ActionExecutionResult.Failure>(result2)
+        val result2 = assertFailsWith<InvalidActionException> {
+            state.applyAction(bob, ActionType.StandardConnect, setOf(aliceContact), setOf(bobContact))
+        }
         assertEquals("Player does not own the selected contact", result2.message)
     }
 
@@ -187,13 +190,14 @@ class ContactsBoardStateTest {
     fun errorSelectingSolvedContact() {
         val (state, alice, _, aliceContact, bobContact) = validationState()
 
-        val result1 = state.withSolvedContacts(aliceContact).applyAction(
-            alice,
-            ActionType.StandardConnect,
-            setOf(aliceContact),
-            setOf(bobContact),
-        )
-        assertIs<ActionExecutionResult.Failure>(result1)
+        val result1 = assertFailsWith<InvalidActionException> {
+            state.withSolvedContacts(aliceContact).applyAction(
+                alice,
+                ActionType.StandardConnect,
+                setOf(aliceContact),
+                setOf(bobContact),
+            )
+        }
         assertEquals("Selected contact is already solved", result1.message)
     }
 
@@ -216,13 +220,14 @@ class ContactsBoardStateTest {
             solved = emptySet(),
         )
 
-        val result = state.applyAction(
-            alice,
-            ActionType.SoloConnectRest,
-            setOf(blue, red),
-            emptySet(),
-        )
-        assertIs<ActionExecutionResult.Failure>(result)
+        val result = assertFailsWith<InvalidActionException> {
+            state.applyAction(
+                alice,
+                ActionType.SoloConnectRest,
+                setOf(blue, red),
+                emptySet(),
+            )
+        }
         assertEquals("Selected contacts must have the same number or all yellow", result.message)
     }
 
@@ -356,9 +361,10 @@ class ContactsBoardStateTest {
         val first = state.applyAction(alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
         assertIs<ActionExecutionResult.Success>(first)
 
-        val second = first.state.applyAction(alice, ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
+        val second = assertFailsWith<InvalidActionException> {
+            first.state.applyAction(alice, ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
+        }
 
-        assertIs<ActionExecutionResult.Failure>(second)
         assertEquals("Only the target player can resolve the multi-connect", second.message)
         assertEquals(2, first.state.resolveMultiConnect?.targetContacts?.size)
     }
@@ -434,14 +440,15 @@ class ContactsBoardStateTest {
             solved = emptySet(),
         )
 
-        val result = state.applyAction(
-            alice,
-            ActionType.FinishReds,
-            setOf(redContact),
-            emptySet(),
-        )
+        val result = assertFailsWith<InvalidActionException> {
+            state.applyAction(
+                alice,
+                ActionType.FinishReds,
+                setOf(redContact),
+                emptySet(),
+            )
+        }
 
-        assertIs<ActionExecutionResult.Failure>(result)
         assertEquals("All other contacts must be solved", result.message)
     }
 

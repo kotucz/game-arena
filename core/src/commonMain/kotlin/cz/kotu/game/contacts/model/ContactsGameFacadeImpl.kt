@@ -43,7 +43,7 @@ class ContactsGameFacadeImpl(
         otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
         val currentState = this@ContactsGameFacadeImpl.gameState.value
-        return runCatching {
+        return try {
             val nextState = currentState.applyAction(
                 player = player,
                 actionType = actionType,
@@ -52,10 +52,10 @@ class ContactsGameFacadeImpl(
                 addRichGameLog = ::addRichGameLog,
             )
             _gameState.value = nextState
-        }.fold(
-            onSuccess = { Result.success(Unit) },
-            onFailure = { Result.failure(it) },
-        )
+            Result.success(Unit)
+        } catch (error: InvalidActionException) {
+            Result.failure(error)
+        }
     }
 
     private fun ContactsGameState.applyAction(
@@ -65,17 +65,13 @@ class ContactsGameFacadeImpl(
         otherContacts: Set<ContactsBoardState.ContactId>,
         addRichGameLog: (LogBuilder.() -> Unit) -> Unit,
     ): ContactsGameState {
-        return when (val result = board.applyActionIds(player, actionType, playerContacts, otherContacts)) {
-            is ActionExecutionResult.Failure -> throw IllegalStateException(result.message)
-            is ActionExecutionResult.Success -> {
-                val nextState = copy(
-                    board = result.state,
-                    activePlayer = nextActivePlayer(actionType, result.state),
-                )
-                addRichGameLog(result.logBuilder)
-                nextState
-            }
-        }
+        val result = board.applyActionIds(player, actionType, playerContacts, otherContacts)
+        val nextState = copy(
+            board = result.state,
+            activePlayer = nextActivePlayer(actionType, result.state),
+        )
+        addRichGameLog(result.logBuilder)
+        return nextState
     }
 
     private fun ContactsGameState.nextActivePlayer(
