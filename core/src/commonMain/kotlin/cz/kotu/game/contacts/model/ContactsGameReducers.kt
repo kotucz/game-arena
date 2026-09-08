@@ -28,7 +28,7 @@ internal fun ContactsGameState.applyAction(
                     addRichGameLog(result.logBuilder)
                     return copy(
                         board = result.state,
-                        gamePhase = nextGamePhase(result.next),
+                        gamePhase = nextGamePhase(newBoard = result.state, result.next),
                     )
                 }
 
@@ -44,7 +44,7 @@ internal fun ContactsGameState.applyAction(
                     addRichGameLog(result.logBuilder)
                     return copy(
                         board = result.state,
-                        gamePhase = nextGamePhase(result.next),
+                        gamePhase = nextGamePhase(result.state, result.next),
                     )
                 }
 
@@ -59,13 +59,12 @@ internal fun ContactsGameState.applyAction(
 }
 
 private fun ContactsGameState.nextGamePhase(
+    newBoard: ContactsBoardState,
     next: Next,
 ): ContactsGameState.GamePhase {
     return when (next) {
         is Next.EndOfTurn -> {
-            StandardTurn(
-                nextPlayer(next.player),
-            )
+            nextPhase(newBoard, afterPlayer = next.player)
         }
 
         is Next.ResolveMultiConnect -> {
@@ -80,6 +79,16 @@ private fun ContactsGameState.nextGamePhase(
     }
 }
 
-// todo only player with contacts
-private fun ContactsGameState.nextPlayer(afterPlayer: ContactsBoardState.Player): ContactsBoardState.Player =
-    players[(players.indexOf(afterPlayer) + 1) % players.size]
+private fun ContactsGameState.nextPhase(
+    newBoard: ContactsBoardState,
+    afterPlayer: ContactsBoardState.Player,
+): ContactsGameState.GamePhase {
+    val afterIndex = players.indexOf(afterPlayer)
+    for (i in players.indices) {
+        val player = players[(afterIndex + 1 + i) % players.size]
+        if (newBoard.hasUnsolvedContacts(player)) {
+            return StandardTurn(player)
+        }
+    }
+    return GameOver("Win: all solved!")
+}

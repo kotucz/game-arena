@@ -184,6 +184,10 @@ data class ContactsBoardState internal constructor(
         return requireNotNull(contact(contactId)) { "Unknown contact id: $contactId" }
     }
 
+    fun hasUnsolvedContacts(player: Player): Boolean {
+        return playerRacks(player).any { rack -> !solved.containsAll(rack.contactIds) }
+    }
+
     fun playerRacks(player: Player): List<Rack> {
         return racks.filter { it.owner == player }
     }
