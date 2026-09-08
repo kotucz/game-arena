@@ -9,7 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 class ContactsBoardStateTest {
     @Test
@@ -158,7 +157,7 @@ class ContactsBoardStateTest {
         assertEquals(true, state.contactsMatch(first, second))
     }
 
-    @Test
+    @Test // todo obsolete test
     fun isActionLegalReturnsNullForAValidConnect() {
         val (state, alice, _, aliceContact, bobContact) = validationState()
 
@@ -168,7 +167,7 @@ class ContactsBoardStateTest {
             setOf(aliceContact),
             setOf(bobContact),
         )
-        assertTrue(result is ActionExecutionResult.Success)
+        assertIs<ActionExecutionResult.Success>(result)
     }
 
     @Test
@@ -304,14 +303,18 @@ class ContactsBoardStateTest {
             solved = emptySet(),
         )
 
-        val first = state.applyAction(alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
+        val first = state.applyAction(
+            alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact),
+        )
         assertIs<ActionExecutionResult.Success>(first)
+        assertIs<Next.ResolveMultiConnect>(first.next)
 
-        val second = first.state.applyAction(bob, ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
+        val second = first.state.handleResolveMultiConnect(bob, bobContact.id, first.next.resolveMultiConnect)
 
         assertIs<ActionExecutionResult.Success>(second)
         assertEquals(setOf(aliceContact.id, bobContact.id), second.state.solved)
-        assertEquals(null, second.state.resolveMultiConnect)
+        assertIs<Next.EndOfTurn>(second.next)
+        assertEquals(alice, second.next.player)
     }
 
     @Test
@@ -330,16 +333,20 @@ class ContactsBoardStateTest {
             solved = emptySet(),
         )
 
-        val first = state.applyAction(alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
+        val first = state.applyAction(
+            alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact),
+        )
         assertIs<ActionExecutionResult.Success>(first)
+        assertIs<Next.ResolveMultiConnect>(first.next)
 
-        val second = first.state.applyAction(bob, ActionType.ResolveMultiConnect, setOf(bobOtherContact), emptySet())
+        val second = first.state.handleResolveMultiConnect(bob, bobOtherContact.id, first.next.resolveMultiConnect)
 
         assertIs<ActionExecutionResult.Success>(second)
         assertEquals(emptySet(), second.state.solved)
         assertEquals(1, second.state.faults)
         assertEquals(bobOtherContact.number.toString(), second.state.racks[1].hint(bobOtherContact))
-        assertEquals(null, second.state.resolveMultiConnect)
+        assertIs<Next.EndOfTurn>(second.next)
+        assertEquals(alice, second.next.player)
     }
 
     @Test
@@ -358,15 +365,18 @@ class ContactsBoardStateTest {
             solved = emptySet(),
         )
 
-        val first = state.applyAction(alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact))
+        val first = state.applyAction(
+            alice, ActionType.DoubleConnect, setOf(aliceContact), setOf(bobContact, bobOtherContact),
+        )
         assertIs<ActionExecutionResult.Success>(first)
+        assertIs<Next.ResolveMultiConnect>(first.next)
 
         val second = assertFailsWith<InvalidActionException> {
-            first.state.applyAction(alice, ActionType.ResolveMultiConnect, setOf(bobContact), emptySet())
+            first.state.handleResolveMultiConnect(alice, bobContact.id, first.next.resolveMultiConnect)
         }
 
         assertEquals("Only the target player can resolve the multi-connect", second.message)
-        assertEquals(2, first.state.resolveMultiConnect?.targetContacts?.size)
+        assertEquals(2, first.next.resolveMultiConnect.targetContacts.size)
     }
 
     @Test

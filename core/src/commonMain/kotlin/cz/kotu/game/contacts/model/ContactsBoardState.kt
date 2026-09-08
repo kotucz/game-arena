@@ -14,8 +14,6 @@ data class ContactsBoardState internal constructor(
 
     val faults: Int = 0,
 
-    val resolveMultiConnect: ResolveMultiConnect? = null,
-
     val lastActionResult: ActionResult = ActionResult(),
 ) {
     @Serializable
@@ -103,6 +101,7 @@ data class ContactsBoardState internal constructor(
      **/
     @Serializable
     data class ResolveMultiConnect(
+        val originalPlayer: Player,
         val targetPlayer: Player,
         val originalContact: ContactId,
         val targetContacts: Set<ContactId>,

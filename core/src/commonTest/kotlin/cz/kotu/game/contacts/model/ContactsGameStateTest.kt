@@ -80,14 +80,16 @@ class ContactsGameStateTest {
             pool = listOf(originalContact),
             racks = emptyList(),
             solved = emptySet(),
-            resolveMultiConnect = ResolveMultiConnect(
-                targetPlayer = bob,
-                originalContact = originalContact.id,
-                targetContacts = setOf(target1, target2),
-            ),
         )
         val state = createBaseState(board = board, activePlayer = alice).copy(
-            gamePhase = GamePhase.ResolveMultiConnect(restorePlayer = alice, resolveMultiConnect = board.resolveMultiConnect!!),
+            gamePhase = GamePhase.ResolveMultiConnect(
+                resolveMultiConnect = ResolveMultiConnect(
+                    originalPlayer = alice,
+                    targetPlayer = bob,
+                    originalContact = originalContact.id,
+                    targetContacts = setOf(target1, target2),
+                ),
+            ),
         )
 
         val actions = state.getAvailablePlayerActions(bob)
@@ -104,14 +106,16 @@ class ContactsGameStateTest {
             pool = listOf(originalContact),
             racks = emptyList(),
             solved = emptySet(),
-            resolveMultiConnect = ResolveMultiConnect(
-                targetPlayer = bob,
-                originalContact = originalContact.id,
-                targetContacts = setOf(ContactId(2)),
-            ),
         )
         val state = createBaseState(board = board, activePlayer = alice).copy(
-            gamePhase = GamePhase.ResolveMultiConnect(restorePlayer = alice, resolveMultiConnect = board.resolveMultiConnect!!),
+            gamePhase = GamePhase.ResolveMultiConnect(
+                resolveMultiConnect = ResolveMultiConnect(
+                    originalPlayer = alice,
+                    targetPlayer = bob,
+                    originalContact = originalContact.id,
+                    targetContacts = setOf(ContactId(2)),
+                ),
+            ),
         )
 
         val actions = state.getAvailablePlayerActions(alice)

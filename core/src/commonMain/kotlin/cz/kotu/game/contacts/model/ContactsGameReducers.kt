@@ -11,20 +11,7 @@ internal fun ContactsGameState.applyAction(
     otherContacts: Set<ContactsBoardState.ContactId>,
     addRichGameLog: (LogBuilder.() -> Unit) -> Unit,
 ): ContactsGameState {
-    val result = board.applyActionIds(player, actionType, playerContacts, otherContacts)
-    val nextState = copy(
-        board = result.state,
-        gamePhase = nextGamePhase(actionType, result.state),
-    )
-    addRichGameLog(result.logBuilder)
-    return nextState
-}
-
-private fun ContactsGameState.nextGamePhase(
-    actionType: ContactsBoardState.ActionType,
-    newBoard: ContactsBoardState,
-): ContactsGameState.GamePhase {
-    return when (gamePhase) {
+    when (gamePhase) {
         is StandardTurn -> {
             when (actionType) {
                 ContactsBoardState.ActionType.StandardConnect,
@@ -32,19 +19,16 @@ private fun ContactsGameState.nextGamePhase(
                 ContactsBoardState.ActionType.MyDoubleConnect,
                 ContactsBoardState.ActionType.SoloConnectRest,
                 ContactsBoardState.ActionType.FinishReds,
-                    -> {
-                    StandardTurn(
-                        nextPlayer(gamePhase.activePlayer),
-                    )
-                }
-
                 ContactsBoardState.ActionType.DoubleConnect,
                 ContactsBoardState.ActionType.TripleConnect,
                     -> {
-                    val resolveMultiConnect = newBoard.resolveMultiConnect!!
-                    ResolveMultiConnect(
-                        restorePlayer = gamePhase.activePlayer,
-                        resolveMultiConnect = resolveMultiConnect,
+                    // TODO verify player is active
+
+                    val result = board.applyActionIds(player, actionType, playerContacts, otherContacts)
+                    addRichGameLog(result.logBuilder)
+                    return copy(
+                        board = result.state,
+                        gamePhase = nextGamePhase(result.next),
                     )
                 }
 
@@ -54,10 +38,13 @@ private fun ContactsGameState.nextGamePhase(
 
         is ResolveMultiConnect -> {
             when (actionType) {
-                // only legal from ResolveMultiConnect phase
                 ContactsBoardState.ActionType.ResolveMultiConnect -> {
-                    StandardTurn(
-                        nextPlayer(gamePhase.restorePlayer),
+                    val result =
+                        board.handleResolveMultiConnect(player, playerContacts.single(), gamePhase.resolveMultiConnect)
+                    addRichGameLog(result.logBuilder)
+                    return copy(
+                        board = result.state,
+                        gamePhase = nextGamePhase(result.next),
                     )
                 }
 
@@ -67,6 +54,28 @@ private fun ContactsGameState.nextGamePhase(
 
         is GameOver -> {
             throw InvalidActionException("Game is over - no actions")
+        }
+    }
+}
+
+private fun ContactsGameState.nextGamePhase(
+    next: Next,
+): ContactsGameState.GamePhase {
+    return when (next) {
+        is Next.EndOfTurn -> {
+            StandardTurn(
+                nextPlayer(next.player),
+            )
+        }
+
+        is Next.ResolveMultiConnect -> {
+            ResolveMultiConnect(
+                resolveMultiConnect = next.resolveMultiConnect,
+            )
+        }
+
+        is Next.GameOver -> {
+            GameOver(next.message)
         }
     }
 }

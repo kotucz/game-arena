@@ -26,7 +26,6 @@ data class ContactsGameState(
         /** A multi-connect needs resolution — the target player must choose. */
         @Serializable
         data class ResolveMultiConnect(
-            val restorePlayer: ContactsBoardState.Player, // who started this turn (for resuming after resolve)
             val resolveMultiConnect: ContactsBoardState.ResolveMultiConnect,
         ) : GamePhase()
         /** Game is over. */

@@ -16,7 +16,7 @@ fun ContactsBoardState.handleAddHint(
     if (isSolved(playerContact)) throw InvalidActionException("Selected contact is already solved")
     val newState = this.withHintFor(playerContact)
         .withLastActionResult(ContactsBoardState.ActionResult())
-    return ActionExecutionResult.Success(newState) {
+    return ActionExecutionResult.Success(newState, Next.EndOfTurn(player)) {
         player(player)
         text("hinted")
         contact(playerContact)
@@ -47,7 +47,11 @@ fun ContactsBoardState.handleStandardConnect(
         val boom = otherContact.type == ContactsBoardState.ContactType.Red
         val newState = withFaultFor(otherContact)
             .withLastActionResult(ContactsBoardState.ActionResult(errorContacts = setOf(otherContact.id)))
-        return ActionExecutionResult.Success(newState) {
+        // TODO game over: too many faults
+        return ActionExecutionResult.Success(
+            newState,
+            next = if (boom) Next.GameOver("Game over: Red connected!") else Next.EndOfTurn(player),
+        ) {
             player(player)
             text("mismatched")
             text(playerContact.matchKey)
@@ -59,7 +63,7 @@ fun ContactsBoardState.handleStandardConnect(
 
     val newState = withSolvedContacts(playerContact, otherContact)
         .withLastActionResult(ContactsBoardState.ActionResult())
-    return ActionExecutionResult.Success(newState) {
+    return ActionExecutionResult.Success(newState, next = Next.EndOfTurn(player)) {
         player(player)
         text("connected")
         contact(playerContact)
@@ -97,14 +101,19 @@ fun ContactsBoardState.handleMultiConnect(
 
     val targetRack = racks.singleOrNull { rack -> otherContacts.all { it.id in rack.contactIds } }
         ?: throw InvalidActionException("Selected opposing contacts must belong to one rack")
-    val newState = copy(
-        resolveMultiConnect = ContactsBoardState.ResolveMultiConnect(
-            targetPlayer = targetRack.owner,
-            originalContact = playerContact.id,
-            targetContacts = otherContacts.map { it.id }.toSet(),
+
+    val newState = this // no change
+    return ActionExecutionResult.Success(
+        newState,
+        next = Next.ResolveMultiConnect(
+            resolveMultiConnect = ContactsBoardState.ResolveMultiConnect(
+                originalPlayer = player,
+                targetPlayer = targetRack.owner,
+                originalContact = playerContact.id,
+                targetContacts = otherContacts.map { it.id }.toSet(),
+            ),
         ),
-    )
-    return ActionExecutionResult.Success(newState) {
+    ) {
         player(player)
         text("connecting")
         text(playerContact.matchKey)
@@ -168,7 +177,7 @@ fun ContactsBoardState.handleSoloConnectRest(
 
     val newState = withSolvedContacts(*playerContacts.toTypedArray())
         .withLastActionResult(ContactsBoardState.ActionResult())
-    return ActionExecutionResult.Success(newState) {
+    return ActionExecutionResult.Success(newState, Next.EndOfTurn(player)) {
         player(player)
         text("solo connected")
         contacts(playerContacts)
@@ -197,7 +206,7 @@ fun ContactsBoardState.handleFinishReds(
 
     val newState = withSolvedContacts(*playerContacts.toTypedArray())
         .withLastActionResult(ContactsBoardState.ActionResult())
-    return ActionExecutionResult.Success(newState) {
+    return ActionExecutionResult.Success(newState, Next.EndOfTurn(player)) {
         player(player)
         text("finished reds")
         contacts(playerContacts)
@@ -206,24 +215,18 @@ fun ContactsBoardState.handleFinishReds(
 
 fun ContactsBoardState.handleResolveMultiConnect(
     player: ContactsBoardState.Player,
-    targetContact: ContactsBoardState.Contact,
+    targetContact: ContactsBoardState.ContactId,
+    resolveMultiConnect: ContactsBoardState.ResolveMultiConnect,
 ): ActionExecutionResult.Success {
-    val resolution = resolveMultiConnect ?: throw InvalidActionException("No multi connect to resolve")
-    if (resolution.targetPlayer != player) throw InvalidActionException("Only the target player can resolve the multi-connect")
-    if (targetContact.id !in resolution.targetContacts) throw InvalidActionException("Selected contact is not a multi-connect target")
+    if (resolveMultiConnect.targetPlayer != player) throw InvalidActionException("Only the target player can resolve the multi-connect")
+    if (targetContact !in resolveMultiConnect.targetContacts) throw InvalidActionException("Selected contact is not a multi-connect target")
 
-    val originalContact = requireContact(resolution.originalContact)
+    val originalContact = requireContact(resolveMultiConnect.originalContact)
     // determine original player
-    val originalPlayer = racks.firstOrNull { originalContact.id in it.contactIds }?.owner
-        ?: throw InvalidActionException("Original player not found")
+    val originalPlayer = resolveMultiConnect.originalPlayer
 
     // Resolve with exactly same validation/result as a normal StandardConnect made by the original contact's owner
-    val connectResult = handleStandardConnect(originalPlayer, originalContact, targetContact)
-    val cleared = connectResult.state.copy(resolveMultiConnect = null)
-    val connectBuilder = connectResult.logBuilder
-    return ActionExecutionResult.Success(cleared) {
-        connectBuilder()
-    }
+    return handleStandardConnect(originalPlayer, originalContact, requireContact(targetContact))
 }
 
 fun ContactsBoardState.applyActionIds(
@@ -278,6 +281,6 @@ fun ContactsBoardState.applyAction(
 
         ContactsBoardState.ActionType.SoloConnectRest -> handleSoloConnectRest(player, playerContacts)
         ContactsBoardState.ActionType.FinishReds -> handleFinishReds(player, playerContacts)
-        ContactsBoardState.ActionType.ResolveMultiConnect -> handleResolveMultiConnect(player, playerContacts.single())
+        ContactsBoardState.ActionType.ResolveMultiConnect -> throw InvalidActionException("Use handleResolveMultiConnect")
     }
 }
