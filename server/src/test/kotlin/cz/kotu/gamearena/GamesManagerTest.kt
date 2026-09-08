@@ -2,6 +2,8 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -79,6 +81,8 @@ class GamesManagerTest {
                 players = listOf("alice", "bob"),
                 createdAt = Instant.parse("2026-08-14T18:30:00Z"),
             )
+            override val statusText: Flow<String>
+                get() = flowOf("status: test")
         }
 
         manager.register(otherGame)

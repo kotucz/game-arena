@@ -16,6 +16,7 @@ class GamesNetworkProtocolTest {
             type = "gotfive",
             players = listOf("alice", "bob"),
             createdAt = Instant.parse("2026-08-14T18:30:00Z"),
+            status = "status: test",
         )
 
         val encoded = Json.encodeToString(RunningGame.serializer(), game)

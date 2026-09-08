@@ -100,6 +100,7 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                             type = game.metadata.type,
                             players = game.metadata.players,
                             createdAt = game.metadata.createdAt,
+                            status = "created",
                         )
                         call.respondText(
                             Json.encodeToString(RunningGame.serializer(), response),

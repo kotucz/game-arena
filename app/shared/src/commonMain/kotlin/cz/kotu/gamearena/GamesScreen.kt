@@ -119,7 +119,7 @@ fun GamesScreen(
 
 enum class GameFilterTab(
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
 ) {
     All("All Games", Icons.Outlined.Public),
     My("My Games", Icons.Outlined.Person)
@@ -129,12 +129,12 @@ enum class GameFilterTab(
 fun GameFilterSegmentedButton(
     selectedTab: GameFilterTab,
     onTabSelected: (GameFilterTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val options = GameFilterTab.entries
 
     SingleChoiceSegmentedButtonRow(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
     ) {
         options.forEachIndexed { index, tab ->
             SegmentedButton(
@@ -142,16 +142,16 @@ fun GameFilterSegmentedButton(
                 onClick = { onTabSelected(tab) },
                 shape = SegmentedButtonDefaults.itemShape(
                     index = index,
-                    count = options.size
+                    count = options.size,
                 ),
                 icon = {
                     SegmentedButtonDefaults.Icon(active = selectedTab == tab) {
                         Icon(
                             imageVector = tab.icon,
-                            contentDescription = null
+                            contentDescription = null,
                         )
                     }
-                }
+                },
             ) {
                 Text(text = tab.label)
             }
@@ -172,6 +172,7 @@ private fun RunningGameCard(game: RunningGame, onClick: () -> Unit) {
             }
             Text("Players: ${game.players.joinToString()}")
             Text("Created: ${game.createdAt.formatLocalUi()}")
+            Text("Status: ${game.status}")
         }
     }
 }

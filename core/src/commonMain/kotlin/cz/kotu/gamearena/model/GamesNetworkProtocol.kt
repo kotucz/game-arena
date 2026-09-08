@@ -17,4 +17,5 @@ data class RunningGame(
     val type: String,
     val players: List<String>,
     val createdAt: Instant,
+    val status: String,
 )

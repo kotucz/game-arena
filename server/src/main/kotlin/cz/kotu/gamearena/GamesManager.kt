@@ -7,7 +7,12 @@ import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,7 +31,20 @@ class GamesManager(
     private val gamesUpdated = MutableStateFlow(0)
     private val json = Json { ignoreUnknownKeys = true }
     private val gamesMutex = Mutex()
-    val runningGames = gamesUpdated.map { runningGames() }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val runningGames: Flow<List<RunningGame>> = gamesUpdated.flatMapLatest {
+        val gameFlows = games.values.map { game ->
+            game.statusText.map { status ->
+                game.metadata.toRunningGame(status = status)
+            }
+        }
+        if (gameFlows.isEmpty()) {
+            flowOf(emptyList())
+        } else {
+            combine(gameFlows) { it.toList() }
+        }
+    }
 
     suspend fun createContactsGame(
         players: List<String>,
@@ -118,11 +136,12 @@ class GamesManager(
         }
     }
 
-    private fun GameMetadata.toRunningGame() = RunningGame(
+    private fun GameMetadata.toRunningGame(status: String = "") = RunningGame(
         id = id,
         type = type,
         players = players,
         createdAt = createdAt,
+        status = status,
     )
 
     private fun newMetadata(players: List<String>): GameMetadata {
@@ -144,12 +163,23 @@ data class GameMetadata(
 
 interface ManagedGame {
     val metadata: GameMetadata
+    val statusText: Flow<String>
 }
 
 data class ContactsGame(
     override val metadata: GameMetadata,
     val contactsGameFacade: ContactsGameFacade,
 ) : ManagedGame {
+
+    override val statusText: Flow<String> =
+        contactsGameFacade.gameState.map { state ->
+            when (val gamePhase = state.gamePhase) {
+                is ContactsGameState.GamePhase.GameOver -> gamePhase.message
+                is ContactsGameState.GamePhase.ResolveMultiConnect -> gamePhase.resolveMultiConnect.targetPlayer.username
+                is ContactsGameState.GamePhase.StandardTurn -> gamePhase.activePlayer.username
+            }
+        }
+
     fun forUser(username: String): ServerContactsGameFacade {
         return ServerContactsGameFacade(
             ContactsPlayerGameAdapter(
