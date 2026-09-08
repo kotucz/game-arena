@@ -46,7 +46,8 @@ class NetworkContactsGameFacade(
         gameEvents()
 
     private val _logs: MutableStateFlow<List<GameLogEntry>> = MutableStateFlow(listOf())
-    private var lastSentLogIndex: Int = -1
+    // Only server-originated entries should advance the replay cursor; local diagnostics do not exist on the server.
+    private var lastServerLogIndex: Int = -1
 
     override val logs: StateFlow<List<GameLogEntry>> = combine(
         _logs,
@@ -116,7 +117,7 @@ class NetworkContactsGameFacade(
     private fun gameLogs(): Flow<Unit> = flow {
         while (currentCoroutineContext().isActive) {
             try {
-                val connectAfterIndex = maxOf(lastSentLogIndex, _logs.value.lastIndex)
+                val connectAfterIndex = lastServerLogIndex
                 val subscriptionUrl = if (connectAfterIndex >= 0) {
                     "$logsEndpoint?lastSentLogIndex=$connectAfterIndex"
                 } else {
@@ -128,7 +129,7 @@ class NetworkContactsGameFacade(
                         event.data?.let { data ->
                             val parsed = json.decodeFromString<GameLogEntry>(data)
                             _logs.value += parsed
-                            lastSentLogIndex = _logs.value.lastIndex
+                            lastServerLogIndex++
                         }
                     }
                 }
@@ -166,7 +167,6 @@ class NetworkContactsGameFacade(
 
     private fun logLocal(text: String) {
         _logs.value += GameLogEntry(Clock.System.now(), text)
-        lastSentLogIndex = _logs.value.lastIndex
     }
 
 }
