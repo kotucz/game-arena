@@ -7,6 +7,8 @@ import cz.kotu.game.contacts.model.ContactsBoardState.ContactType
 import cz.kotu.game.contacts.model.ContactsBoardState.Player
 import cz.kotu.game.contacts.model.ContactsBoardState.Rack
 import cz.kotu.game.contacts.model.ContactsBoardState.ResolveMultiConnect
+import cz.kotu.game.contacts.model.ContactsGameState.GamePhase
+import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -34,7 +36,7 @@ class ContactsGameStateTest {
         return ContactsGameState(
             board = board,
             players = players,
-            activePlayer = activePlayer,
+            gamePhase = StandardTurn(activePlayer = activePlayer),
         )
     }
 
@@ -65,7 +67,7 @@ class ContactsGameStateTest {
         val actions = state.getAvailablePlayerActions(bob)
 
         assertEquals(emptySet(), actions.allowedActionTypes)
-        assertEquals("It is ${alice}'s turn", actions.actionStatusText)
+        assertEquals("It is alice's turn", actions.actionStatusText)
         assertNull(actions.resolveMultiConnectContacts)
     }
 
@@ -84,7 +86,9 @@ class ContactsGameStateTest {
                 targetContacts = setOf(target1, target2),
             ),
         )
-        val state = createBaseState(board = board, activePlayer = alice)
+        val state = createBaseState(board = board, activePlayer = alice).copy(
+            gamePhase = GamePhase.ResolveMultiConnect(restorePlayer = alice, resolveMultiConnect = board.resolveMultiConnect!!),
+        )
 
         val actions = state.getAvailablePlayerActions(bob)
 
@@ -106,7 +110,9 @@ class ContactsGameStateTest {
                 targetContacts = setOf(ContactId(2)),
             ),
         )
-        val state = createBaseState(board = board, activePlayer = alice)
+        val state = createBaseState(board = board, activePlayer = alice).copy(
+            gamePhase = GamePhase.ResolveMultiConnect(restorePlayer = alice, resolveMultiConnect = board.resolveMultiConnect!!),
+        )
 
         val actions = state.getAvailablePlayerActions(alice)
 

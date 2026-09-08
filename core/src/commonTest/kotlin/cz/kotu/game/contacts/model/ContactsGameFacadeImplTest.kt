@@ -1,5 +1,6 @@
 package cz.kotu.game.contacts.model
 
+import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,7 +25,7 @@ class ContactsGameFacadeImplTest {
             solved = emptySet(),
         ),
         players = listOf(alice, bob),
-        activePlayer = alice,
+        gamePhase = StandardTurn(activePlayer = alice),
     )
 
     @Test
