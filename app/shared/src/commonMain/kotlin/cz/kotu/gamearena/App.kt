@@ -37,6 +37,7 @@ import cz.kotu.game.gotfive.Table
 
 internal const val GAMES_ROUTE = "games"
 internal const val GOT_FIVE_ROUTE = "got-five"
+internal const val DEBUG_ROUTE = "debug"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
 internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
@@ -69,6 +70,7 @@ fun App() {
                     GamesScreen(
                         viewModel = gamesViewModel,
                         onStartGotFive = { navController.navigate(GOT_FIVE_ROUTE) },
+                        onDebugClick = { navController.navigate(DEBUG_ROUTE) },
                         onGameClick = { game -> navController.navigate("game/${game.id}") },
                     )
                 }
@@ -77,6 +79,12 @@ fun App() {
                     GotFiveScreen(
                         appComponent = appComponent,
                         onBack = { navController.popBackStack() },
+                    )
+                }
+
+                composable(DEBUG_ROUTE) {
+                    DebugScreen(
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

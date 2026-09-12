@@ -37,6 +37,7 @@ import cz.kotu.gamearena.model.RunningGame
 fun GamesScreen(
     viewModel: GamesViewModel,
     onStartGotFive: () -> Unit,
+    onDebugClick: () -> Unit,
     onGameClick: (RunningGame) -> Unit,
 ) {
     val games by viewModel.games.collectAsState()
@@ -83,6 +84,10 @@ fun GamesScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Create Contacts game")
+        }
+
+        Button(onClick = onDebugClick, modifier = Modifier.fillMaxWidth()) {
+            Text("Debug")
         }
 
         HorizontalDivider()
