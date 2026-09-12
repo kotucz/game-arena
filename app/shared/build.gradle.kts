@@ -25,6 +25,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
+            export(libs.kmpnotifier.local)
         }
     }
 
@@ -68,6 +69,7 @@ kotlin {
         }
         commonMain.dependencies {
             api(project(":core"))
+            api(libs.kmpnotifier.local)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
