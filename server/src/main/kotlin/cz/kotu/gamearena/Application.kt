@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import cz.kotu.gamearena.plugins.configureSecurity
 import cz.kotu.gamearena.routes.authRoutes
 import cz.kotu.gamearena.routes.gameRoutes
+import cz.kotu.gamearena.routes.notificationRoutes
 import cz.kotu.gamearena.routes.staticRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
@@ -68,6 +69,7 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
             call.respondText("OK")
         }
         authRoutes(database)
+        notificationRoutes(database)
         gameRoutes(gamesManager)
         staticRoutes(webRoot)
     }

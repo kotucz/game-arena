@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
@@ -36,11 +37,42 @@ interface GameDao {
     suspend fun findById(id: String): StoredGame?
 }
 
-@Database(entities = [User::class, Session::class, StoredGame::class], version = 3, exportSchema = false)
+@Entity(
+    tableName = "push_tokens",
+    indices = [Index(value = ["username", "service"])],
+)
+data class PushToken(
+    /** Opaque client-generated ID (e.g. UUID) so clients can refresh or remove their own row. */
+    @PrimaryKey val tokenId: String,
+    val username: String,
+    /** Stable service discriminator: "fcm" | "webpush" */
+    val service: String,
+    val token: String,
+    val updatedAtMillis: Long,
+)
+
+@Dao
+interface PushTokenDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(pushToken: PushToken)
+
+    /** Remove a specific token. Scoped to username so a user cannot remove another user's token. */
+    @Query("DELETE FROM push_tokens WHERE tokenId = :tokenId AND username = :username")
+    suspend fun delete(tokenId: String, username: String)
+
+    @Query("SELECT * FROM push_tokens WHERE username = :username")
+    suspend fun findByUsername(username: String): List<PushToken>
+
+    @Query("SELECT * FROM push_tokens WHERE username IN (:usernames)")
+    suspend fun findByUsernames(usernames: List<String>): List<PushToken>
+}
+
+@Database(entities = [User::class, Session::class, StoredGame::class, PushToken::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun sessionDao(): SessionDao
     abstract fun gameDao(): GameDao
+    abstract fun pushTokenDao(): PushTokenDao
 }
 
 fun createDatabase(): AppDatabase {
@@ -63,6 +95,16 @@ fun createDatabase(): AppDatabase {
                     ).use {
                         it.step()
                     }
+                }
+            },
+            object : Migration(3, 4) {
+                override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                    connection.prepare(
+                        "CREATE TABLE IF NOT EXISTS push_tokens (tokenId TEXT NOT NULL PRIMARY KEY, username TEXT NOT NULL, service TEXT NOT NULL, token TEXT NOT NULL, updatedAtMillis INTEGER NOT NULL)"
+                    ).use { it.step() }
+                    connection.prepare(
+                        "CREATE INDEX IF NOT EXISTS idx_push_tokens_username_service ON push_tokens (username, service)"
+                    ).use { it.step() }
                 }
             },
         )
