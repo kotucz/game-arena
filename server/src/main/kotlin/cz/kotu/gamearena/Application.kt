@@ -5,6 +5,8 @@ import cz.kotu.gamearena.routes.authRoutes
 import cz.kotu.gamearena.routes.gameRoutes
 import cz.kotu.gamearena.routes.notificationRoutes
 import cz.kotu.gamearena.routes.staticRoutes
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
@@ -47,6 +49,9 @@ fun main() {
 }
 
 fun Application.module(serverComponent: ServerBindings = ServerComponent::class.create()) {
+    Napier.base(DebugAntilog())
+    Napier.i { "Starting GameArena server" }
+
     install(CallLogging) {
         level = Level.INFO
         logger = org.slf4j.LoggerFactory.getLogger("Ktor.Server")

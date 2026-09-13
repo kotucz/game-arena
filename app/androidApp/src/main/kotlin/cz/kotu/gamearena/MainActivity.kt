@@ -11,6 +11,7 @@ import com.mmk.kmpnotifier.permission.permissionUtil
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        initNapier()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 

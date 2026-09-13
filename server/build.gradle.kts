@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.sessions)
     implementation(libs.kotlin.inject.runtime.kmp)
+    implementation(libs.napier)
     ksp(libs.room.compiler)
     ksp(libs.kotlin.inject.compiler.ksp)
     kspTest(libs.kotlin.inject.compiler.ksp)

@@ -1,9 +1,9 @@
 package cz.kotu.gamearena
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.HttpResponseValidator
-import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
@@ -20,7 +20,11 @@ fun HttpClientConfig<*>.commonHttpClientConfig(onUnauthorized: () -> Unit) {
     install(SSE)
     install(Logging) {
         level = LogLevel.INFO
-        logger = Logger.DEFAULT
+        logger = object : Logger {
+            override fun log(message: String) {
+                Napier.i(tag = "KtorClient") { message }
+            }
+        }
     }
     HttpResponseValidator {
         validateResponse { response ->
