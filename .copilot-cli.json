@@ -1,0 +1,5 @@
+{
+  "autoCommit": false,
+  "autoStage": true,
+  "note": "Assistant will stage files but not create git commits. User will handle commits manually."
+}
