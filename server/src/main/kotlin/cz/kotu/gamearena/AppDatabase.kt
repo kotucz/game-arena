@@ -75,38 +75,38 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pushTokenDao(): PushTokenDao
 }
 
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(
+    object : Migration(1, 2) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare(
+                "CREATE TABLE IF NOT EXISTS sessions (tokenHash TEXT NOT NULL PRIMARY KEY, username TEXT NOT NULL, expiresAt INTEGER NOT NULL)"
+            ).use { it.step() }
+        }
+    },
+    object : Migration(2, 3) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare(
+                "CREATE TABLE IF NOT EXISTS games (id TEXT NOT NULL PRIMARY KEY, type TEXT NOT NULL, playersJson TEXT NOT NULL, createdAtMillis INTEGER NOT NULL, stateJson TEXT NOT NULL, logsJson TEXT NOT NULL DEFAULT '[]', updatedAtMillis INTEGER NOT NULL)"
+            ).use { it.step() }
+        }
+    },
+    object : Migration(3, 4) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare(
+                "CREATE TABLE IF NOT EXISTS push_tokens (tokenId TEXT NOT NULL PRIMARY KEY, username TEXT NOT NULL, service TEXT NOT NULL, token TEXT NOT NULL, updatedAtMillis INTEGER NOT NULL)"
+            ).use { it.step() }
+            connection.prepare(
+                "CREATE INDEX IF NOT EXISTS idx_push_tokens_username_service ON push_tokens (username, service)"
+            ).use { it.step() }
+        }
+    },
+)
+
 fun createDatabase(): AppDatabase {
     val databaseFile = File(System.getenv("DATABASE_PATH") ?: "data/gamearena.db")
     databaseFile.parentFile?.mkdirs()
     return Room.databaseBuilder<AppDatabase>(databaseFile.path)
         .setDriver(BundledSQLiteDriver())
-        .addMigrations(
-            object : Migration(1, 2) {
-                override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
-                    connection.prepare("CREATE TABLE IF NOT EXISTS sessions (tokenHash TEXT NOT NULL PRIMARY KEY, username TEXT NOT NULL, expiresAt INTEGER NOT NULL)").use {
-                        it.step()
-                    }
-                }
-            },
-            object : Migration(2, 3) {
-                override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
-                    connection.prepare(
-                        "CREATE TABLE IF NOT EXISTS games (id TEXT NOT NULL PRIMARY KEY, type TEXT NOT NULL, playersJson TEXT NOT NULL, createdAtMillis INTEGER NOT NULL, stateJson TEXT NOT NULL, logsJson TEXT NOT NULL DEFAULT '[]', updatedAtMillis INTEGER NOT NULL)"
-                    ).use {
-                        it.step()
-                    }
-                }
-            },
-            object : Migration(3, 4) {
-                override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
-                    connection.prepare(
-                        "CREATE TABLE IF NOT EXISTS push_tokens (tokenId TEXT NOT NULL PRIMARY KEY, username TEXT NOT NULL, service TEXT NOT NULL, token TEXT NOT NULL, updatedAtMillis INTEGER NOT NULL)"
-                    ).use { it.step() }
-                    connection.prepare(
-                        "CREATE INDEX IF NOT EXISTS idx_push_tokens_username_service ON push_tokens (username, service)"
-                    ).use { it.step() }
-                }
-            },
-        )
+        .addMigrations(*ALL_MIGRATIONS)
         .build()
 }
