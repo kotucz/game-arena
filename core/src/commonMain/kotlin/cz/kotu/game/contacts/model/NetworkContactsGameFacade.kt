@@ -30,7 +30,6 @@ import kotlin.time.Duration.Companion.seconds
 
 class NetworkContactsGameFacade(
     private val httpClient: HttpClient,
-    private val endpoint: String,
     private val gameId: String,
     private val scope: CoroutineScope,
     private val json: Json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" },
@@ -38,10 +37,11 @@ class NetworkContactsGameFacade(
     private val awaitLogin: (suspend () -> Unit)? = null,
 ) : ContactsPlayerFacade {
 
-    private val gameEndpoint: String = endpoint.trimEnd('/') + "/games/" + gameId + "/contacts"
-    private val eventsEndpoint: String = gameEndpoint + "/events"
+    // Use root-relative endpoints; the HttpClient's DefaultRequest should supply the base URL.
+    private val gameEndpoint: String = "/api/games/" + gameId + "/contacts"
+    private val eventsEndpoint: String = "$gameEndpoint/events"
     private val logsEndpoint: String = gameEndpoint.removeSuffix("/contacts") + "/logs"
-    private val actionsEndpoint: String = gameEndpoint + "/actions"
+    private val actionsEndpoint: String = "$gameEndpoint/actions"
 
     override val gameState: Flow<PlayerViewState> =
         gameEvents()

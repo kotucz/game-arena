@@ -4,11 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
-import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
-import cz.kotu.gamearena.ApiBaseUrl
 import cz.kotu.gamearena.AuthClient
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +28,6 @@ data class MultiPlayerUser(
 class MultiPlayerViewModel(
     @Assisted private val remoteGameId: String,
     @Assisted private val debugHttpClientFactory: (String) -> HttpClient,
-    private val apiBaseUrl: ApiBaseUrl,
 ) : ViewModel() {
     val configuredPlayers = listOf(
         // TODO fill credentials for test users
@@ -76,7 +73,6 @@ class MultiPlayerViewModel(
     fun gameFacadeForPlayer(username: String): ContactsPlayerFacade = if (remoteGameId.isNotBlank()) {
         NetworkContactsGameFacade(
             httpClient = getOrCreateClient(username),
-            endpoint = apiBaseUrl.endpoint("/api"),
             gameId = remoteGameId,
             scope = networkScope,
         )
