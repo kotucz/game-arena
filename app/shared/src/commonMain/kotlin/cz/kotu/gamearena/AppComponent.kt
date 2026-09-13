@@ -50,6 +50,10 @@ abstract class AppComponent {
 
     @Provides
     @AppScope
-    fun provideHttpClient(unauthorizedEvents: MutableSharedFlow<Unit>): HttpClient =
-        createAuthHttpClient(onUnauthorized = { unauthorizedEvents.tryEmit(Unit) })
+    fun provideApiBaseUrl(): ApiBaseUrl = ApiBaseUrl(defaultApiBaseUrl())
+
+    @Provides
+    @AppScope
+    fun provideHttpClient(unauthorizedEvents: MutableSharedFlow<Unit>, baseUrl: ApiBaseUrl): HttpClient =
+        createAuthHttpClient(baseUrl = baseUrl.value, onUnauthorized = { unauthorizedEvents.tryEmit(Unit) })
 }

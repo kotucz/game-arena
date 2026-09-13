@@ -22,7 +22,7 @@ class NotificationClient(private val httpClient: HttpClient) {
         registerToken(tokenId, RegisterTokenRequest(service = service, token = token))
 
     suspend fun registerToken(tokenId: String, request: RegisterTokenRequest): Result<Unit> = runCatching {
-        val response = httpClient.put(endpoint("/api/notifications/tokens/$tokenId")) {
+        val response = httpClient.put("/api/notifications/tokens/$tokenId") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             setBody(Json.encodeToString(RegisterTokenRequest.serializer(), request))
         }
@@ -35,7 +35,7 @@ class NotificationClient(private val httpClient: HttpClient) {
     }
 
     suspend fun deleteToken(tokenId: String): Result<Unit> = runCatching {
-        val response = httpClient.delete(endpoint("/api/notifications/tokens/$tokenId"))
+        val response = httpClient.delete("/api/notifications/tokens/$tokenId")
         val body = response.bodyAsText()
         if (!response.status.isSuccess()) {
             error(body.ifBlank { "Failed to delete push token" })
@@ -43,6 +43,4 @@ class NotificationClient(private val httpClient: HttpClient) {
     }.onFailure { error ->
         Napier.e("Delete token request failed", error)
     }
-
-    private fun endpoint(path: String): String = authBaseUrl().trimEnd('/') + path
 }

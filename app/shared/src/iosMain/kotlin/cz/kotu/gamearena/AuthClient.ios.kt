@@ -6,7 +6,7 @@ import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.plugins.cookies.HttpCookies
 
 // Use localhost for simulator; change to device IP or env var if needed.
-actual fun authBaseUrl(): String = "http://localhost:8080"
+actual fun defaultApiBaseUrl(): String = "http://localhost:8080"
 
 actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(Darwin) {
     install(HttpCookies)

@@ -18,4 +18,4 @@ actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Uni
     configure()
 }
 
-actual fun authBaseUrl(): String = "http://10.0.2.2:8080"
+actual fun defaultApiBaseUrl(): String = "http://10.0.2.2:8080"

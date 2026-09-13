@@ -54,8 +54,8 @@ fun createInMemoryAuthHttpClient(onUnauthorized: () -> Unit = {}): HttpClient = 
             protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
         }
     }
-    commonHttpClientConfig(onUnauthorized)
+    commonHttpClientConfig("", onUnauthorized)
 }
 
-actual fun authBaseUrl(): String = System.getenv("GAMEARENA_API_URL") ?: "http://localhost:8080"
+actual fun defaultApiBaseUrl(): String = System.getenv("GAMEARENA_API_URL") ?: "http://localhost:8080"
 

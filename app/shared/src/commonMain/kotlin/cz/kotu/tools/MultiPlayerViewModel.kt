@@ -8,8 +8,8 @@ import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
+import cz.kotu.gamearena.ApiBaseUrl
 import cz.kotu.gamearena.AuthClient
-import cz.kotu.gamearena.authBaseUrl
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +30,7 @@ data class MultiPlayerUser(
 class MultiPlayerViewModel(
     @Assisted private val remoteGameId: String,
     @Assisted private val debugHttpClientFactory: (String) -> HttpClient,
+    private val apiBaseUrl: ApiBaseUrl,
 ) : ViewModel() {
     val configuredPlayers = listOf(
         // TODO fill credentials for test users
@@ -75,7 +76,7 @@ class MultiPlayerViewModel(
     fun gameFacadeForPlayer(username: String): ContactsPlayerFacade = if (remoteGameId.isNotBlank()) {
         NetworkContactsGameFacade(
             httpClient = getOrCreateClient(username),
-            endpoint = authBaseUrl().trimEnd('/') + "/api",
+            endpoint = apiBaseUrl.endpoint("/api"),
             gameId = remoteGameId,
             scope = networkScope,
         )

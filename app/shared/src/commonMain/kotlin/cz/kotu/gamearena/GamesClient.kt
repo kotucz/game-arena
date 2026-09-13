@@ -26,7 +26,7 @@ import me.tatarka.inject.annotations.Inject
 @Inject
 class GamesClient(private val httpClient: HttpClient) {
     suspend fun runningGames(): Result<List<RunningGame>> = runCatching {
-        val response = httpClient.get(endpoint("/api/games"))
+        val response = httpClient.get("/api/games")
         val body = response.bodyAsText()
         if (!response.status.isSuccess()) {
             error(body.ifBlank { "Could not load running games" })
@@ -46,7 +46,7 @@ class GamesClient(private val httpClient: HttpClient) {
     fun observeGames(): Flow<List<RunningGame>> = flow {
         while (currentCoroutineContext().isActive) {
             try {
-                httpClient.sse(endpoint("/api/games/events")) {
+                httpClient.sse("/api/games/events") {
                     incoming.collect { event ->
                         event.data?.let {
                             emit(Json.decodeFromString(ListSerializer(RunningGame.serializer()), it))
@@ -64,7 +64,7 @@ class GamesClient(private val httpClient: HttpClient) {
     }
 
     suspend fun createGame(type: String, players: List<String>, config: String): Result<RunningGame> = runCatching {
-        val response = httpClient.post(endpoint("/api/games")) {
+        val response = httpClient.post("/api/games") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             setBody(Json.encodeToString(CreateGameRequest.serializer(), CreateGameRequest(type, players, config)))
         }
@@ -74,6 +74,4 @@ class GamesClient(private val httpClient: HttpClient) {
         }
         Json.decodeFromString(body)
     }
-
-    private fun endpoint(path: String): String = authBaseUrl().trimEnd('/') + path
 }

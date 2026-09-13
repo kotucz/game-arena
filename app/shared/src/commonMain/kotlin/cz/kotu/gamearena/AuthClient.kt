@@ -10,8 +10,6 @@ import io.ktor.http.Parameters
 import io.ktor.http.isSuccess
 import me.tatarka.inject.annotations.Inject
 
-expect fun authBaseUrl(): String
-
 @AppScope
 @Inject
 class AuthClient(private val httpClient: HttpClient) {
@@ -33,27 +31,25 @@ class AuthClient(private val httpClient: HttpClient) {
     )
 
     suspend fun logout(): Result<String> = runCatching {
-        val response = httpClient.post(endpoint("/api/logout"))
+        val response = httpClient.post("/api/logout")
         val message = response.bodyAsText()
         if (!response.status.isSuccess()) error(message.ifBlank { "Logout failed" })
         message
     }
 
     suspend fun currentUser(): Result<String> = runCatching {
-        val response = httpClient.get(endpoint("/api/me"))
+        val response = httpClient.get("/api/me")
         val message = response.bodyAsText()
         if (!response.status.isSuccess()) error(message.ifBlank { "Not authenticated" })
         message
     }
 
     private suspend fun submit(path: String, parameters: Parameters): Result<String> = runCatching {
-        val response = httpClient.submitForm(endpoint(path), parameters)
+        val response = httpClient.submitForm(path, parameters)
         val message = response.bodyAsText()
         if (!response.status.isSuccess()) error(message.ifBlank { "Request failed" })
         message
     }.onFailure { error ->
         Napier.e("Authentication request failed", error)
     }
-
-    private fun endpoint(path: String): String = authBaseUrl().trimEnd('/') + path
 }

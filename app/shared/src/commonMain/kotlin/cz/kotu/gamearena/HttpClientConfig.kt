@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
+import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
@@ -14,9 +15,16 @@ import io.ktor.http.HttpStatusCode
  * Common Ktor plugin configuration shared across all platforms.
  * Each platform actual calls this inside its engine-specific HttpClient block.
  *
+ * @param baseUrl optional base URL; if blank, requests remain origin-relative (useful for web).
  * @param onUnauthorized called whenever any response returns HTTP 401.
  */
-fun HttpClientConfig<*>.commonHttpClientConfig(onUnauthorized: () -> Unit) {
+fun HttpClientConfig<*>.commonHttpClientConfig(baseUrl: String = "", onUnauthorized: () -> Unit) {
+    if (baseUrl.isNotBlank()) {
+        install(DefaultRequest) {
+            url(baseUrl)
+        }
+    }
+
     install(SSE)
     install(Logging) {
         level = LogLevel.INFO
@@ -38,7 +46,7 @@ fun HttpClientConfig<*>.commonHttpClientConfig(onUnauthorized: () -> Unit) {
 /** Platform-specific factory; each actual supplies the engine and cookie storage. */
 expect fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient
 
-fun createAuthHttpClient(onUnauthorized: () -> Unit): HttpClient =
+fun createAuthHttpClient(baseUrl: String = "", onUnauthorized: () -> Unit): HttpClient =
     createPlatformAuthHttpClient {
-        commonHttpClientConfig(onUnauthorized)
+        commonHttpClientConfig(baseUrl, onUnauthorized)
     }
