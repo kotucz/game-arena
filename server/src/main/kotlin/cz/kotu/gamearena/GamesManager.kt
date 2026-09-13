@@ -7,6 +7,7 @@ import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,9 +126,7 @@ class GamesManager(
                         }
                     }
                 } catch (e: Exception) {
-                    // TODO log properly
-                    println("Failed to load game: $record")
-                    e.printStackTrace()
+                    Napier.e("Failed to load game: $record", e)
                 }
             }
             if (games.isNotEmpty()) {

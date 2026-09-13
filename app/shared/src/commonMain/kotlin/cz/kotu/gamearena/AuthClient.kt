@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
@@ -15,18 +16,20 @@ expect fun authBaseUrl(): String
 @Inject
 class AuthClient(private val httpClient: HttpClient) {
     suspend fun register(username: String, email: String, password: String): Result<String> = submit(
-        "/api/register", Parameters.build {
+        "/api/register",
+        Parameters.build {
             append("username", username)
             append("email", email)
             append("password", password)
-        }
+        },
     )
 
     suspend fun login(username: String, password: String): Result<String> = submit(
-        "/api/login", Parameters.build {
+        "/api/login",
+        Parameters.build {
             append("username", username)
             append("password", password)
-        }
+        },
     )
 
     suspend fun logout(): Result<String> = runCatching {
@@ -49,7 +52,7 @@ class AuthClient(private val httpClient: HttpClient) {
         if (!response.status.isSuccess()) error(message.ifBlank { "Request failed" })
         message
     }.onFailure { error ->
-        println("Authentication request failed: ${error.stackTraceToString()}")
+        Napier.e("Authentication request failed", error)
     }
 
     private fun endpoint(path: String): String = authBaseUrl().trimEnd('/') + path

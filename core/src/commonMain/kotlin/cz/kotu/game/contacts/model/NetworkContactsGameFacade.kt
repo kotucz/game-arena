@@ -1,5 +1,6 @@
 package cz.kotu.game.contacts.model
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.sse.SSEClientException
 import io.ktor.client.plugins.sse.sse
@@ -148,6 +149,7 @@ class NetworkContactsGameFacade(
                     logLocal("Game events connected")
                     incoming.collect { event ->
                         event.data?.let { data ->
+                            Napier.d("Game state: $data")
                             emit(json.decodeFromString<PlayerViewState>(data))
                         }
                     }
