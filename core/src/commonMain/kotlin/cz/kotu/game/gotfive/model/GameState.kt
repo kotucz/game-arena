@@ -1,5 +1,6 @@
 package cz.kotu.game.gotfive.model
 
+@ConsistentCopyVisibility
 data class GameState private constructor(
     val phase: Phase,
     val shuffledPool: List<Tile>,
@@ -69,6 +70,8 @@ data class GameState private constructor(
     fun setNote(tile: Tile, selected: Boolean): GameState = copy(
         notes = if (selected) notes + tile else notes - tile,
     )
+
+    fun withoutNotes(): GameState = copy(notes = emptySet())
 
     companion object {
         fun create(): GameState {

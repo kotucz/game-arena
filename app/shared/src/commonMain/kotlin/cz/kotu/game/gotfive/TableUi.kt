@@ -75,7 +75,7 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
         else -> MaterialTheme.colorScheme.onErrorContainer
     }
     // Notes change on every drag event and must not restart the tile transition.
-    val tileState = game.copy(notes = emptySet())
+    val tileState = game.withoutNotes()
 
     SharedTransitionLayout {
         val sharedScope = this
