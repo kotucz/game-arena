@@ -30,8 +30,41 @@ Contacts is the first client/server game.
   running-games endpoint. It lives in
   `core/src/commonMain/kotlin/cz/kotu/gamearena/model/GamesNetworkProtocol.kt`.
 - `RunningGame` contains `id`, `type`, `players`, and ISO-8601 `createdAt`.
-- Network response DTOs that are consumed by both clients and server belong in
-  `core`; do not duplicate them as server-local contracts.
+- `RegisterTokenRequest` is the shared `@Serializable` DTO for push token
+  registration. It lives in the same `GamesNetworkProtocol.kt` file.
+- Network request/response DTOs that are consumed by both clients and server
+  belong in `core`; do not define them as server-local contracts.
+- **Do not mark shared DTOs `private`**. The kotlinx.serialization compiler
+  plugin cannot expose a runtime-accessible serializer for `private` top-level
+  classes, causing a `SerializationException` at runtime. Use `internal` or
+  `public`. The serialization plugin must be applied to the module where the
+  class is defined (it is applied to `core`; the `server` module picks it up
+  transitively via `api(project(":core"))`).
+
+## Database (Room)
+
+- All Room migrations live in a single `ALL_MIGRATIONS` top-level `val` in
+  `AppDatabase.kt`. Both `createDatabase()` and `TestFakes.createTempDatabase()`
+  reference it via `addMigrations(*ALL_MIGRATIONS)`. Never copy migration SQL
+  into test code — keep one source of truth.
+- When adding a new `@Entity`, always: (1) add it to the `entities` list in
+  `@Database`, (2) bump `version`, and (3) append a new `Migration` object to
+  `ALL_MIGRATIONS`.
+
+## Push notification tokens
+
+- The `push_tokens` table is keyed by a **client-generated `tokenId`** (e.g. a
+  stable UUID stored in client preferences). This allows upsert-on-refresh
+  without duplicates and targeted deletion on logout.
+- `tokenId` is the sole primary key — two users cannot share a `tokenId` row.
+  Use `(username, service)` only as an index for efficient lookup, not as a key.
+- Delete is scoped by `AND username = :username` in the DAO, so a user cannot
+  remove another user's token even if they know its `tokenId`.
+- Stale tokens (device uninstalled, etc.) are cleaned up **lazily**: the push-
+  sending logic must delete the token row when the delivery API returns 404/410.
+  No TTL or background job is needed at this stage.
+- Accepted service discriminators: `"fcm"`, `"webpush"`. Add new values to
+  `knownServices` in `NotificationRoutes.kt` without a schema change.
 
 ## Contacts
 
