@@ -19,3 +19,10 @@ data class RunningGame(
     val createdAt: Instant,
     val status: String,
 )
+
+@Serializable
+data class RegisterTokenRequest(
+    /** Stable service discriminator: "fcm" | "webpush" */
+    val service: String,
+    val token: String,
+)

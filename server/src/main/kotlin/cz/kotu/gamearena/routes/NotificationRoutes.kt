@@ -1,8 +1,9 @@
-﻿package cz.kotu.gamearena.routes
+package cz.kotu.gamearena.routes
 
 import cz.kotu.gamearena.AppDatabase
 import cz.kotu.gamearena.PushToken
 import cz.kotu.gamearena.UserPrincipal
+import cz.kotu.gamearena.model.RegisterTokenRequest
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
@@ -12,15 +13,8 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-
-@Serializable
-private data class RegisterTokenRequest(
-    val service: String,
-    val token: String,
-)
 
 private val knownServices = setOf("fcm", "webpush")
 

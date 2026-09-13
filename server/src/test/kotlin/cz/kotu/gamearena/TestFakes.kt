@@ -28,6 +28,16 @@ private fun createTempDatabase(): AppDatabase {
                     }
                 }
             },
+            object : androidx.room.migration.Migration(3, 4) {
+                override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                    connection.prepare(
+                        "CREATE TABLE IF NOT EXISTS push_tokens (tokenId TEXT NOT NULL PRIMARY KEY, username TEXT NOT NULL, service TEXT NOT NULL, token TEXT NOT NULL, updatedAtMillis INTEGER NOT NULL)"
+                    ).use { it.step() }
+                    connection.prepare(
+                        "CREATE INDEX IF NOT EXISTS idx_push_tokens_username_service ON push_tokens (username, service)"
+                    ).use { it.step() }
+                }
+            },
         )
         .build()
 }
