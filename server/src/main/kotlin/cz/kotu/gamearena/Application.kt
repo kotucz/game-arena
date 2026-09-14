@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.gamearena.admin.htmxAdminRoutes
 import cz.kotu.gamearena.plugins.configureSecurity
 import cz.kotu.gamearena.routes.authRoutes
 import cz.kotu.gamearena.routes.gameRoutes
@@ -75,6 +76,7 @@ fun Application.module(serverComponent: ServerBindings) {
         authRoutes(database)
         notificationRoutes(database)
         gameRoutes(gamesManager)
+        htmxAdminRoutes()
         staticRoutes(webRoot)
     }
 

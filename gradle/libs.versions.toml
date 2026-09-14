@@ -18,6 +18,7 @@ kotlin-wrappers = "2026.7.2"
 kotlinx-coroutines = "1.11.0"
 kotlinx-datetime = "0.8.0"
 kotlinx-serialization = "1.11.0"
+kotlinxHtmlJvm = "0.12.0"
 ktor = "3.5.2"
 logback = "1.5.38"
 material3 = "1.11.0-alpha07"
@@ -55,10 +56,12 @@ kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-s
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-html-jvm = { module = "org.jetbrains.kotlinx:kotlinx-html-jvm", version.ref = "kotlinxHtmlJvm" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+ktor-server-html-builder = { module = "io.ktor:ktor-server-html-builder", version.ref = "ktor" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 napier = { module = "io.github.aakira:napier", version.ref = "napier" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
