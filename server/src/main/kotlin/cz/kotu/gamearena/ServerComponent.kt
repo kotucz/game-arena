@@ -11,6 +11,7 @@ abstract class ServerComponent(
 
     abstract override val database: AppDatabase
     abstract override val gamesManager: GamesManager
+    abstract override val notificationService: PushNotificationService
 
     @Provides
     @ServerScope

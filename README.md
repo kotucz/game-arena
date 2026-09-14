@@ -74,6 +74,12 @@ Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
     - JS target: `./gradlew :app:shared:jsTest`
 - iOS tests: `./gradlew :app:shared:iosSimulatorArm64Test`
 
+### Firebase push notifications
+
+The server can issue Firebase Cloud Messaging pushes from the JVM process using the Firebase Admin SDK. 
+Provide a service-account JSON file `application.conf` in `firebase.googleCredentialsPath` before starting the server.
+Stored FCM tokens are read from the `push_tokens` table; if delivery responds with stale-registration errors such as `404` or `410`, the server removes that token automatically.
+
 ### Server authentication and sessions
 
 The Ktor server uses a cookie-backed session with Ktor authentication. A successful login or registration creates a session cookie named `gamearena_session`, and the server validates the session token against the SQLite-backed `sessions` table.

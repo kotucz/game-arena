@@ -10,9 +10,15 @@ annotation class ServerScope
 interface ServerBindings {
     val database: AppDatabase
     val gamesManager: GamesManager
+    val notificationService: PushNotificationService
     val serverConfig: ServerConfig
 
     @Provides
     @ServerScope
     fun provideGamesManager(database: AppDatabase): GamesManager = GamesManager(gameDao = database.gameDao())
+
+    @Provides
+    @ServerScope
+    fun provideNotificationService(database: AppDatabase, serverConfig: ServerConfig): PushNotificationService =
+        FirebaseAdminPushNotificationService(database, serverConfig)
 }

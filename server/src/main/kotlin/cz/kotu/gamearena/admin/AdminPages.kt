@@ -1,5 +1,6 @@
 package cz.kotu.gamearena.admin
 
+import cz.kotu.gamearena.PushNotificationService
 import cz.kotu.gamearena.ServerConfig
 import io.github.aakira.napier.Napier
 import io.ktor.http.HttpStatusCode
@@ -28,6 +29,7 @@ import kotlinx.html.p
 import kotlinx.html.script
 import kotlinx.html.textInput
 import kotlinx.html.title
+import java.time.Instant
 
 fun AuthenticationConfig.adminBasicAuthentication(serverConfig: ServerConfig) {
     basic("admin-auth") {
@@ -42,7 +44,7 @@ fun AuthenticationConfig.adminBasicAuthentication(serverConfig: ServerConfig) {
     }
 }
 
-fun Route.adminRoutes() {
+fun Route.adminRoutes(pushNotificationService: PushNotificationService) {
     authenticate("admin-auth") {
         // Full page shell
         get("/admin") {
@@ -107,11 +109,19 @@ fun Route.adminRoutes() {
             Napier.d { "Send test push to $username" }
             // TODO: Trigger your actual push notification service here using the username
 
+            val recipients = listOf(username)
+
+            val sent = pushNotificationService.sendToUsers(
+                usernames = recipients,
+                title = "Game Arena",
+                body = "Test to $username at ${Instant.now()}",
+            )
+
             // Return a small HTML fragment acknowledging the action
             call.respondHtml(HttpStatusCode.OK) {
                 body {
                     div(classes = "p-3 bg-green-50 text-green-800 rounded-lg border border-green-200 text-sm") {
-                        + "Push notification successfully dispatched to user: $username"
+                        +"Push notification $sent successfully dispatched to user: $username"
                     }
                 }
             }

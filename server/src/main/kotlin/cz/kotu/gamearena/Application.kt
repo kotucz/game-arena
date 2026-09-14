@@ -63,6 +63,7 @@ fun Application.module(serverComponent: ServerBindings) {
     val database = serverComponent.database
     val gamesManager = serverComponent.gamesManager
     val serverConfig = serverComponent.serverConfig
+    val pushNotificationService = serverComponent.notificationService
     runBlocking { gamesManager.restorePersistedGames() }
 
     configureSecurity(database, serverConfig)
@@ -76,7 +77,7 @@ fun Application.module(serverComponent: ServerBindings) {
         authRoutes(database)
         notificationRoutes(database)
         gameRoutes(gamesManager)
-        adminRoutes()
+        adminRoutes(pushNotificationService)
         staticRoutes(webRoot)
     }
 
