@@ -1,9 +1,11 @@
 package cz.kotu.gamearena.plugins
 
 import cz.kotu.gamearena.AppDatabase
+import cz.kotu.gamearena.ServerConfig
 import cz.kotu.gamearena.Session
 import cz.kotu.gamearena.SessionTokens
 import cz.kotu.gamearena.UserPrincipal
+import cz.kotu.gamearena.admin.adminBasicAuthentication
 import io.ktor.http.Cookie
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -17,7 +19,7 @@ import io.ktor.server.sessions.sessions
 import java.time.Instant
 import kotlin.time.Duration.Companion.seconds
 
-fun Application.configureSecurity(database: AppDatabase) {
+fun Application.configureSecurity(database: AppDatabase, serverConfig: ServerConfig) {
     install(Sessions) {
         cookie<String>(SessionTokens.cookieName) {
             cookie.path = "/"
@@ -28,6 +30,8 @@ fun Application.configureSecurity(database: AppDatabase) {
 
     // Authentication provider that validates session tokens stored in the database.
     install(Authentication) {
+        adminBasicAuthentication(serverConfig)
+
         session<String>("auth-session") {
             validate { token ->
                 val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token))

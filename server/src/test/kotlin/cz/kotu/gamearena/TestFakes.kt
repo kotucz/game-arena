@@ -24,5 +24,7 @@ class TestFakes(
         port = 8080,
         webRoot = File("."),
         databaseFile = File("data/test-gamearena.db"),
+        adminUsername = "admin",
+        adminPassword = "test-secret",
     ),
 )

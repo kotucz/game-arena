@@ -12,6 +12,9 @@ with shared UI code.
 GotFive is a client-only game now.
 Contacts is the first client/server game.
 
+- Manage all new dependencies through `gradle/libs.versions.toml` and reference
+  them via `libs.*` in Gradle files.
+
 ## Games manager
 
 - `GamesManager` owns the in-memory registry of `ManagedGame` instances keyed by
@@ -41,8 +44,14 @@ Contacts is the first client/server game.
   class is defined (it is applied to `core`; the `server` module picks it up
   transitively via `api(project(":core"))`).
 
-## Database (Room)
+## Server configuration
 
+- Server runtime settings belong in `server/src/main/resources/application.conf`
+  using HOCON, accessed via a typed `ServerConfig` model.
+- Expose config values through `ServerBindings`/`ServerComponent` so app setup is
+  dependency-injected rather than reading `System.getenv()`.
+
+## Database (Room)
 - All Room migrations live in a single `ALL_MIGRATIONS` top-level `val` in
   `AppDatabase.kt`. Both `createDatabase()` and `TestFakes.createTempDatabase()`
   reference it via `addMigrations(*ALL_MIGRATIONS)`. Never copy migration SQL

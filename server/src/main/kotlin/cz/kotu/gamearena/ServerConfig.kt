@@ -8,6 +8,8 @@ data class ServerConfig(
     val port: Int,
     val webRoot: File,
     val databaseFile: File,
+    val adminUsername: String,
+    val adminPassword: String,
 ) {
     companion object {
         fun load(): ServerConfig {
@@ -23,10 +25,13 @@ data class ServerConfig(
                 ?: baseConfig
 
             val config = resolvedConfig.getConfig("gamearena")
+            val adminConfig = config.getConfig("admin")
             return ServerConfig(
                 port = config.getInt("port"),
                 webRoot = File(config.getString("web-root")),
                 databaseFile = File(config.getString("database-path")),
+                adminUsername = adminConfig.getString("username"),
+                adminPassword = adminConfig.getString("password"),
             )
         }
     }
