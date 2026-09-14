@@ -1,5 +1,6 @@
 package cz.kotu.gamearena.routes
 
+import io.github.aakira.napier.Napier
 import io.ktor.http.CacheControl
 import io.ktor.http.HttpHeaders
 import io.ktor.server.application.ApplicationCall
@@ -10,6 +11,8 @@ import io.ktor.server.routing.get
 import java.io.File
 
 fun Route.staticRoutes(webRoot: File) {
+    Napier.i("staticRoutes webRoot: $webRoot")
+
     suspend fun respondAppShell(call: ApplicationCall) {
         val file = File(webRoot, "index.html")
         call.response.headers.append(

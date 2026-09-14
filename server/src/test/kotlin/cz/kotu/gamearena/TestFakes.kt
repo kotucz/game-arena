@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import me.tatarka.inject.annotations.Provides
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import java.io.File
 import java.nio.file.Files
 
 private fun createTempDatabase(): AppDatabase {
@@ -18,4 +19,10 @@ private fun createTempDatabase(): AppDatabase {
 class TestFakes(
     @get:Provides
     val database: AppDatabase = createTempDatabase(),
+    @get:Provides
+    val serverConfig: ServerConfig = ServerConfig(
+        port = 8080,
+        webRoot = File("."),
+        databaseFile = File("data/test-gamearena.db"),
+    ),
 )

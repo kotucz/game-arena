@@ -21,17 +21,16 @@ import io.ktor.server.sse.SSE
 import io.netty.channel.ChannelOption
 import kotlinx.coroutines.runBlocking
 import org.slf4j.event.Level
-import java.io.File
 
 fun main() {
-    val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
+    val serverConfig = ServerConfig.load()
     embeddedServer(
         factory = Netty,
         configure = {
             // Set host and port via connector
             connector {
                 host = "0.0.0.0"
-                this.port = port
+                this.port = serverConfig.port
             }
 
             // Enable HTTP/2 over cleartext (h2c) for local proxy connections
@@ -44,11 +43,13 @@ fun main() {
                 childOption(ChannelOption.TCP_NODELAY, true)
             }
         },
-        module = Application::module
+        module = {
+            module(ServerComponent::class.create(serverConfig))
+        }
     ).start(wait = true)
 }
 
-fun Application.module(serverComponent: ServerBindings = ServerComponent::class.create()) {
+fun Application.module(serverComponent: ServerBindings) {
     Napier.base(DebugAntilog())
     Napier.i { "Starting GameArena server" }
 
@@ -60,14 +61,12 @@ fun Application.module(serverComponent: ServerBindings = ServerComponent::class.
 
     val database = serverComponent.database
     val gamesManager = serverComponent.gamesManager
+    val serverConfig = serverComponent.serverConfig
     runBlocking { gamesManager.restorePersistedGames() }
 
     configureSecurity(database)
 
-    val webRoot = File(
-        // relative url with ./gradlew :server:run
-        System.getenv("WEB_ROOT") ?: "../app/webApp/build/dist/wasmJs/productionExecutable",
-    )
+    val webRoot = serverConfig.webRoot
 
     routing {
         get("/health") {

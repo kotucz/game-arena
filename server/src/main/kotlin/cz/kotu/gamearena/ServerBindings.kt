@@ -5,6 +5,7 @@ import me.tatarka.inject.annotations.Provides
 interface ServerBindings {
     val database: AppDatabase
     val gamesManager: GamesManager
+    val serverConfig: ServerConfig
 
     @Provides
     fun provideGamesManager(database: AppDatabase): GamesManager = GamesManager(gameDao = database.gameDao())

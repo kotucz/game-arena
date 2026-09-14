@@ -12,6 +12,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import io.github.aakira.napier.Napier
 import java.io.File
 
 @Entity(tableName = "games")
@@ -102,9 +103,9 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     },
 )
 
-fun createDatabase(): AppDatabase {
-    val databaseFile = File(System.getenv("DATABASE_PATH") ?: "data/gamearena.db")
+fun createDatabase(databaseFile: File): AppDatabase {
     databaseFile.parentFile?.mkdirs()
+    Napier.i("createDatabase $databaseFile")
     return Room.databaseBuilder<AppDatabase>(databaseFile.path)
         .setDriver(BundledSQLiteDriver())
         .addMigrations(*ALL_MIGRATIONS)
