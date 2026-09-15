@@ -2,11 +2,14 @@ package cz.kotu.gamearena
 
 import io.github.aakira.napier.Napier
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
-import java.net.HttpURLConnection
 
 class WebPushNotificationService(
     private val database: AppDatabase,
@@ -52,20 +55,27 @@ class WebPushNotificationService(
 
         for (token in tokens) {
             try {
-                val sub = Json.parseToJsonElement(token.token).jsonObject
-                val endpoint = sub["endpoint"]!!.jsonPrimitive.content
-                val keys = sub["keys"]!!.jsonObject
-                val p256dh = keys["p256dh"]!!.jsonPrimitive.content
-                val auth = keys["auth"]!!.jsonPrimitive.content
+                val element = Json.parseToJsonElement(token.token)
+                val sub = element.jsonObject
+                val endpoint = sub["endpoint"]?.jsonPrimitive?.contentOrNull
+                val keys = sub["keys"]?.jsonObject
+                val p256dh = keys?.get("p256dh")?.jsonPrimitive?.contentOrNull
+                val auth = keys?.get("auth")?.jsonPrimitive?.contentOrNull
+
+                if (endpoint.isNullOrBlank() || p256dh.isNullOrBlank() || auth.isNullOrBlank()) {
+                    Napier.w("WebPushNotificationService: invalid subscription for ${token.tokenId}")
+                    database.pushTokenDao().delete(token.tokenId, token.username)
+                    continue
+                }
 
                 val notification = Notification(endpoint, p256dh, auth, payload.toByteArray(Charsets.UTF_8))
                 pushService.send(notification)
                 sent += 1
             } catch (e: Exception) {
                 Napier.w(e) { "webpush send failed for ${token.tokenId}" }
-                // Best-effort stale detection: if cause is HTTP 410/404, delete token
-                val code = (e.cause as? java.net.HttpURLConnection)?.responseCode ?: (e as? java.io.IOException)?.let { null }
-                if (e.message?.contains("410") == true || e.message?.contains("404") == true || code == HttpURLConnection.HTTP_GONE || code == HttpURLConnection.HTTP_NOT_FOUND) {
+                // Best-effort stale detection: look for 404/410 in message or cause
+                val message = (e.message ?: "") + (e.cause?.message ?: "")
+                if (message.contains("410") || message.contains("404") || message.contains("gone", ignoreCase = true)) {
                     try {
                         database.pushTokenDao().delete(token.tokenId, token.username)
                     } catch (dbEx: Exception) {
@@ -79,9 +89,16 @@ class WebPushNotificationService(
     }
 
     private fun buildPayload(title: String, body: String, data: Map<String, String>): String {
-        // Minimal payload: include title/body and data as JSON string
-        val map = mutableMapOf<String, Any>("title" to title, "body" to body)
-        if (data.isNotEmpty()) map["data"] = data
-        return Json.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), Json.parseToJsonElement(Json.encodeToString(map)).jsonObject)
+        val obj = buildJsonObject {
+            put("title", title)
+            put("body", body)
+            if (data.isNotEmpty()) {
+                val dataObj = buildJsonObject {
+                    for ((k, v) in data) put(k, v)
+                }
+                put("data", dataObj)
+            }
+        }
+        return Json.encodeToString(JsonObject.serializer(), obj)
     }
 }
