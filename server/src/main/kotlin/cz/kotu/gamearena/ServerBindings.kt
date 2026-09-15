@@ -19,6 +19,9 @@ interface ServerBindings {
 
     @Provides
     @ServerScope
-    fun provideNotificationService(database: AppDatabase, serverConfig: ServerConfig): PushNotificationService =
-        FirebaseAdminPushNotificationService(database, serverConfig)
+    fun provideNotificationService(database: AppDatabase, serverConfig: ServerConfig): PushNotificationService {
+        val firebase = FirebaseAdminPushNotificationService(database, serverConfig)
+        val webPush = WebPushNotificationService(database, serverConfig)
+        return CompositePushNotificationService(listOf(firebase, webPush))
+    }
 }

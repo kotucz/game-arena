@@ -27,6 +27,7 @@ dependencies {
     implementation(libs.kotlin.inject.runtime.kmp)
     implementation(libs.kotlinx.html.jvm)
     implementation(libs.napier)
+    implementation(libs.web.push)
     ksp(libs.room.compiler)
     ksp(libs.kotlin.inject.compiler.ksp)
     kspTest(libs.kotlin.inject.compiler.ksp)
