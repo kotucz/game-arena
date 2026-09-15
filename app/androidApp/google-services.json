@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "541489886592",
+    "project_id": "game-arena-c1035",
+    "storage_bucket": "game-arena-c1035.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:541489886592:android:065df369be9eaf9b38bd65",
+        "android_client_info": {
+          "package_name": "cz.kotu.gamearena"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmUpymqf9ziLADa9tV5pg3s-9mzzAAFuc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

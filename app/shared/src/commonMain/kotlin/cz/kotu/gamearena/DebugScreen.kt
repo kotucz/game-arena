@@ -11,12 +11,17 @@ import androidx.compose.ui.unit.dp
 import cz.kotu.common.Notifications
 
 @Composable
-fun DebugScreen(onBack: () -> Unit) {
+fun DebugScreen(
+    notifications: Notifications,
+    onBack: () -> Unit,
+) {
     Column(modifier = Modifier.padding(16.dp)) {
         TextButton(onClick = onBack) { Text("Back") }
         Text("Debug Screen", modifier = Modifier.padding(top = 16.dp))
-        Button(onClick = {
-            Notifications().showNotification()
-        }) { Text("Notify") }
+        Button(
+            onClick = {
+                notifications.showNotification()
+            },
+        ) { Text("Notify") }
     }
 }

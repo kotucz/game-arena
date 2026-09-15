@@ -44,11 +44,13 @@ internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
 @Composable
 @Preview
-fun App() {
+fun App(
+    appComponent: AppComponent = remember { AppComponent::class.create() },
+) {
     MaterialTheme {
-        val appComponent = remember { AppComponent::class.create() }
         val navController = rememberNavController()
         val authManager = appComponent.authManager
+        val notifications = appComponent.notifications
         var showAuthModal by remember { mutableStateOf(false) }
 
         LaunchedEffect(authManager) {
@@ -84,15 +86,18 @@ fun App() {
 
                 composable(DEBUG_ROUTE) {
                     DebugScreen(
-                        onBack = { navController.popBackStack() }
+                        notifications = notifications,
+                        onBack = { navController.popBackStack() },
                     )
                 }
 
                 composable(
                     route = CONTACTS_GAME_ROUTE,
-                    arguments = listOf(navArgument(CONTACTS_GAME_ID_ARGUMENT) {
-                        type = NavType.StringType
-                    }),
+                    arguments = listOf(
+                        navArgument(CONTACTS_GAME_ID_ARGUMENT) {
+                            type = NavType.StringType
+                        },
+                    ),
                 ) { entry ->
                     val gameId = entry.arguments?.read {
                         getString(CONTACTS_GAME_ID_ARGUMENT)

@@ -14,12 +14,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // Component retrieved from Application context
+        val appComponent: AppComponent = (applicationContext as GameArenaApplication).appComponent
+
         setContent {
-            App()
+            App(appComponent)
         }
 
         permissionUtil().value.askNotificationPermission {
             Toast.makeText(this, "Notifications: $it", Toast.LENGTH_SHORT).show()
+            appComponent.notifications.onNotificationPermission(it)
         }
     }
 }

@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.common.Notifications
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.tools.MultiPlayerViewModel
@@ -23,6 +24,7 @@ abstract class AppComponent {
     abstract val authManager: AuthManager
     abstract val gamesClient: GamesClient
     abstract val notificationClient: NotificationClient
+    abstract val notifications: Notifications
     abstract val gameViewModelFactory: () -> GameViewModel
     abstract val multiPlayerViewModelFactory: (String, (String) -> HttpClient) -> MultiPlayerViewModel
 
