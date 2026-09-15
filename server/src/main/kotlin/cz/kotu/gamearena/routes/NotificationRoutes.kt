@@ -4,6 +4,7 @@ import cz.kotu.gamearena.AppDatabase
 import cz.kotu.gamearena.PushToken
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.model.RegisterTokenRequest
+import io.github.aakira.napier.Napier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
@@ -30,7 +31,8 @@ fun Route.notificationRoutes(database: AppDatabase) {
                 }
                 val body = try {
                     Json.decodeFromString<RegisterTokenRequest>(call.receiveText())
-                } catch (_: SerializationException) {
+                } catch (e: SerializationException) {
+                    Napier.w(e) { "RegisterTokenRequest" }
                     call.respond(HttpStatusCode.BadRequest, "Invalid request body")
                     return@put
                 }

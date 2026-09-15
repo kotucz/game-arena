@@ -20,8 +20,6 @@ class TestFakes(
     @get:Provides
     val database: AppDatabase = createTempDatabase(),
     @get:Provides
-    val notificationService: PushNotificationService = NoopPushNotificationService(),
-    @get:Provides
     val serverConfig: ServerConfig = ServerConfig(
         port = 8080,
         webRoot = File("."),
