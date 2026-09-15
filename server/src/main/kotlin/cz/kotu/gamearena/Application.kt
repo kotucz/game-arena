@@ -74,6 +74,13 @@ fun Application.module(serverComponent: ServerBindings) {
         get("/health") {
             call.respondText("OK")
         }
+
+        // Expose VAPID public key (empty if not configured) so clients can subscribe for web push
+        get("/api/notifications/vapidPublicKey") {
+            val key = serverConfig.vapidPublicKey ?: ""
+            call.respondText(key)
+        }
+
         authRoutes(database)
         notificationRoutes(database)
         gameRoutes(gamesManager)

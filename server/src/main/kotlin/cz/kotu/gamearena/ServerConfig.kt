@@ -11,6 +11,9 @@ data class ServerConfig(
     val firebaseConfigFile: File,
     val adminUsername: String,
     val adminPassword: String,
+    // Optional VAPID keys (base64 url-safe public key and private key) for web-push
+    val vapidPublicKey: String? = null,
+    val vapidPrivateKey: String? = null,
 ) {
     companion object {
         fun load(): ServerConfig {
@@ -28,6 +31,11 @@ data class ServerConfig(
             val config = resolvedConfig.getConfig("gamearena")
             val adminConfig = config.getConfig("admin")
             val firebaseConfig = config.getConfig("firebase")
+
+            val webpushConfig = if (config.hasPath("webpush")) config.getConfig("webpush") else null
+            val vapidPublic = webpushConfig?.getString("publicKey")
+            val vapidPrivate = webpushConfig?.getString("privateKey")
+
             return ServerConfig(
                 port = config.getInt("port"),
                 webRoot = File(config.getString("web-root")),
@@ -35,6 +43,8 @@ data class ServerConfig(
                 adminUsername = adminConfig.getString("username"),
                 adminPassword = adminConfig.getString("password"),
                 firebaseConfigFile = File(firebaseConfig.getString("googleCredentialsPath")),
+                vapidPublicKey = vapidPublic,
+                vapidPrivateKey = vapidPrivate,
             )
         }
     }
