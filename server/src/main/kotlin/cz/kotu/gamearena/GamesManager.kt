@@ -8,13 +8,17 @@ import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -27,7 +31,9 @@ class GamesManager(
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Instant = Clock.System::now,
     private val gameDao: GameDao? = null,
+    private val notificationService: PushNotificationService = NoopPushNotificationService(),
 ) {
+    private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val games = ConcurrentHashMap<String, ManagedGame>()
     private val gamesUpdated = MutableStateFlow(0)
     private val json = Json { ignoreUnknownKeys = true }
@@ -61,6 +67,7 @@ class GamesManager(
         games[game.metadata.id] = game
         gamesUpdated.value++
         persist(game)
+        observeGameNotifications(game)
         game
     }
 
@@ -70,6 +77,7 @@ class GamesManager(
         }
         gamesUpdated.value++
         persist(game)
+        if (game is ContactsGame) observeGameNotifications(game)
         game
     }
 
@@ -123,6 +131,7 @@ class GamesManager(
                                 ),
                             )
                             games[metadata.id] = game
+                            observeGameNotifications(game)
                         }
                     }
                 } catch (e: Exception) {
@@ -133,6 +142,61 @@ class GamesManager(
                 gamesUpdated.value++
             }
         }
+    }
+
+    private fun observeGameNotifications(game: ContactsGame) {
+        notificationScope.launch {
+            var lastState: ContactsGameState.GamePhase? = null
+            game.contactsGameFacade.gameState.collect { state ->
+                val phase = state.gamePhase
+                if (lastState == null) {
+                    lastState = phase
+                    return@collect
+                }
+                if (phase == lastState) return@collect
+
+                val recipients = notificationRecipients(game.metadata, phase)
+                if (recipients.isEmpty()) {
+                    lastState = phase
+                    return@collect
+                }
+
+                val (title, body) = notificationText(game.metadata, phase)
+                runCatching {
+                    notificationService.sendToUsers(
+                        usernames = recipients,
+                        title = title,
+                        body = body,
+                        data = mapOf(
+                            "gameId" to game.metadata.id,
+                            "gameType" to game.metadata.type,
+                            "gamePhase" to phase.javaClass.simpleName,
+                        ),
+                    )
+                }.onFailure { error ->
+                    Napier.e(error) { "Failed to send game notification for ${game.metadata.id}" }
+                }
+                lastState = phase
+            }
+        }
+    }
+
+    private fun notificationRecipients(
+        metadata: GameMetadata,
+        phase: ContactsGameState.GamePhase,
+    ): List<String> = when (phase) {
+        is ContactsGameState.GamePhase.GameOver -> metadata.players
+        is ContactsGameState.GamePhase.ResolveMultiConnect -> listOf(phase.resolveMultiConnect.targetPlayer.username)
+        is ContactsGameState.GamePhase.StandardTurn -> listOf(phase.activePlayer.username)
+    }
+
+    private fun notificationText(
+        metadata: GameMetadata,
+        phase: ContactsGameState.GamePhase,
+    ): Pair<String, String> = when (phase) {
+        is ContactsGameState.GamePhase.GameOver -> "Game over" to phase.message
+        is ContactsGameState.GamePhase.ResolveMultiConnect -> "Resolve multi-connect" to "${phase.resolveMultiConnect.targetPlayer.username}, resolve the multi-connect in ${metadata.type}"
+        is ContactsGameState.GamePhase.StandardTurn -> "Your turn" to "It is your turn in ${metadata.type} game"
     }
 
     private fun GameMetadata.toRunningGame(status: String = "") = RunningGame(

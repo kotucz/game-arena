@@ -15,7 +15,13 @@ interface ServerBindings {
 
     @Provides
     @ServerScope
-    fun provideGamesManager(database: AppDatabase): GamesManager = GamesManager(gameDao = database.gameDao())
+    fun provideGamesManager(
+        database: AppDatabase,
+        notificationService: PushNotificationService,
+    ): GamesManager = GamesManager(
+        gameDao = database.gameDao(),
+        notificationService = notificationService,
+    )
 
     @Provides
     @ServerScope
