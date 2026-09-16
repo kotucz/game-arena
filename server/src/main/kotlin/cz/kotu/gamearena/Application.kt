@@ -81,7 +81,7 @@ fun Application.module(serverComponent: ServerBindings) {
             call.respondText(key)
         }
 
-        authRoutes(database)
+        authRoutes(database, serverConfig)
         notificationRoutes(database)
         gameRoutes(gamesManager)
         adminRoutes(pushNotificationService)
