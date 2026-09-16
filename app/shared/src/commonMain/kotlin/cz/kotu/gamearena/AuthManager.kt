@@ -127,6 +127,15 @@ class AuthManager(
             _authState.value = AuthState.Authorized(username.trim())
         }
 
+    suspend fun loginWithFirebase(
+        idToken: String,
+        username: String? = null,
+        email: String? = null,
+    ): Result<String> = authClient.loginWithFirebase(idToken, username, email).onSuccess {
+        val resolvedUsername = username?.trim().orEmpty().ifBlank { "google-user" }
+        _authState.value = AuthState.Authorized(resolvedUsername)
+    }
+
     suspend fun logout() {
         authClient.logout()
         _authState.value = AuthState.Unauthorized

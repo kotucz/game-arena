@@ -30,6 +30,19 @@ class AuthClient(private val httpClient: HttpClient) {
         },
     )
 
+    suspend fun loginWithFirebase(
+        idToken: String,
+        username: String? = null,
+        email: String? = null,
+    ): Result<String> = submit(
+        "/api/auth/firebase",
+        Parameters.build {
+            append("idToken", idToken)
+            if (!username.isNullOrBlank()) append("username", username)
+            if (!email.isNullOrBlank()) append("email", email)
+        },
+    )
+
     suspend fun logout(): Result<String> = runCatching {
         val response = httpClient.post("/api/logout")
         val message = response.bodyAsText()

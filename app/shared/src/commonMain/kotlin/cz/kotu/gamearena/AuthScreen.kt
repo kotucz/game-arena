@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.mmk.kmpauth.google.rememberGoogleSignInState
 import kotlinx.coroutines.launch
 
 private enum class AuthMode { Login, Register }
@@ -44,6 +45,29 @@ fun AuthScreen(
     var submitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    val googleSignIn = rememberGoogleSignInState(onResult = { result ->
+        result.fold(
+            onSuccess = { googleUser ->
+                val idToken = googleUser.idToken
+                if (idToken.isBlank()) {
+                    message = "Google auth returned no identity token"
+                    return@fold
+                }
+                scope.launch {
+                    val firebaseResult = authManager.loginWithFirebase(
+                        idToken = idToken,
+                        username = username.ifBlank { googleUser.displayName ?: "google-user" },
+                        email = googleUser.email ?: email.ifBlank { null },
+                    )
+                    firebaseResult.fold(
+                        onSuccess = { onAuthenticated() },
+                        onFailure = { message = it.message ?: "Google sign-in failed" },
+                    )
+                }
+            },
+            onFailure = { message = it.message ?: "Google sign-in failed" },
+        )
+    })
 
     val submit = {
         if (!submitting) {
@@ -74,10 +98,7 @@ fun AuthScreen(
         Button(
             enabled = !submitting,
             modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                // TODO: replace with KMPAuth Google flow once Firebase config is ready.
-                onGoogleSignIn()
-            },
+            onClick = { googleSignIn.launch() },
         ) {
             Text("Continue with Google")
         }

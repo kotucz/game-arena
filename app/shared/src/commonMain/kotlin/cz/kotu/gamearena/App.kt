@@ -17,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.mmk.kmpauth.core.KMPAuth
+import com.mmk.kmpauth.google.google
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,12 +43,20 @@ internal const val DEBUG_ROUTE = "debug"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
 internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
+private const val GOOGLE_WEB_CLIENT_ID = "TODO_SET_GOOGLE_WEB_CLIENT_ID"
 
 @Composable
 @Preview
 fun App(
     appComponent: AppComponent = remember { AppComponent::class.create() },
 ) {
+    LaunchedEffect(Unit) {
+        if (GOOGLE_WEB_CLIENT_ID.startsWith("TODO_")) return@LaunchedEffect
+        KMPAuth.initialize {
+            google(serverId = GOOGLE_WEB_CLIENT_ID)
+        }
+    }
+
     MaterialTheme {
         val navController = rememberNavController()
         val authManager = appComponent.authManager
