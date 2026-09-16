@@ -123,6 +123,9 @@ fun App(
                     AuthScreen(
                         authManager = authManager,
                         onAuthenticated = { showAuthModal = false },
+                        onGoogleSignIn = {
+                            // TODO: integrate KMPAuth Google flow and then submit Firebase UID to the server.
+                        },
                     )
                 }
             }

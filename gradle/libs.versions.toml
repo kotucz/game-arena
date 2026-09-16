@@ -15,6 +15,7 @@ composeMultiplatform = "1.11.1"
 firebaseAdmin = "9.5.0"
 googleServices = "4.4.0"
 junit = "4.13.2"
+kmpAuth = "3.0.6"
 kmpNotifier = "2.0.1"
 kotlin = "2.4.10"
 kotlin-wrappers = "2026.7.2"
@@ -56,6 +57,8 @@ compose-components-resources = { module = "org.jetbrains.compose.components:comp
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebaseAdmin" }
 junit = { module = "junit:junit", version.ref = "junit" }
+kmpauth-firebase = { module = "io.github.mirzemehdi:kmpauth-firebase", version.ref = "kmpAuth" }
+kmpauth-google = { module = "io.github.mirzemehdi:kmpauth-google", version.ref = "kmpAuth" }
 kmpnotifier = { module = "io.github.mirzemehdi:kmpnotifier", version.ref = "kmpNotifier" }
 kmpnotifier-local = { module = "io.github.mirzemehdi:kmpnotifier-local", version.ref = "kmpNotifier" }
 kmpnotifier-push-firebase = { module = "io.github.mirzemehdi:kmpnotifier-push-firebase", version.ref = "kmpNotifier" }

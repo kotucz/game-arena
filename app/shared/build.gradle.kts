@@ -82,6 +82,8 @@ kotlin {
             implementation(libs.androidx.navigation.compose)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.logging)
+            implementation(libs.kmpauth.firebase)
+            implementation(libs.kmpauth.google)
             implementation(libs.kotlin.inject.runtime.kmp)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)

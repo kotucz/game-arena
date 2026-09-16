@@ -34,6 +34,7 @@ private enum class AuthMode { Login, Register }
 fun AuthScreen(
     authManager: AuthManager,
     onAuthenticated: () -> Unit,
+    onGoogleSignIn: () -> Unit = {},
 ) {
     var mode by remember { mutableStateOf(AuthMode.Login) }
     var username by remember { mutableStateOf("") }
@@ -70,6 +71,17 @@ fun AuthScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(if (mode == AuthMode.Login) "Welcome to Game Arena" else "Create your account")
+        Button(
+            enabled = !submitting,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                // TODO: replace with KMPAuth Google flow once Firebase config is ready.
+                onGoogleSignIn()
+            },
+        ) {
+            Text("Continue with Google")
+        }
+        Text("or use your local account")
         OutlinedTextField(
             username, { username = it }, label = { Text("Username") },
             singleLine = true,
