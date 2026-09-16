@@ -12,6 +12,7 @@ application {
 
 dependencies {
     api(project(":core"))
+    implementation(libs.bcprov.jdk18on)
     implementation(libs.firebase.admin)
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)

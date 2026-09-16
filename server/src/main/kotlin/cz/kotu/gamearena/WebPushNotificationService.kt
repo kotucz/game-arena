@@ -10,11 +10,22 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.security.Security
 
 class WebPushNotificationService(
     private val database: AppDatabase,
     private val serverConfig: ServerConfig,
 ) : PushNotificationService {
+
+    companion object {
+        private val bouncyCastleRegistered = runCatching {
+            Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) ?: run {
+                Security.addProvider(BouncyCastleProvider())
+                true
+            }
+        }.getOrElse { false }
+    }
 
     override suspend fun sendToUser(
         username: String,
