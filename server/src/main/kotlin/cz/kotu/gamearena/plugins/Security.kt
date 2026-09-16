@@ -40,19 +40,28 @@ fun Application.configureSecurity(database: AppDatabase, serverConfig: ServerCon
                     database.sessionDao().deleteByTokenHash(session.tokenHash)
                     return@validate null
                 }
-                UserPrincipal(session.username)
+                UserPrincipal(
+                    userId = session.userId.ifBlank { session.username },
+                    username = session.username,
+                )
             }
         }
     }
 }
 
-suspend fun createSession(call: ApplicationCall, database: AppDatabase, username: String) {
+suspend fun createSession(
+    call: ApplicationCall,
+    database: AppDatabase,
+    username: String,
+    userId: String = username,
+) {
     val token = SessionTokens.create()
     database.sessionDao().insert(
         Session(
             tokenHash = SessionTokens.hash(token),
             username = username,
             expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
+            userId = userId.ifBlank { username },
         )
     )
     // Use Ktor Sessions API to set the cookie-backed session value so Authentication/session can read it.

@@ -14,14 +14,18 @@ import javax.crypto.spec.PBEKeySpec
 @Entity(tableName = "users")
 data class User(
     @androidx.room.PrimaryKey val username: String,
-    val passwordHash: String,
-    val email: String,
+    val passwordHash: String = "",
+    val email: String = "",
+    val firebaseUid: String? = null,
 )
 
 @Dao
 interface UserDao {
     @Query("SELECT * FROM users WHERE username = :username LIMIT 1")
     suspend fun findByUsername(username: String): User?
+
+    @Query("SELECT * FROM users WHERE firebaseUid = :firebaseUid LIMIT 1")
+    suspend fun findByFirebaseUid(firebaseUid: String): User?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(user: User)
@@ -32,6 +36,7 @@ data class Session(
     @androidx.room.PrimaryKey val tokenHash: String,
     val username: String,
     val expiresAt: Long,
+    val userId: String = username,
 )
 
 @Dao

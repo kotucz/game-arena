@@ -19,6 +19,32 @@ import io.ktor.server.sessions.clear
 import io.ktor.server.sessions.sessions
 
 fun Route.authRoutes(database: AppDatabase) {
+    post("/api/auth/firebase") {
+        val form = call.receiveParameters()
+        val firebaseUid = form["firebaseUid"]?.trim().orEmpty()
+        val username = form["username"]?.trim().orEmpty()
+        val email = form["email"]?.trim().orEmpty()
+
+        if (firebaseUid.isBlank() || username.isBlank()) {
+            call.respond(HttpStatusCode.BadRequest, "firebaseUid and username are required")
+            return@post
+        }
+
+        val existingUser = database.userDao().findByFirebaseUid(firebaseUid)
+        if (existingUser == null) {
+            database.userDao().insert(
+                User(
+                    username = username,
+                    passwordHash = "",
+                    email = email,
+                    firebaseUid = firebaseUid,
+                ),
+            )
+        }
+        createSession(call, database, username, userId = firebaseUid)
+        call.respondText("Firebase login successful")
+    }
+
     post("/api/register") {
         val form = call.receiveParameters()
         val username = form["username"]?.trim().orEmpty()
