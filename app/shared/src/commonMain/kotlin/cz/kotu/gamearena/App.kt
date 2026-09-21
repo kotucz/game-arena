@@ -37,6 +37,7 @@ import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
+import kotlin.String
 
 internal const val GAMES_ROUTE = "games"
 internal const val GOT_FIVE_ROUTE = "got-five"
@@ -51,7 +52,11 @@ fun App(
 ) {
     LaunchedEffect(Unit) {
         KMPAuth.initialize {
-            google(serverId = ClientAuthConfig.GOOGLE_WEB_CLIENT_ID)
+            google(
+                serverId = ClientAuthConfig.GOOGLE_WEB_CLIENT_ID,
+                // must be configured at https://console.cloud.google.com/auth/clients/ Authorized redirect URIs
+                redirectUri = "http://localhost:8087/callback",
+            )
             firebase(
                 apiKey = ClientAuthConfig.FIREBASE_API_KEY,
                 projectId = ClientAuthConfig.FIREBASE_PROJECT_ID,
