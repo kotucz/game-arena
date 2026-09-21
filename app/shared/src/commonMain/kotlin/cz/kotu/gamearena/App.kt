@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.mmk.kmpauth.core.KMPAuth
+import com.mmk.kmpauth.firebase.firebase
 import com.mmk.kmpauth.google.google
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,17 +44,19 @@ internal const val DEBUG_ROUTE = "debug"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
 internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
-private const val GOOGLE_WEB_CLIENT_ID = "TODO_SET_GOOGLE_WEB_CLIENT_ID"
-
 @Composable
 @Preview
 fun App(
     appComponent: AppComponent = remember { AppComponent::class.create() },
 ) {
     LaunchedEffect(Unit) {
-        if (GOOGLE_WEB_CLIENT_ID.startsWith("TODO_")) return@LaunchedEffect
         KMPAuth.initialize {
-            google(serverId = GOOGLE_WEB_CLIENT_ID)
+            google(serverId = ClientAuthConfig.GOOGLE_WEB_CLIENT_ID)
+            firebase(
+                apiKey = ClientAuthConfig.FIREBASE_API_KEY,
+                projectId = ClientAuthConfig.FIREBASE_PROJECT_ID,
+                applicationId = ClientAuthConfig.FIREBASE_APPLICATION_ID,
+            )
         }
     }
 

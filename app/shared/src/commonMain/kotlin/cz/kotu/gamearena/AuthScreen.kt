@@ -26,7 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.mmk.kmpauth.google.rememberGoogleSignInState
+import com.mmk.kmpauth.core.KMPAuth
+import com.mmk.kmpauth.google.rememberGoogleAuthState
 import kotlinx.coroutines.launch
 
 private enum class AuthMode { Login, Register }
@@ -45,23 +46,24 @@ fun AuthScreen(
     var submitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    val googleSignIn = rememberGoogleSignInState(onResult = { result ->
+    val googleAuth = rememberGoogleAuthState(onResult = { result ->
         result.fold(
-            onSuccess = { googleUser ->
-                val idToken = googleUser.idToken
-                if (idToken.isBlank()) {
-                    message = "Google auth returned no identity token"
-                    return@fold
-                }
+            onSuccess = { kmpAuthUser ->
                 scope.launch {
-                    val firebaseResult = authManager.loginWithFirebase(
-                        idToken = idToken,
-                        username = username.ifBlank { googleUser.displayName ?: "google-user" },
-                        email = googleUser.email ?: email.ifBlank { null },
-                    )
-                    firebaseResult.fold(
-                        onSuccess = { onAuthenticated() },
-                        onFailure = { message = it.message ?: "Google sign-in failed" },
+                    val tokenResult = KMPAuth.currentUserIdToken()
+                    tokenResult.fold(
+                        onSuccess = { firebaseIdToken ->
+                            val firebaseResult = authManager.loginWithFirebase(
+                                idToken = firebaseIdToken,
+                                username = username.ifBlank { kmpAuthUser.displayName ?: "google-user" },
+                                email = kmpAuthUser.email ?: email.ifBlank { null },
+                            )
+                            firebaseResult.fold(
+                                onSuccess = { onAuthenticated() },
+                                onFailure = { message = it.message ?: "Google sign-in failed" },
+                            )
+                        },
+                        onFailure = { message = it.message ?: "Failed to retrieve Firebase ID token" },
                     )
                 }
             },
@@ -96,11 +98,11 @@ fun AuthScreen(
     ) {
         Text(if (mode == AuthMode.Login) "Welcome to Game Arena" else "Create your account")
         Button(
-            enabled = !submitting,
+            enabled = !submitting && !googleAuth.isInProgress,
             modifier = Modifier.fillMaxWidth(),
-            onClick = { googleSignIn.launch() },
+            onClick = { googleAuth.launch() },
         ) {
-            Text("Continue with Google")
+            Text(if (googleAuth.isInProgress) "Signing in with Google..." else "Continue with Google")
         }
         Text("or use your local account")
         OutlinedTextField(
