@@ -1,4 +1,37 @@
-const CACHE_NAME = 'gamearena-shell-v1';
+// ── Firebase Messaging (background push) ────────────────────────────────────
+// Firebase compat scripts are required in service workers because SW module
+// imports have limited browser support. Keep the version in sync with pwa.js.
+// Check https://firebase.google.com/docs/web/learn-more#available-libraries for latest.
+const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.14.0';
+importScripts(`${FIREBASE_SDK}/firebase-app-compat.js`);
+importScripts(`${FIREBASE_SDK}/firebase-messaging-compat.js`);
+
+// Firebase web SDK config — mirrors application.conf firebase.webConfig.
+// Update both here AND in application.conf when the Firebase project settings change.
+const FIREBASE_CONFIG = {
+  apiKey:            'AIzaSyCqdx5USEs15DlBFlfyxkku2O9ly62b46g',
+  authDomain:        'game-arena-c1035.firebaseapp.com',
+  projectId:         'game-arena-c1035',
+  storageBucket:     'game-arena-c1035.firebasestorage.app',
+  messagingSenderId: '541489886592',
+  appId:             '1:541489886592:web:2920f01ffd5a537838bd65',
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const messaging = firebase.messaging();
+
+// Background messages — app is not in the foreground tab.
+messaging.onBackgroundMessage((payload) => {
+  const { title = 'Game Arena', body = '' } = payload.notification ?? {};
+  self.registration.showNotification(title, {
+    body,
+    // TODO: set icon/badge once assets are finalised (e.g. icon: '/icon-192.png')
+    data: { url: '/' },
+  });
+});
+// ── end Firebase Messaging ───────────────────────────────────────────────────
+
+const CACHE_NAME = 'gamearena-shell-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -85,26 +118,15 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-  // Handle incoming push messages and show notifications
-  self.addEventListener('push', (event) => {
-    const payload = event.data ? event.data.text() : '';
-    const title = 'Game Arena';
-    const options = {
-      body: payload,
-      // icon: '/icon-192.png',
-      // badge: '/badge.png',
-      data: { url: '/' },
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
-  });
-
-  self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
-    event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url === url && 'focus' in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(url);
-    }));
-  });
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  // TODO: deep-link navigation — parse event.notification.data (e.g. gameId, gameType)
+  //       and navigate to the specific game screen once routing supports deep links.
+  const url = event.notification.data?.url ?? '/';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    for (const client of clientList) {
+      if (client.url === url && 'focus' in client) return client.focus();
+    }
+    if (clients.openWindow) return clients.openWindow(url);
+  }));
+});

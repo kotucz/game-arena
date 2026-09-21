@@ -122,6 +122,22 @@ class NotificationRoutesTest {
     }
 
     @Test
+    fun registerTokenRejectsWebPush() = testApplication {
+        val component = TestServerComponent::class.create()
+        application { module(component) }
+        val client = registeredClient(component)
+
+        // "webpush" was removed when the web client switched to FCM.
+        val response = client.put("/api/notifications/tokens/web-1") {
+            contentType(ContentType.Application.Json)
+            setBody(tokenBody(service = "webpush"))
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("Unknown service"))
+    }
+
+    @Test
     fun registerTokenRequiresAuthentication() = testApplication {
         application { module(TestServerComponent::class.create()) }
 

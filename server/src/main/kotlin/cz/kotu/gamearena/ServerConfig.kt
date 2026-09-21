@@ -11,9 +11,10 @@ data class ServerConfig(
     val firebaseConfigFile: File,
     val adminUsername: String,
     val adminPassword: String,
-    // Optional VAPID keys (base64 url-safe public key and private key) for web-push
-    val vapidPublicKey: String? = null,
-    val vapidPrivateKey: String? = null,
+    /** Public Firebase web SDK config served to the browser at /api/firebase-config. */
+    val firebaseWebConfig: Map<String, String> = emptyMap(),
+    /** FCM Web Push VAPID key — included in /api/firebase-config so the browser can call getToken(). */
+    val firebaseWebVapidKey: String? = null,
 ) {
     companion object {
         fun load(): ServerConfig {
@@ -32,9 +33,17 @@ data class ServerConfig(
             val adminConfig = config.getConfig("admin")
             val firebaseConfig = config.getConfig("firebase")
 
-            val webpushConfig = if (config.hasPath("webpush")) config.getConfig("webpush") else null
-            val vapidPublic = webpushConfig?.getString("publicKey")
-            val vapidPrivate = webpushConfig?.getString("privateKey")
+            val webConfig: Map<String, String> =
+                if (firebaseConfig.hasPath("webConfig")) {
+                    val wc = firebaseConfig.getConfig("webConfig")
+                    listOf("apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId")
+                        .associateWith { wc.getString(it) }
+                } else {
+                    emptyMap()
+                }
+
+            val webVapidKey =
+                if (firebaseConfig.hasPath("webVapidKey")) firebaseConfig.getString("webVapidKey") else null
 
             return ServerConfig(
                 port = config.getInt("port"),
@@ -43,8 +52,8 @@ data class ServerConfig(
                 adminUsername = adminConfig.getString("username"),
                 adminPassword = adminConfig.getString("password"),
                 firebaseConfigFile = File(firebaseConfig.getString("googleCredentialsPath")),
-                vapidPublicKey = vapidPublic,
-                vapidPrivateKey = vapidPrivate,
+                firebaseWebConfig = webConfig,
+                firebaseWebVapidKey = webVapidKey,
             )
         }
     }
