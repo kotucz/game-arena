@@ -35,7 +35,6 @@ fun AuthScreen(
     onGoogleSignIn: () -> Unit = {},
 ) {
     val mode by viewModel.mode.collectAsState()
-    val username by viewModel.username.collectAsState()
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
     val message by viewModel.message.collectAsState()
@@ -56,12 +55,6 @@ fun AuthScreen(
     )
     val submitEnabled by derivedStateOf { !submitting && !emailAuth.isInProgress && !googleAuth.isInProgress }
 
-    val submit = {
-        if (submitEnabled) {
-            viewModel.submit(onAuthenticated)
-        }
-    }
-
     Column(
         modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -74,38 +67,29 @@ fun AuthScreen(
         ) {
             Text(if (googleAuth.isInProgress) "Signing in with Google..." else "Continue with Google")
         }
-        Text("or use your local account")
+        Text("or with email and password")
         OutlinedTextField(
-            value = username,
-            onValueChange = viewModel::updateUsername,
-            label = { Text("Username") },
+            value = email,
+            onValueChange = viewModel::updateEmail,
+            label = { Text("Email") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
             modifier = Modifier.fillMaxWidth().semantics {
-                contentType = if (mode == AuthMode.Register) ContentType.NewUsername else ContentType.Username
+                contentType = ContentType.EmailAddress
             },
         )
-        if (mode == AuthMode.Register) {
-            OutlinedTextField(
-                value = email,
-                onValueChange = viewModel::updateEmail,
-                label = { Text("Email") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
-                modifier = Modifier.fillMaxWidth().semantics {
-                    contentType = ContentType.EmailAddress
-                },
-            )
-        }
         OutlinedTextField(
             value = password,
             onValueChange = viewModel::updatePassword,
             label = { Text("Password") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
+            keyboardActions = KeyboardActions(onDone = {
+                if (submitEnabled) {
+                    emailAuth.launch()
+                }
+            }),
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth().semantics {
                 contentType = if (mode == AuthMode.Register) ContentType.NewPassword else ContentType.Password
@@ -116,14 +100,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             onClick = emailAuth::launch,
         ) {
-            Text(if (mode == AuthMode.Login) "Log in Firebase" else "Register Firebase")
-        }
-        Button(
-            enabled = submitEnabled,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = submit,
-        ) {
-            Text(if (mode == AuthMode.Login) "Old Log in" else "Old Register")
+            Text(if (mode == AuthMode.Login) "Log in" else "Register")
         }
         message?.let { Text(it) }
         TextButton(

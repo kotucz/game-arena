@@ -68,7 +68,7 @@ interface PushTokenDao {
     suspend fun findByUsernames(usernames: List<String>): List<PushToken>
 }
 
-@Database(entities = [User::class, Session::class, StoredGame::class, PushToken::class], version = 4, exportSchema = false)
+@Database(entities = [User::class, Session::class, StoredGame::class, PushToken::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun sessionDao(): SessionDao
@@ -99,6 +99,27 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             connection.prepare(
                 "CREATE INDEX IF NOT EXISTS idx_push_tokens_username_service ON push_tokens (username, service)"
             ).use { it.step() }
+        }
+    },
+    object : Migration(4, 5) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare(
+                """
+                CREATE TABLE IF NOT EXISTS users_new (
+                    username TEXT NOT NULL PRIMARY KEY,
+                    email TEXT NOT NULL DEFAULT '',
+                    firebaseUid TEXT
+                )
+                """.trimIndent()
+            ).use { it.step() }
+            connection.prepare(
+                """
+                INSERT OR IGNORE INTO users_new (username, email, firebaseUid)
+                SELECT username, email, firebaseUid FROM users
+                """.trimIndent()
+            ).use { it.step() }
+            connection.prepare("DROP TABLE users").use { it.step() }
+            connection.prepare("ALTER TABLE users_new RENAME TO users").use { it.step() }
         }
     },
 )

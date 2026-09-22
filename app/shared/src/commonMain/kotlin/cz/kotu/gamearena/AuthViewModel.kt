@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
 
-enum class AuthMode { Login, Register }
+enum class AuthMode {
+    Login,
+    Register,
+}
 
 @Inject
 class AuthViewModel(
@@ -20,9 +23,6 @@ class AuthViewModel(
 
     private val _mode = MutableStateFlow(AuthMode.Login)
     val mode: StateFlow<AuthMode> = _mode.asStateFlow()
-
-    private val _username = MutableStateFlow("")
-    val username: StateFlow<String> = _username.asStateFlow()
 
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email.asStateFlow()
@@ -36,20 +36,6 @@ class AuthViewModel(
     private val _submitting = MutableStateFlow(false)
     val submitting: StateFlow<Boolean> = _submitting.asStateFlow()
 
-    fun updateMode(mode: AuthMode) {
-        _mode.value = mode
-        _message.value = null
-    }
-
-    fun toggleMode() {
-        _mode.value = if (_mode.value == AuthMode.Login) AuthMode.Register else AuthMode.Login
-        _message.value = null
-    }
-
-    fun updateUsername(value: String) {
-        _username.value = value
-    }
-
     fun updateEmail(value: String) {
         _email.value = value
     }
@@ -58,26 +44,13 @@ class AuthViewModel(
         _password.value = value
     }
 
-    fun clearMessage() {
+    fun toggleMode() {
+        _mode.value = if (_mode.value == AuthMode.Login) AuthMode.Register else AuthMode.Login
         _message.value = null
     }
 
-    fun submit(onAuthenticated: () -> Unit) {
-        if (_submitting.value) return
-        _submitting.value = true
+    fun clearMessage() {
         _message.value = null
-        viewModelScope.launch {
-            val result = if (_mode.value == AuthMode.Login) {
-                authManager.login(_username.value, _password.value)
-            } else {
-                authManager.register(_username.value, _email.value, _password.value)
-            }
-            _submitting.value = false
-            result.fold(
-                onSuccess = { onAuthenticated() },
-                onFailure = { _message.value = it.message ?: "Request failed" },
-            )
-        }
     }
 
     fun handleAuthResult(result: Result<KMPAuthUser>, onAuthenticated: () -> Unit) {
@@ -87,16 +60,20 @@ class AuthViewModel(
                     val tokenResult = KMPAuth.currentUserIdToken()
                     tokenResult.fold(
                         onSuccess = { firebaseIdToken ->
+                            val userEmail = kmpAuthUser.email ?: _email.value.trim().ifBlank { null }
+                            val userName = kmpAuthUser.displayName?.trim().takeUnless { it.isNullOrBlank() }
+                                ?: userEmail?.substringBefore('@')
+                                ?: "user"
                             val firebaseResult = authManager.loginWithFirebase(
                                 idToken = firebaseIdToken,
-                                username = _username.value.ifBlank { kmpAuthUser.displayName ?: "google-user" },
-                                email = kmpAuthUser.email ?: _email.value.ifBlank { null },
+                                username = userName,
+                                email = userEmail,
                             )
                             firebaseResult.fold(
                                 onSuccess = { onAuthenticated() },
                                 onFailure = {
-                                    Napier.w(it) { "Google sign-in failed 1" }
-                                    _message.value = it.message ?: "Google sign-in failed"
+                                    Napier.w(it) { "Firebase sign-in failed 1" }
+                                    _message.value = it.message ?: "Firebase sign-in failed"
                                 },
                             )
                         },
@@ -108,8 +85,8 @@ class AuthViewModel(
                 }
             },
             onFailure = {
-                Napier.w(it) { "Google sign-in failed 2" }
-                _message.value = it.message ?: "Google sign-in failed"
+                Napier.w(it) { "Firebase sign-in failed 2" }
+                _message.value = it.message ?: "Firebase sign-in failed"
             },
         )
     }

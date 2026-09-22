@@ -4,16 +4,17 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.delete
-import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Cookie
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Url
 import io.ktor.http.contentType
-import io.ktor.http.formUrlEncode
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -25,20 +26,31 @@ class NotificationRoutesTest {
     private suspend fun ApplicationTestBuilder.registeredClient(
         component: TestServerComponent,
         username: String = "notif-user",
-        password: String = "password123",
     ): HttpClient {
         if (component.database.userDao().findByUsername(username) == null) {
             component.database.userDao().insert(
-                User(username, PasswordHasher.hash(password), "$username@example.com")
+                User(username, "$username@example.com")
             )
         }
-        val client = createClient { install(HttpCookies) { storage = AcceptAllCookiesStorage() } }
-        val login = client.post("/api/login") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody(listOf("username" to username, "password" to password).formUrlEncode())
+        val token = SessionTokens.create()
+        component.database.sessionDao().insert(
+            Session(
+                tokenHash = SessionTokens.hash(token),
+                username = username,
+                expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
+                userId = username,
+            )
+        )
+        val storage = AcceptAllCookiesStorage()
+        storage.addCookie(
+            Url("http://localhost/"),
+            Cookie(name = SessionTokens.cookieName, value = token, path = "/")
+        )
+        return createClient {
+            install(HttpCookies) {
+                this.storage = storage
+            }
         }
-        assertEquals(HttpStatusCode.OK, login.status, "Login failed for $username")
-        return client
     }
 
     private fun tokenBody(service: String = "fcm", token: String = "tok-abc") =

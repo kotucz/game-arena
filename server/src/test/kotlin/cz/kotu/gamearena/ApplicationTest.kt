@@ -7,6 +7,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import java.time.Instant
 import kotlin.test.*
 
 class ApplicationTest {
@@ -16,7 +17,6 @@ class ApplicationTest {
             database.userDao().insert(
                 User(
                     username = username,
-                    passwordHash = PasswordHasher.hash("password123"),
                     email = "$username@example.com",
                 )
             )
@@ -26,22 +26,30 @@ class ApplicationTest {
     private suspend fun ApplicationTestBuilder.createAuthenticatedClient(
         component: ServerBindings,
         username: String = "test-user",
-        password: String = "password123",
     ): HttpClient {
         ensureTestUser(component.database, username)
 
-        val authenticatedClient = createClient {
+        val token = SessionTokens.create()
+        component.database.sessionDao().insert(
+            Session(
+                tokenHash = SessionTokens.hash(token),
+                username = username,
+                expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
+                userId = username,
+            )
+        )
+
+        val storage = AcceptAllCookiesStorage()
+        storage.addCookie(
+            Url("http://localhost/"),
+            Cookie(name = SessionTokens.cookieName, value = token, path = "/")
+        )
+
+        return createClient {
             install(HttpCookies) {
-                storage = AcceptAllCookiesStorage()
+                this.storage = storage
             }
         }
-
-        val loginResponse = authenticatedClient.post("/api/login") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody(listOf("username" to username, "password" to password).formUrlEncode())
-        }
-        assertEquals(HttpStatusCode.OK, loginResponse.status, "Failed to log in test user")
-        return authenticatedClient
     }
 
     @Test
@@ -53,21 +61,6 @@ class ApplicationTest {
         val response = client.get("/health")
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("OK", response.bodyAsText())
-    }
-
-    @Test
-    fun registrationCreatesPersistentSession() = testApplication {
-        val component = TestServerComponent::class.create()
-        application { module(component) }
-
-        val username = "user_${System.currentTimeMillis()}"
-        val registration = client.post("/api/register") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody("username=$username&email=$username%40example.com&password=correctPassword123")
-        }
-
-        assertEquals(HttpStatusCode.Created, registration.status)
-        assertTrue(registration.headers[HttpHeaders.SetCookie]?.startsWith("gamearena_session=") == true)
     }
 
     @Test

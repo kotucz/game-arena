@@ -117,22 +117,12 @@ open class AuthManager(
 
     // ── Auth actions ────────────────────────────────────────────────────────
 
-    open suspend fun login(username: String, password: String): Result<String> =
-        authClient.login(username, password).onSuccess {
-            _authState.value = AuthState.Authorized(username.trim())
-        }
-
-    open suspend fun register(username: String, email: String, password: String): Result<String> =
-        authClient.register(username, email, password).onSuccess {
-            _authState.value = AuthState.Authorized(username.trim())
-        }
-
     open suspend fun loginWithFirebase(
         idToken: String,
         username: String? = null,
         email: String? = null,
-    ): Result<String> = authClient.loginWithFirebase(idToken, username, email).onSuccess {
-        val resolvedUsername = username?.trim().orEmpty().ifBlank { "google-user" }
+    ): Result<String> = authClient.loginWithFirebase(idToken, username, email).onSuccess { serverUsername ->
+        val resolvedUsername = serverUsername.ifBlank { username?.trim().orEmpty().ifBlank { "google-user" } }
         _authState.value = AuthState.Authorized(resolvedUsername)
     }
 

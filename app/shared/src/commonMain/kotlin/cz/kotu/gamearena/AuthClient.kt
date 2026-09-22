@@ -13,23 +13,6 @@ import me.tatarka.inject.annotations.Inject
 @AppScope
 @Inject
 class AuthClient(private val httpClient: HttpClient) {
-    suspend fun register(username: String, email: String, password: String): Result<String> = submit(
-        "/api/register",
-        Parameters.build {
-            append("username", username)
-            append("email", email)
-            append("password", password)
-        },
-    )
-
-    suspend fun login(username: String, password: String): Result<String> = submit(
-        "/api/login",
-        Parameters.build {
-            append("username", username)
-            append("password", password)
-        },
-    )
-
     suspend fun loginWithFirebase(
         idToken: String,
         username: String? = null,

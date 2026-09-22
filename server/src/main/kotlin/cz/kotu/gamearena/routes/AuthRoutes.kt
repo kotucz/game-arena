@@ -2,7 +2,6 @@ package cz.kotu.gamearena.routes
 
 import cz.kotu.gamearena.AppDatabase
 import cz.kotu.gamearena.FirebaseTokenVerifier
-import cz.kotu.gamearena.PasswordHasher
 import cz.kotu.gamearena.ServerConfig
 import cz.kotu.gamearena.SessionTokens
 import cz.kotu.gamearena.User
@@ -44,7 +43,7 @@ fun Route.authRoutes(database: AppDatabase, serverConfig: ServerConfig) {
         val existingUser = database.userDao().findByFirebaseUid(firebaseUid)
         val resolvedUsername = existingUser?.username
             ?: username.ifBlank { claims.name?.trim().orEmpty().ifBlank { "user_${firebaseUid.take(12)}" } }
-        val resolvedEmail = existingUser?.email ?: email.ifBlank { claims.email.orEmpty() }
+        val resolvedEmail = email.ifBlank { claims.email.orEmpty() }.ifBlank { existingUser?.email.orEmpty() }
 
         if (resolvedUsername.isBlank()) {
             call.respond(HttpStatusCode.BadRequest, "username is required")
@@ -55,7 +54,6 @@ fun Route.authRoutes(database: AppDatabase, serverConfig: ServerConfig) {
             existingUser == null -> {
                 val created = User(
                     username = resolvedUsername,
-                    passwordHash = "",
                     email = resolvedEmail,
                     firebaseUid = firebaseUid,
                 )
@@ -76,36 +74,6 @@ fun Route.authRoutes(database: AppDatabase, serverConfig: ServerConfig) {
         call.respondText("Firebase login successful")
     }
 
-    post("/api/register") {
-        val form = call.receiveParameters()
-        val username = form["username"]?.trim().orEmpty()
-        val email = form["email"]?.trim().orEmpty()
-        val password = form["password"].orEmpty()
-        val validationError = validateRegistration(username, email, password)
-        if (validationError != null) {
-            call.respond(HttpStatusCode.BadRequest, validationError)
-        } else if (database.userDao().findByUsername(username) != null) {
-            call.respond(HttpStatusCode.Conflict, "Username is already registered")
-        } else {
-            database.userDao().insert(User(username, PasswordHasher.hash(password), email))
-            createSession(call, database, username)
-            call.respond(HttpStatusCode.Created, "Registration successful")
-        }
-    }
-
-    post("/api/login") {
-        val form = call.receiveParameters()
-        val username = form["username"]?.trim().orEmpty()
-        val password = form["password"].orEmpty()
-        val user = database.userDao().findByUsername(username)
-        if (user == null || !PasswordHasher.matches(password, user.passwordHash)) {
-            call.respond(HttpStatusCode.Unauthorized, "Invalid username or password")
-        } else {
-            createSession(call, database, user.username)
-            call.respondText("Login successful")
-        }
-    }
-
     post("/api/logout") {
         val token = call.request.cookies[SessionTokens.cookieName]
         if (token != null) {
@@ -121,11 +89,4 @@ fun Route.authRoutes(database: AppDatabase, serverConfig: ServerConfig) {
             call.respondText(principal.username)
         }
     }
-}
-
-private fun validateRegistration(username: String, email: String, password: String): String? = when {
-    !username.matches(Regex("^[A-Za-z0-9_]{3,32}$")) -> "Username must be 3-32 letters, numbers, or underscores"
-    !email.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) -> "Enter a valid email address"
-    password.length < 8 -> "Password must be at least 8 characters"
-    else -> null
 }
