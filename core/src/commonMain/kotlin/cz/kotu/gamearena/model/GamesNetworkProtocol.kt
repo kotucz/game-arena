@@ -26,3 +26,10 @@ data class RegisterTokenRequest(
     val service: String,
     val token: String,
 )
+
+@Serializable
+data class RegisterUserRequest(
+    val username: String,
+    val email: String? = null,
+    val idToken: String? = null,
+)

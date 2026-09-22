@@ -1,26 +1,104 @@
 package cz.kotu.gamearena.routes
 
 import cz.kotu.gamearena.AppDatabase
-import cz.kotu.gamearena.FirebaseTokenVerifier
-import cz.kotu.gamearena.ServerConfig
 import cz.kotu.gamearena.SessionTokens
+import cz.kotu.gamearena.TokenVerifier
 import cz.kotu.gamearena.User
 import cz.kotu.gamearena.UserPrincipal
+import cz.kotu.gamearena.model.RegisterUserRequest
 import cz.kotu.gamearena.plugins.createSession
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import io.ktor.server.request.contentType
 import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import io.ktor.server.sessions.clear
 import io.ktor.server.sessions.sessions
+import kotlinx.serialization.json.Json
 
-fun Route.authRoutes(database: AppDatabase, serverConfig: ServerConfig) {
-    val firebaseTokenVerifier = FirebaseTokenVerifier(serverConfig)
+fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
+    suspend fun handleUserRegistration(call: ApplicationCall) {
+        val idToken: String?
+        val username: String?
+        val email: String?
+
+        val contentType = call.request.contentType()
+        if (contentType.match(ContentType.Application.Json)) {
+            val body = runCatching {
+                Json.decodeFromString<RegisterUserRequest>(call.receiveText())
+            }.getOrNull()
+            if (body == null) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid JSON body")
+                return
+            }
+            username = body.username.trim()
+            email = body.email?.trim()
+            idToken = body.idToken?.trim()
+        } else {
+            val form = call.receiveParameters()
+            username = form["username"]?.trim()
+            email = form["email"]?.trim()
+            idToken = form["idToken"]?.trim()
+        }
+
+        val authHeader = call.request.headers[HttpHeaders.Authorization]
+        val bearerToken = authHeader?.removePrefix("Bearer ")?.trim()
+        val token = idToken?.takeIf { it.isNotBlank() } ?: bearerToken?.takeIf { it.isNotBlank() }
+
+        if (token.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest, "idToken is required")
+            return
+        }
+
+        if (username.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest, "username is required")
+            return
+        }
+
+        val claims = tokenVerifier.verify(token)
+        if (claims == null) {
+            call.respond(HttpStatusCode.Unauthorized, "Invalid Firebase token")
+            return
+        }
+
+        val firebaseUid = claims.uid
+        val existingByUid = database.userDao().findByFirebaseUid(firebaseUid)
+        if (existingByUid != null) {
+            call.respond(HttpStatusCode.Conflict, "User is already registered")
+            return
+        }
+
+        val existingByUsername = database.userDao().findByUsername(username)
+        if (existingByUsername != null) {
+            call.respond(HttpStatusCode.Conflict, "Username is already taken")
+            return
+        }
+
+        val resolvedEmail = email?.takeIf { it.isNotBlank() } ?: claims.email.orEmpty()
+        val created = User(
+            username = username,
+            email = resolvedEmail,
+            firebaseUid = firebaseUid,
+        )
+        database.userDao().insert(created)
+        call.respond(HttpStatusCode.Created, "User registered successfully")
+    }
+
+    post("/api/auth/register") {
+        handleUserRegistration(call)
+    }
+
+    post("/api/auth/user") {
+        handleUserRegistration(call)
+    }
 
     post("/api/auth/firebase") {
         val form = call.receiveParameters()
@@ -33,7 +111,7 @@ fun Route.authRoutes(database: AppDatabase, serverConfig: ServerConfig) {
             return@post
         }
 
-        val claims = firebaseTokenVerifier.verify(idToken)
+        val claims = tokenVerifier.verify(idToken)
         if (claims == null) {
             call.respond(HttpStatusCode.Unauthorized, "Invalid Firebase token")
             return@post

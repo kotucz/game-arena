@@ -91,7 +91,7 @@ fun Application.module(serverComponent: ServerBindings) {
             call.respondText(json.toString(), ContentType.Application.Json)
         }
 
-        authRoutes(database, serverConfig)
+        authRoutes(database, tokenVerifier)
         notificationRoutes(database)
         gameRoutes(gamesManager)
         adminRoutes(pushNotificationService)
