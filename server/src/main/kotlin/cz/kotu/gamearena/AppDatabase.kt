@@ -68,10 +68,9 @@ interface PushTokenDao {
     suspend fun findByUsernames(usernames: List<String>): List<PushToken>
 }
 
-@Database(entities = [User::class, Session::class, StoredGame::class, PushToken::class], version = 5, exportSchema = false)
+@Database(entities = [User::class, StoredGame::class, PushToken::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
-    abstract fun sessionDao(): SessionDao
     abstract fun gameDao(): GameDao
     abstract fun pushTokenDao(): PushTokenDao
 }
@@ -120,6 +119,11 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             ).use { it.step() }
             connection.prepare("DROP TABLE users").use { it.step() }
             connection.prepare("ALTER TABLE users_new RENAME TO users").use { it.step() }
+        }
+    },
+    object : Migration(5, 6) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare("DROP TABLE IF EXISTS sessions").use { it.step() }
         }
     },
 )

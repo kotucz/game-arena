@@ -1,12 +1,10 @@
 package cz.kotu.gamearena.routes
 
 import cz.kotu.gamearena.AppDatabase
-import cz.kotu.gamearena.SessionTokens
 import cz.kotu.gamearena.TokenVerifier
 import cz.kotu.gamearena.User
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.model.RegisterUserRequest
-import cz.kotu.gamearena.plugins.createSession
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -21,7 +19,6 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import io.ktor.server.sessions.sessions
 import kotlinx.serialization.json.Json
 
 fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
@@ -148,16 +145,10 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
             else -> existingUser
         }
 
-        createSession(call, database, user.username, userId = firebaseUid)
         call.respondText("Firebase login successful")
     }
 
     post("/api/logout") {
-        val token = call.request.cookies[SessionTokens.cookieName]
-        if (token != null) {
-            database.sessionDao().deleteByTokenHash(SessionTokens.hash(token))
-        }
-        call.sessions.clear(SessionTokens.cookieName)
         call.respondText("Logout successful")
     }
 
