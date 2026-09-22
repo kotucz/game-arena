@@ -8,5 +8,6 @@ abstract class TestServerComponent(@Component val fakes: TestFakes = TestFakes()
     abstract override val gamesManager: GamesManager
     abstract override val notificationService: PushNotificationService
     abstract override val serverConfig: ServerConfig
+    abstract override val tokenVerifier: TokenVerifier
 
 }

@@ -12,9 +12,14 @@ abstract class ServerComponent(
     abstract override val database: AppDatabase
     abstract override val gamesManager: GamesManager
     abstract override val notificationService: PushNotificationService
+    abstract override val tokenVerifier: TokenVerifier
 
     @Provides
     @ServerScope
     fun provideDatabase(serverConfig: ServerConfig): AppDatabase = createDatabase(serverConfig.databaseFile)
+
+    @Provides
+    @ServerScope
+    fun provideTokenVerifier(serverConfig: ServerConfig): TokenVerifier = FirebaseTokenVerifier(serverConfig)
 
 }

@@ -28,4 +28,6 @@ class TestFakes(
         adminPassword = "test-secret",
         firebaseConfigFile = File("."),
     ),
+    @get:Provides
+    val tokenVerifier: TokenVerifier = FirebaseTokenVerifier(serverConfig),
 )

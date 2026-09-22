@@ -4,6 +4,7 @@ import cz.kotu.gamearena.AppDatabase
 import cz.kotu.gamearena.ServerConfig
 import cz.kotu.gamearena.Session
 import cz.kotu.gamearena.SessionTokens
+import cz.kotu.gamearena.TokenVerifier
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.admin.adminBasicAuthentication
 import io.ktor.http.Cookie
@@ -11,38 +12,25 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.session
-import io.ktor.server.sessions.Sessions
-import io.ktor.server.sessions.cookie
-import io.ktor.server.sessions.maxAge
+import io.ktor.server.auth.bearer
 import io.ktor.server.sessions.sessions
 import java.time.Instant
-import kotlin.time.Duration.Companion.seconds
 
-fun Application.configureSecurity(database: AppDatabase, serverConfig: ServerConfig) {
-    install(Sessions) {
-        cookie<String>(SessionTokens.cookieName) {
-            cookie.path = "/"
-            cookie.httpOnly = true
-            cookie.maxAge = SessionTokens.lifetimeSeconds.seconds
-        }
-    }
-
-    // Authentication provider that validates session tokens stored in the database.
+fun Application.configureSecurity(
+    database: AppDatabase,
+    serverConfig: ServerConfig,
+    tokenVerifier: TokenVerifier,
+) {
     install(Authentication) {
         adminBasicAuthentication(serverConfig)
 
-        session<String>("auth-session") {
-            validate { token ->
-                val session = database.sessionDao().findByTokenHash(SessionTokens.hash(token))
-                if (session == null) return@validate null
-                if (session.expiresAt <= Instant.now().epochSecond) {
-                    database.sessionDao().deleteByTokenHash(session.tokenHash)
-                    return@validate null
-                }
+        bearer("auth-firebase") {
+            authenticate { credential ->
+                val claims = tokenVerifier.verify(credential.token) ?: return@authenticate null
+                val user = database.userDao().findByFirebaseUid(claims.uid) ?: return@authenticate null
                 UserPrincipal(
-                    userId = session.userId.ifBlank { session.username },
-                    username = session.username,
+                    userId = claims.uid,
+                    username = user.username,
                 )
             }
         }

@@ -14,9 +14,13 @@ data class FirebaseUserClaims(
     val name: String?,
 )
 
+interface TokenVerifier {
+    fun verify(idToken: String): FirebaseUserClaims?
+}
+
 class FirebaseTokenVerifier(
     private val serverConfig: ServerConfig,
-) {
+) : TokenVerifier {
     private val firebaseAuth: FirebaseAuth? = runCatching {
         ensureFirebaseInitialized(serverConfig.firebaseConfigFile)
         FirebaseAuth.getInstance()
@@ -24,7 +28,7 @@ class FirebaseTokenVerifier(
         Napier.w("Firebase auth verification unavailable", it)
     }.getOrNull()
 
-    fun verify(idToken: String): FirebaseUserClaims? {
+    override fun verify(idToken: String): FirebaseUserClaims? {
         if (idToken.isBlank() || firebaseAuth == null) return null
         return runCatching {
             val token = firebaseAuth!!.verifyIdToken(idToken)

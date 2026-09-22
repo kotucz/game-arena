@@ -12,6 +12,7 @@ interface ServerBindings {
     val gamesManager: GamesManager
     val notificationService: PushNotificationService
     val serverConfig: ServerConfig
+    val tokenVerifier: TokenVerifier
 
     @Provides
     @ServerScope

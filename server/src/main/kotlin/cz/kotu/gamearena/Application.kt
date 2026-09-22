@@ -67,9 +67,10 @@ fun Application.module(serverComponent: ServerBindings) {
     val gamesManager = serverComponent.gamesManager
     val serverConfig = serverComponent.serverConfig
     val pushNotificationService = serverComponent.notificationService
+    val tokenVerifier = serverComponent.tokenVerifier
     runBlocking { gamesManager.restorePersistedGames() }
 
-    configureSecurity(database, serverConfig)
+    configureSecurity(database, serverConfig, tokenVerifier)
 
     val webRoot = serverConfig.webRoot
 
