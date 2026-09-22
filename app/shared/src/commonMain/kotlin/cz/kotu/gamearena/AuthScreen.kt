@@ -12,6 +12,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +28,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.mmk.kmpauth.core.KMPAuth
+import com.mmk.kmpauth.core.auth.EmailAuthMode
+import com.mmk.kmpauth.core.auth.KMPAuthUser
+import com.mmk.kmpauth.core.auth.rememberEmailAuthState
 import com.mmk.kmpauth.google.rememberGoogleAuthState
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 
 private enum class AuthMode { Login, Register }
@@ -46,7 +51,8 @@ fun AuthScreen(
     var submitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    val googleAuth = rememberGoogleAuthState(onResult = { result ->
+
+    fun onAuthResult(result: Result<KMPAuthUser>) {
         result.fold(
             onSuccess = { kmpAuthUser ->
                 scope.launch {
@@ -60,19 +66,40 @@ fun AuthScreen(
                             )
                             firebaseResult.fold(
                                 onSuccess = { onAuthenticated() },
-                                onFailure = { message = it.message ?: "Google sign-in failed" },
+                                onFailure = {
+                                    Napier.w(it) { "Google sign-in failed 1" }
+                                    message = it.message ?: "Google sign-in failed"
+                                },
                             )
                         },
-                        onFailure = { message = it.message ?: "Failed to retrieve Firebase ID token" },
+                        onFailure = {
+                            Napier.w(it) { "Failed to retrieve Firebase ID token" }
+                            message = it.message ?: "Failed to retrieve Firebase ID token"
+                        },
                     )
                 }
             },
-            onFailure = { message = it.message ?: "Google sign-in failed" },
+            onFailure = {
+                Napier.w(it) { "Google sign-in failed 2" }
+                message = it.message ?: "Google sign-in failed"
+            },
         )
-    })
+    }
+
+    val emailAuth = rememberEmailAuthState(
+        email = email,
+        password = password,
+        mode = when (mode) {
+            AuthMode.Login -> EmailAuthMode.SignIn
+            AuthMode.Register -> EmailAuthMode.SignUp
+        },
+        onResult = ::onAuthResult,
+    )
+    val googleAuth = rememberGoogleAuthState(onResult = ::onAuthResult)
+    val submitEnabled by derivedStateOf { !submitting && !emailAuth.isInProgress && !googleAuth.isInProgress }
 
     val submit = {
-        if (!submitting) {
+        if (submitEnabled) {
             submitting = true
             message = null
             scope.launch {
@@ -98,7 +125,7 @@ fun AuthScreen(
     ) {
         Text(if (mode == AuthMode.Login) "Welcome to Game Arena" else "Create your account")
         Button(
-            enabled = !submitting && !googleAuth.isInProgress,
+            enabled = submitEnabled,
             modifier = Modifier.fillMaxWidth(),
             onClick = { googleAuth.launch() },
         ) {
@@ -136,17 +163,26 @@ fun AuthScreen(
             },
         )
         Button(
-            enabled = !submitting,
+            enabled = submitEnabled,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = emailAuth::launch,
+        ) {
+            Text(if (mode == AuthMode.Login) "Log in Firebase" else "Register Firebase")
+        }
+        Button(
+            enabled = submitEnabled,
             modifier = Modifier.fillMaxWidth(),
             onClick = submit,
         ) {
-            Text(if (mode == AuthMode.Login) "Log in" else "Register")
+            Text(if (mode == AuthMode.Login) "Old Log in" else "Old Register")
         }
         message?.let { Text(it) }
-        TextButton(onClick = {
-            mode = if (mode == AuthMode.Login) AuthMode.Register else AuthMode.Login
-            message = null
-        }) {
+        TextButton(
+            onClick = {
+                mode = if (mode == AuthMode.Login) AuthMode.Register else AuthMode.Login
+                message = null
+            },
+        ) {
             Text(if (mode == AuthMode.Login) "Need an account? Register" else "Already registered? Log in")
         }
     }
