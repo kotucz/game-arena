@@ -48,7 +48,7 @@ sealed interface AuthState {
  */
 @AppScope
 @Inject
-class AuthManager(
+open class AuthManager(
     private val authClient: AuthClient,
     private val unauthorizedEvents: MutableSharedFlow<Unit>,
     private val appScope: CoroutineScope,
@@ -56,19 +56,19 @@ class AuthManager(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthorized)
 
     /** Observable authentication state. */
-    val authState: StateFlow<AuthState> = _authState
+    open val authState: StateFlow<AuthState> = _authState
 
     /**
      * Convenience view of [authState] as a nullable username string.
      * `null` when [AuthState.Pending] or [AuthState.Unauthorized].
      * Backward-compatible replacement for the previous `StateFlow<String?>`.
      */
-    val currentUsername: StateFlow<String?> = authState
+    open val currentUsername: StateFlow<String?> = authState
         .map { (it as? AuthState.Authorized)?.username }
         .stateIn(appScope, SharingStarted.Eagerly, null)
 
     /** Emitted (via the shared flow) by the Ktor interceptor on HTTP 401. */
-    val unauthorizedEvent: SharedFlow<Unit> = unauthorizedEvents.asSharedFlow()
+    open val unauthorizedEvent: SharedFlow<Unit> = unauthorizedEvents.asSharedFlow()
 
     init {
         // Reset auth state whenever the Ktor interceptor fires a 401.
@@ -88,7 +88,7 @@ class AuthManager(
      * Triggers the initial `/me` check on the first call; subsequent calls are no-ops.
      * Safe to call from multiple coroutines concurrently — only one HTTP request is issued.
      */
-    suspend fun ensureLoaded() {
+    open suspend fun ensureLoaded() {
         if (initialFetchDone) return           // fast path, no lock needed
         loadMutex.withLock {
             if (initialFetchDone) return       // double-check inside the lock
@@ -110,24 +110,24 @@ class AuthManager(
      * been done yet. After a 401 logout, [initialFetchDone] is already `true`, so this
      * just waits for the user to log in explicitly via the auth modal.
      */
-    suspend fun awaitLogin() {
+    open suspend fun awaitLogin() {
         ensureLoaded()
         authState.first { it is AuthState.Authorized }
     }
 
     // ── Auth actions ────────────────────────────────────────────────────────
 
-    suspend fun login(username: String, password: String): Result<String> =
+    open suspend fun login(username: String, password: String): Result<String> =
         authClient.login(username, password).onSuccess {
             _authState.value = AuthState.Authorized(username.trim())
         }
 
-    suspend fun register(username: String, email: String, password: String): Result<String> =
+    open suspend fun register(username: String, email: String, password: String): Result<String> =
         authClient.register(username, email, password).onSuccess {
             _authState.value = AuthState.Authorized(username.trim())
         }
 
-    suspend fun loginWithFirebase(
+    open suspend fun loginWithFirebase(
         idToken: String,
         username: String? = null,
         email: String? = null,
@@ -136,7 +136,7 @@ class AuthManager(
         _authState.value = AuthState.Authorized(resolvedUsername)
     }
 
-    suspend fun logout() {
+    open suspend fun logout() {
         authClient.logout()
         _authState.value = AuthState.Unauthorized
         unauthorizedEvents.tryEmit(Unit)

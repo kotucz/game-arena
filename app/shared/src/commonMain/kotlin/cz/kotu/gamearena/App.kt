@@ -138,8 +138,9 @@ fun App(
                     shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
+                    val authViewModel: AuthViewModel = viewModel { appComponent.authViewModelFactory() }
                     AuthScreen(
-                        authManager = authManager,
+                        viewModel = authViewModel,
                         onAuthenticated = { showAuthModal = false },
                         onGoogleSignIn = {
                             // TODO: integrate KMPAuth Google flow and then submit Firebase UID to the server.
