@@ -97,62 +97,11 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
         handleUserRegistration(call)
     }
 
-    post("/api/auth/firebase") {
-        val form = call.receiveParameters()
-        val idToken = form["idToken"]?.trim().orEmpty()
-        val username = form["username"]?.trim().orEmpty()
-        val email = form["email"]?.trim().orEmpty()
-
-        if (idToken.isBlank()) {
-            call.respond(HttpStatusCode.BadRequest, "idToken is required")
-            return@post
-        }
-
-        val claims = tokenVerifier.verify(idToken)
-        if (claims == null) {
-            call.respond(HttpStatusCode.Unauthorized, "Invalid Firebase token")
-            return@post
-        }
-
-        val firebaseUid = claims.uid
-        val existingUser = database.userDao().findByFirebaseUid(firebaseUid)
-        val resolvedUsername = existingUser?.username
-            ?: username.ifBlank { claims.name?.trim().orEmpty().ifBlank { "user_${firebaseUid.take(12)}" } }
-        val resolvedEmail = email.ifBlank { claims.email.orEmpty() }.ifBlank { existingUser?.email.orEmpty() }
-
-        if (resolvedUsername.isBlank()) {
-            call.respond(HttpStatusCode.BadRequest, "username is required")
-            return@post
-        }
-
-        val user = when {
-            existingUser == null -> {
-                val created = User(
-                    username = resolvedUsername,
-                    email = resolvedEmail,
-                    firebaseUid = firebaseUid,
-                )
-                database.userDao().insert(created)
-                created
-            }
-
-            existingUser.email != resolvedEmail -> {
-                val updated = existingUser.copy(email = resolvedEmail)
-                database.userDao().insert(updated)
-                updated
-            }
-
-            else -> existingUser
-        }
-
-        call.respondText("Firebase login successful")
-    }
-
     post("/api/logout") {
         call.respondText("Logout successful")
     }
 
-    authenticate("auth-session") {
+    authenticate("auth-firebase") {
         get("/api/me") {
             val principal = call.principal<UserPrincipal>()!!
             call.respondText(principal.username)

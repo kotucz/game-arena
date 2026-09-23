@@ -46,7 +46,7 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
         }
     }
 
-    authenticate("auth-session") {
+    authenticate("auth-firebase") {
         get("/api/games") {
             val principal = call.principal<UserPrincipal>()!!
             val games = Json.encodeToString(

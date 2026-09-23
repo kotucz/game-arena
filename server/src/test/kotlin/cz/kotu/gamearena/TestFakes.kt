@@ -16,6 +16,27 @@ private fun createTempDatabase(): AppDatabase {
         .build()
 }
 
+class FakeTokenVerifier : TokenVerifier {
+    private val claimsMap = java.util.concurrent.ConcurrentHashMap<String, FirebaseUserClaims>()
+
+    fun setClaims(token: String, claims: FirebaseUserClaims) {
+        claimsMap[token] = claims
+    }
+
+    override fun verify(idToken: String): FirebaseUserClaims? {
+        claimsMap[idToken]?.let { return it }
+        if (idToken.startsWith("test-token:")) {
+            val uid = idToken.removePrefix("test-token:")
+            return FirebaseUserClaims(uid = uid, email = "$uid@example.com", name = uid)
+        }
+        if (idToken.startsWith("test-token-")) {
+            val uid = idToken.removePrefix("test-token-")
+            return FirebaseUserClaims(uid = uid, email = "$uid@example.com", name = uid)
+        }
+        return null
+    }
+}
+
 class TestFakes(
     @get:Provides
     val database: AppDatabase = createTempDatabase(),
@@ -29,5 +50,5 @@ class TestFakes(
         firebaseConfigFile = File("."),
     ),
     @get:Provides
-    val tokenVerifier: TokenVerifier = FirebaseTokenVerifier(serverConfig),
+    val tokenVerifier: TokenVerifier = FakeTokenVerifier(),
 )

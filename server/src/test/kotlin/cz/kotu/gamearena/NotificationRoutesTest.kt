@@ -1,20 +1,18 @@
 package cz.kotu.gamearena
 
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
-import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.delete
+import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.Cookie
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.Url
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
-import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -26,29 +24,17 @@ class NotificationRoutesTest {
     private suspend fun ApplicationTestBuilder.registeredClient(
         component: TestServerComponent,
         username: String = "notif-user",
+        firebaseUid: String = "uid-$username",
     ): HttpClient {
         if (component.database.userDao().findByUsername(username) == null) {
             component.database.userDao().insert(
-                User(username, "$username@example.com")
+                User(username, "$username@example.com", firebaseUid = firebaseUid)
             )
         }
-        val token = SessionTokens.create()
-        component.database.sessionDao().insert(
-            Session(
-                tokenHash = SessionTokens.hash(token),
-                username = username,
-                expiresAt = Instant.now().epochSecond + SessionTokens.lifetimeSeconds,
-                userId = username,
-            )
-        )
-        val storage = AcceptAllCookiesStorage()
-        storage.addCookie(
-            Url("http://localhost/"),
-            Cookie(name = SessionTokens.cookieName, value = token, path = "/")
-        )
+        val token = "test-token:$firebaseUid"
         return createClient {
-            install(HttpCookies) {
-                this.storage = storage
+            defaultRequest {
+                header(HttpHeaders.Authorization, "Bearer $token")
             }
         }
     }
