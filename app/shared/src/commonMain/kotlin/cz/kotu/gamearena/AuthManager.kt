@@ -117,13 +117,37 @@ open class AuthManager(
 
     // ── Auth actions ────────────────────────────────────────────────────────
 
+    open suspend fun registerUser(
+        idToken: String,
+        username: String,
+        email: String? = null,
+    ): Result<String> = authClient.registerUser(idToken, username, email).onSuccess {
+        _authState.value = AuthState.Authorized(username)
+    }
+
     open suspend fun loginWithFirebase(
         idToken: String,
         username: String? = null,
         email: String? = null,
-    ): Result<String> = authClient.loginWithFirebase(idToken, username, email).onSuccess { serverUsername ->
-        val resolvedUsername = serverUsername.ifBlank { username?.trim().orEmpty().ifBlank { "google-user" } }
-        _authState.value = AuthState.Authorized(resolvedUsername)
+    ): Result<String> {
+        val meResult = authClient.currentUser()
+        if (meResult.isSuccess) {
+            val serverUsername = meResult.getOrThrow()
+            _authState.value = AuthState.Authorized(serverUsername)
+            return Result.success(serverUsername)
+        }
+
+        val candidateUsername = username?.trim().orEmpty()
+        if (candidateUsername.isNotBlank()) {
+            val registerResult = authClient.registerUser(idToken, candidateUsername, email)
+            if (registerResult.isSuccess) {
+                _authState.value = AuthState.Authorized(candidateUsername)
+                return Result.success(candidateUsername)
+            }
+            return registerResult
+        }
+
+        return meResult
     }
 
     open suspend fun logout() {

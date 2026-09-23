@@ -7,6 +7,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -14,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
@@ -33,7 +35,7 @@ class AuthViewModelTest {
     private class FakeAuthManager(
         var firebaseResult: Result<String> = Result.success("OK"),
     ) : AuthManager(
-        authClient = AuthClient(createAuthHttpClient("http://localhost") {}),
+        authClient = AuthClient(createAuthHttpClient("http://localhost", tokenProvider = null) {}),
         unauthorizedEvents = MutableSharedFlow(extraBufferCapacity = 1),
         appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     ) {
@@ -44,6 +46,17 @@ class AuthViewModelTest {
         override suspend fun loginWithFirebase(
             idToken: String,
             username: String?,
+            email: String?,
+        ): Result<String> {
+            lastIdToken = idToken
+            lastUsername = username
+            lastEmail = email
+            return firebaseResult
+        }
+
+        override suspend fun registerUser(
+            idToken: String,
+            username: String,
             email: String?,
         ): Result<String> {
             lastIdToken = idToken
@@ -120,5 +133,15 @@ class AuthViewModelTest {
 
         viewModel.clearMessage()
         assertNull(viewModel.message.value)
+    }
+
+    @Test
+    fun authManagerLoginWithFirebaseUpdatesState() = runTest {
+        val fakeManager = FakeAuthManager(firebaseResult = Result.success("alice"))
+        val result = fakeManager.loginWithFirebase(idToken = "test-token", username = "alice", email = "alice@example.com")
+        assertTrue(result.isSuccess)
+        assertEquals("alice", fakeManager.lastUsername)
+        assertEquals("test-token", fakeManager.lastIdToken)
+        assertEquals("alice@example.com", fakeManager.lastEmail)
     }
 }

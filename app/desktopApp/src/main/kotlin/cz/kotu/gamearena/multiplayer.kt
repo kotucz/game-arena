@@ -25,7 +25,9 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "Game Arena - Multiplayer Debug",
     ) {
-        val debugHttpClientFactory: DebugHttpClientFactory = { _ -> createInMemoryAuthHttpClient() }
+        val debugHttpClientFactory: DebugHttpClientFactory = { username ->
+            createInMemoryAuthHttpClient(tokenProvider = { "test-token:uid-$username" })
+        }
         MultiPlayerScreen(
             remoteGameId = "", // empty = local play - fill game id to join remote game
             debugHttpClientFactory,
