@@ -20,6 +20,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.json.Json
+import java.util.Locale
 
 fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
     suspend fun handleUserRegistration(call: ApplicationCall) {
@@ -73,7 +74,8 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
             return
         }
 
-        val existingByUsername = database.userDao().findByUsername(username)
+        val usernameLower = username.lowercase(Locale.ROOT)
+        val existingByUsername = database.userDao().findByUsernameLower(usernameLower)
         if (existingByUsername != null) {
             call.respond(HttpStatusCode.Conflict, "Username is already taken")
             return
@@ -81,9 +83,10 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
 
         val resolvedEmail = email?.takeIf { it.isNotBlank() } ?: claims.email.orEmpty()
         val created = User(
-            username = username,
-            email = resolvedEmail,
             firebaseUid = firebaseUid,
+            username = username,
+            usernameLower = usernameLower,
+            email = resolvedEmail,
         )
         database.userDao().insert(created)
         call.respond(HttpStatusCode.Created, "User registered successfully")

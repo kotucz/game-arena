@@ -26,9 +26,14 @@ class NotificationRoutesTest {
         username: String = "notif-user",
         firebaseUid: String = "uid-$username",
     ): HttpClient {
-        if (component.database.userDao().findByUsername(username) == null) {
+        if (component.database.userDao().findByFirebaseUid(firebaseUid) == null) {
             component.database.userDao().insert(
-                User(username, "$username@example.com", firebaseUid = firebaseUid)
+                User(
+                    firebaseUid = firebaseUid,
+                    username = username,
+                    usernameLower = username.lowercase(),
+                    email = "$username@example.com",
+                )
             )
         }
         val token = "test-token-$firebaseUid"

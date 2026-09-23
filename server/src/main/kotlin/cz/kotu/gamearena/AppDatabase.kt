@@ -68,7 +68,7 @@ interface PushTokenDao {
     suspend fun findByUsernames(usernames: List<String>): List<PushToken>
 }
 
-@Database(entities = [User::class, StoredGame::class, PushToken::class], version = 6, exportSchema = false)
+@Database(entities = [User::class, StoredGame::class, PushToken::class], version = 7, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun gameDao(): GameDao
@@ -124,6 +124,35 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     object : Migration(5, 6) {
         override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
             connection.prepare("DROP TABLE IF EXISTS sessions").use { it.step() }
+        }
+    },
+    object : Migration(6, 7) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare(
+                """
+                CREATE TABLE IF NOT EXISTS users_new (
+                    firebaseUid TEXT NOT NULL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    usernameLower TEXT NOT NULL,
+                    email TEXT,
+                    createdAt INTEGER NOT NULL
+                )
+                """.trimIndent()
+            ).use { it.step() }
+            // Created before copying so INSERT OR IGNORE skips case-insensitive username duplicates.
+            connection.prepare(
+                "CREATE UNIQUE INDEX IF NOT EXISTS index_users_usernameLower ON users_new (usernameLower)"
+            ).use { it.step() }
+            // Users without firebaseUid cannot be keyed anymore and are dropped.
+            connection.prepare(
+                """
+                INSERT OR IGNORE INTO users_new (firebaseUid, username, usernameLower, email, createdAt)
+                SELECT firebaseUid, username, lower(username), NULLIF(email, ''), CAST(strftime('%s', 'now') AS INTEGER) * 1000
+                FROM users WHERE firebaseUid IS NOT NULL
+                """.trimIndent()
+            ).use { it.step() }
+            connection.prepare("DROP TABLE users").use { it.step() }
+            connection.prepare("ALTER TABLE users_new RENAME TO users").use { it.step() }
         }
     },
 )

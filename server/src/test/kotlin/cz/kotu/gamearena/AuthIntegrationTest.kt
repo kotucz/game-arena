@@ -82,11 +82,11 @@ class AuthIntegrationTest {
         }
         assertEquals(HttpStatusCode.Conflict, duplicateUidResponse.status)
 
-        // Duplicate username with different UID
+        // Username uniqueness is case-insensitive.
         val duplicateUsernameResponse = client.post("/api/auth/register") {
             header(HttpHeaders.Authorization, "Bearer test-token-uid-bob")
             contentType(ContentType.Application.Json)
-            setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "alice")))
+            setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "ALICE")))
         }
         assertEquals(HttpStatusCode.Conflict, duplicateUsernameResponse.status)
     }
@@ -111,7 +111,12 @@ class AuthIntegrationTest {
 
         val username = "testuser_${System.currentTimeMillis()}"
         val firebaseUid = "uid_$username"
-        val user = User(username = username, email = "$username@example.com", firebaseUid = firebaseUid)
+        val user = User(
+            firebaseUid = firebaseUid,
+            username = username,
+            usernameLower = username.lowercase(),
+            email = "$username@example.com",
+        )
         component.database.userDao().insert(user)
 
         val client = createClient {}

@@ -24,12 +24,13 @@ class ApplicationTest {
         username: String = "test-user",
         firebaseUid: String = "uid-$username",
     ) {
-        if (database.userDao().findByUsername(username) == null) {
+        if (database.userDao().findByFirebaseUid(firebaseUid) == null) {
             database.userDao().insert(
                 User(
-                    username = username,
-                    email = "$username@example.com",
                     firebaseUid = firebaseUid,
+                    username = username,
+                    usernameLower = username.lowercase(),
+                    email = "$username@example.com",
                 )
             )
         }
