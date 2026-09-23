@@ -24,8 +24,4 @@ interface ServerBindings {
         notificationService = notificationService,
     )
 
-    @Provides
-    @ServerScope
-    fun provideNotificationService(database: AppDatabase, serverConfig: ServerConfig): PushNotificationService =
-        FirebaseAdminPushNotificationService(database, serverConfig)
 }

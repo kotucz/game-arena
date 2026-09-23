@@ -22,4 +22,11 @@ abstract class ServerComponent(
     @ServerScope
     fun provideTokenVerifier(serverConfig: ServerConfig): TokenVerifier = FirebaseTokenVerifier(serverConfig)
 
+    @Provides
+    @ServerScope
+    fun provideNotificationService(
+        database: AppDatabase,
+        serverConfig: ServerConfig,
+    ): PushNotificationService = FirebaseAdminPushNotificationService(database, serverConfig)
+
 }
