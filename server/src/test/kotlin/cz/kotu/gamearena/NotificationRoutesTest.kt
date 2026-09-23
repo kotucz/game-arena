@@ -31,7 +31,7 @@ class NotificationRoutesTest {
                 User(username, "$username@example.com", firebaseUid = firebaseUid)
             )
         }
-        val token = "test-token:$firebaseUid"
+        val token = "test-token-$firebaseUid"
         return createClient {
             defaultRequest {
                 header(HttpHeaders.Authorization, "Bearer $token")

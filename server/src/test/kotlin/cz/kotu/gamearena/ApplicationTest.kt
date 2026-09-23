@@ -41,7 +41,7 @@ class ApplicationTest {
         firebaseUid: String = "uid-$username",
     ): HttpClient {
         ensureTestUser(component.database, username, firebaseUid)
-        val token = "test-token:$firebaseUid"
+        val token = "test-token-$firebaseUid"
         return createClient {
             defaultRequest {
                 header(HttpHeaders.Authorization, "Bearer $token")

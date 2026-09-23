@@ -25,10 +25,7 @@ class FakeTokenVerifier : TokenVerifier {
 
     override fun verify(idToken: String): FirebaseUserClaims? {
         claimsMap[idToken]?.let { return it }
-        if (idToken.startsWith("test-token:")) {
-            val uid = idToken.removePrefix("test-token:")
-            return FirebaseUserClaims(uid = uid, email = "$uid@example.com", name = uid)
-        }
+        // Bearer tokens must use token68 characters; a colon is not valid.
         if (idToken.startsWith("test-token-")) {
             val uid = idToken.removePrefix("test-token-")
             return FirebaseUserClaims(uid = uid, email = "$uid@example.com", name = uid)

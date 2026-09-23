@@ -52,7 +52,7 @@ class AuthIntegrationTest {
 
         // Missing username
         val missingUsernameResponse = client.post("/api/auth/register") {
-            header(HttpHeaders.Authorization, "Bearer test-token:uid-alice")
+            header(HttpHeaders.Authorization, "Bearer test-token-uid-alice")
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "")))
         }
@@ -68,7 +68,7 @@ class AuthIntegrationTest {
 
         // Valid registration
         val validRegistration = client.post("/api/auth/register") {
-            header(HttpHeaders.Authorization, "Bearer test-token:uid-alice")
+            header(HttpHeaders.Authorization, "Bearer test-token-uid-alice")
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "alice", email = "alice@example.com")))
         }
@@ -76,7 +76,7 @@ class AuthIntegrationTest {
 
         // Duplicate UID
         val duplicateUidResponse = client.post("/api/auth/register") {
-            header(HttpHeaders.Authorization, "Bearer test-token:uid-alice")
+            header(HttpHeaders.Authorization, "Bearer test-token-uid-alice")
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "alice2")))
         }
@@ -84,7 +84,7 @@ class AuthIntegrationTest {
 
         // Duplicate username with different UID
         val duplicateUsernameResponse = client.post("/api/auth/register") {
-            header(HttpHeaders.Authorization, "Bearer test-token:uid-bob")
+            header(HttpHeaders.Authorization, "Bearer test-token-uid-bob")
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "alice")))
         }
@@ -99,7 +99,7 @@ class AuthIntegrationTest {
 
         // Valid token for unprovisioned user
         val meResponse = client.get("/api/me") {
-            header(HttpHeaders.Authorization, "Bearer test-token:unprovisioned-uid")
+            header(HttpHeaders.Authorization, "Bearer test-token-unprovisioned-uid")
         }
         assertEquals(HttpStatusCode.Unauthorized, meResponse.status)
     }
@@ -122,7 +122,7 @@ class AuthIntegrationTest {
 
         // Authenticated request to /api/me with valid Bearer token
         val meResponse: HttpResponse = client.get("/api/me") {
-            header(HttpHeaders.Authorization, "Bearer test-token:$firebaseUid")
+            header(HttpHeaders.Authorization, "Bearer test-token-$firebaseUid")
         }
         assertEquals(HttpStatusCode.OK, meResponse.status)
         assertEquals(username, meResponse.bodyAsText())

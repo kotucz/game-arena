@@ -116,6 +116,10 @@ Notes:
 - Do not run gradlew commands. Just tell me to do it or ask before you do.
 - If possible, run verification via IntelliJ API.
 - Use `--console=plain`
+- If the agent shell has no Java on PATH, set `JAVA_HOME` explicitly. On this
+  Linux workstation, the IDE JDK works:
+  `JAVA_HOME=/home/deck/.local/share/JetBrains/Toolbox/apps/intellij-idea/jbr ./gradlew :server:test --console=plain`
+  (running Gradle still requires user authorization as above).
 - In PowerShell, invoke the Gradle wrapper as `.\gradlew.bat <task>`; do not
   prefix it with an additional slash.
 - Run the narrowest relevant task:
