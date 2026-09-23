@@ -37,6 +37,8 @@ fun AuthScreen(
     val mode by viewModel.mode.collectAsState()
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
+    val onboardingUser by viewModel.onboardingUser.collectAsState()
+    val chosenUsername by viewModel.chosenUsername.collectAsState()
     val message by viewModel.message.collectAsState()
     val submitting by viewModel.submitting.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -59,54 +61,87 @@ fun AuthScreen(
         modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(if (mode == AuthMode.Login) "Welcome to Game Arena" else "Create your account")
-        Button(
-            enabled = submitEnabled,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { googleAuth.launch() },
-        ) {
-            Text(if (googleAuth.isInProgress) "Signing in with Google..." else "Continue with Google")
-        }
-        Text("or with email and password")
-        OutlinedTextField(
-            value = email,
-            onValueChange = viewModel::updateEmail,
-            label = { Text("Email") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
-            modifier = Modifier.fillMaxWidth().semantics {
-                contentType = ContentType.EmailAddress
-            },
-        )
-        OutlinedTextField(
-            value = password,
-            onValueChange = viewModel::updatePassword,
-            label = { Text("Password") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                if (submitEnabled) {
-                    emailAuth.launch()
-                }
-            }),
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth().semantics {
-                contentType = if (mode == AuthMode.Register) ContentType.NewPassword else ContentType.Password
-            },
-        )
-        Button(
-            enabled = submitEnabled,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = emailAuth::launch,
-        ) {
-            Text(if (mode == AuthMode.Login) "Log in" else "Register")
-        }
-        message?.let { Text(it) }
-        TextButton(
-            onClick = { viewModel.toggleMode() },
-        ) {
-            Text(if (mode == AuthMode.Login) "Need an account? Register" else "Already registered? Log in")
+        if (onboardingUser != null) {
+            Text("Choose your username")
+            Text("Complete your profile by choosing a username for Game Arena.")
+            OutlinedTextField(
+                value = chosenUsername,
+                onValueChange = viewModel::updateChosenUsername,
+                label = { Text("Username") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (submitEnabled) {
+                        viewModel.completeOnboarding(onAuthenticated)
+                    }
+                }),
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentType = ContentType.Username
+                },
+            )
+            Button(
+                enabled = submitEnabled,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { viewModel.completeOnboarding(onAuthenticated) },
+            ) {
+                Text(if (submitting) "Setting up..." else "Finish Setup")
+            }
+            message?.let { Text(it) }
+            TextButton(
+                onClick = { viewModel.cancelOnboarding() },
+            ) {
+                Text("Cancel")
+            }
+        } else {
+            Text(if (mode == AuthMode.Login) "Welcome to Game Arena" else "Create your account")
+            Button(
+                enabled = submitEnabled,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { googleAuth.launch() },
+            ) {
+                Text(if (googleAuth.isInProgress) "Signing in with Google..." else "Continue with Google")
+            }
+            Text("or with email and password")
+            OutlinedTextField(
+                value = email,
+                onValueChange = viewModel::updateEmail,
+                label = { Text("Email") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentType = ContentType.EmailAddress
+                },
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = viewModel::updatePassword,
+                label = { Text("Password") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (submitEnabled) {
+                        emailAuth.launch()
+                    }
+                }),
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentType = if (mode == AuthMode.Register) ContentType.NewPassword else ContentType.Password
+                },
+            )
+            Button(
+                enabled = submitEnabled,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = emailAuth::launch,
+            ) {
+                Text(if (mode == AuthMode.Login) "Log in" else "Register")
+            }
+            message?.let { Text(it) }
+            TextButton(
+                onClick = { viewModel.toggleMode() },
+            ) {
+                Text(if (mode == AuthMode.Login) "Need an account? Register" else "Already registered? Log in")
+            }
         }
     }
 }

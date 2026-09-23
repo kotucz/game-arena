@@ -117,6 +117,10 @@ open class AuthManager(
 
     // ── Auth actions ────────────────────────────────────────────────────────
 
+    open suspend fun checkExistingUser(): Result<String> = authClient.currentUser().onSuccess { serverUsername ->
+        _authState.value = AuthState.Authorized(serverUsername)
+    }
+
     open suspend fun registerUser(
         idToken: String,
         username: String,

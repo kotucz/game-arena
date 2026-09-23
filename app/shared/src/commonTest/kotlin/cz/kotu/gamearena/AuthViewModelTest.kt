@@ -34,6 +34,7 @@ class AuthViewModelTest {
 
     private class FakeAuthManager(
         var firebaseResult: Result<String> = Result.success("OK"),
+        var checkUserResult: Result<String> = Result.failure(Exception("Not found")),
     ) : AuthManager(
         authClient = AuthClient(createAuthHttpClient("http://localhost", tokenProvider = null) {}),
         unauthorizedEvents = MutableSharedFlow(extraBufferCapacity = 1),
@@ -42,6 +43,10 @@ class AuthViewModelTest {
         var lastIdToken: String? = null
         var lastUsername: String? = null
         var lastEmail: String? = null
+
+        override suspend fun checkExistingUser(): Result<String> {
+            return checkUserResult
+        }
 
         override suspend fun loginWithFirebase(
             idToken: String,
@@ -74,8 +79,80 @@ class AuthViewModelTest {
         assertEquals(AuthMode.Login, viewModel.mode.value)
         assertEquals("", viewModel.email.value)
         assertEquals("", viewModel.password.value)
+        assertEquals("", viewModel.chosenUsername.value)
+        assertNull(viewModel.onboardingUser.value)
         assertNull(viewModel.message.value)
         assertFalse(viewModel.submitting.value)
+    }
+
+    @Test
+    fun updateChosenUsernameUpdatesState() {
+        val authManager = FakeAuthManager()
+        val viewModel = AuthViewModel(authManager)
+
+        viewModel.updateChosenUsername("new_user")
+        assertEquals("new_user", viewModel.chosenUsername.value)
+    }
+
+    @Test
+    fun completeOnboardingSuccessCallsOnAuthenticated() = runTest {
+        val authManager = FakeAuthManager(firebaseResult = Result.success("charlie"))
+        val viewModel = AuthViewModel(authManager)
+
+        viewModel.setOnboardingUserForTesting(OnboardingUser(idToken = "token-123", email = "charlie@example.com"))
+        viewModel.updateChosenUsername("charlie")
+
+        var authenticated = false
+        viewModel.completeOnboarding { authenticated = true }
+
+        assertTrue(authenticated)
+        assertEquals("charlie", authManager.lastUsername)
+        assertEquals("token-123", authManager.lastIdToken)
+        assertEquals("charlie@example.com", authManager.lastEmail)
+        assertNull(viewModel.onboardingUser.value)
+        assertNull(viewModel.message.value)
+    }
+
+    @Test
+    fun completeOnboardingBlankUsernameShowsMessage() = runTest {
+        val authManager = FakeAuthManager(firebaseResult = Result.success("charlie"))
+        val viewModel = AuthViewModel(authManager)
+
+        viewModel.setOnboardingUserForTesting(OnboardingUser(idToken = "token-123", email = "charlie@example.com"))
+        viewModel.updateChosenUsername("   ")
+
+        var authenticated = false
+        viewModel.completeOnboarding { authenticated = true }
+
+        assertFalse(authenticated)
+        assertEquals("Please choose a username", viewModel.message.value)
+    }
+
+    @Test
+    fun completeOnboardingFailureShowsErrorMessage() = runTest {
+        val authManager = FakeAuthManager(firebaseResult = Result.failure(Exception("Username is already taken")))
+        val viewModel = AuthViewModel(authManager)
+
+        viewModel.setOnboardingUserForTesting(OnboardingUser(idToken = "token-123", email = "charlie@example.com"))
+        viewModel.updateChosenUsername("charlie")
+
+        var authenticated = false
+        viewModel.completeOnboarding { authenticated = true }
+
+        assertFalse(authenticated)
+        assertEquals("Username is already taken", viewModel.message.value)
+    }
+
+    @Test
+    fun cancelOnboardingClearsState() {
+        val authManager = FakeAuthManager()
+        val viewModel = AuthViewModel(authManager)
+
+        viewModel.updateChosenUsername("temp_user")
+        viewModel.cancelOnboarding()
+        assertEquals("", viewModel.chosenUsername.value)
+        assertNull(viewModel.onboardingUser.value)
+        assertNull(viewModel.message.value)
     }
 
     @Test

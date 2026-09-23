@@ -16,6 +16,11 @@ enum class AuthMode {
     Register,
 }
 
+data class OnboardingUser(
+    val idToken: String,
+    val email: String?,
+)
+
 @Inject
 class AuthViewModel(
     private val authManager: AuthManager,
@@ -29,6 +34,12 @@ class AuthViewModel(
 
     private val _password = MutableStateFlow("")
     val password: StateFlow<String> = _password.asStateFlow()
+
+    private val _onboardingUser = MutableStateFlow<OnboardingUser?>(null)
+    val onboardingUser: StateFlow<OnboardingUser?> = _onboardingUser.asStateFlow()
+
+    private val _chosenUsername = MutableStateFlow("")
+    val chosenUsername: StateFlow<String> = _chosenUsername.asStateFlow()
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -44,6 +55,14 @@ class AuthViewModel(
         _password.value = value
     }
 
+    fun updateChosenUsername(value: String) {
+        _chosenUsername.value = value
+    }
+
+    internal fun setOnboardingUserForTesting(onboarding: OnboardingUser?) {
+        _onboardingUser.value = onboarding
+    }
+
     fun toggleMode() {
         _mode.value = if (_mode.value == AuthMode.Login) AuthMode.Register else AuthMode.Login
         _message.value = null
@@ -53,31 +72,73 @@ class AuthViewModel(
         _message.value = null
     }
 
+    fun cancelOnboarding() {
+        _onboardingUser.value = null
+        _chosenUsername.value = ""
+        _message.value = null
+    }
+
+    fun completeOnboarding(onAuthenticated: () -> Unit) {
+        val onboarding = _onboardingUser.value ?: return
+        val username = _chosenUsername.value.trim()
+        if (username.isBlank()) {
+            _message.value = "Please choose a username"
+            return
+        }
+
+        viewModelScope.launch {
+            _submitting.value = true
+            _message.value = null
+            val result = authManager.registerUser(
+                idToken = onboarding.idToken,
+                username = username,
+                email = onboarding.email,
+            )
+            _submitting.value = false
+            result.fold(
+                onSuccess = {
+                    _onboardingUser.value = null
+                    onAuthenticated()
+                },
+                onFailure = {
+                    Napier.w(it) { "Username onboarding registration failed" }
+                    _message.value = it.message ?: "Registration failed"
+                },
+            )
+        }
+    }
+
     fun handleAuthResult(result: Result<KMPAuthUser>, onAuthenticated: () -> Unit) {
         result.fold(
             onSuccess = { kmpAuthUser ->
                 viewModelScope.launch {
+                    _submitting.value = true
+                    _message.value = null
                     val tokenResult = KMPAuth.currentUserIdToken()
                     tokenResult.fold(
                         onSuccess = { firebaseIdToken ->
                             val userEmail = kmpAuthUser.email ?: _email.value.trim().ifBlank { null }
-                            val userName = kmpAuthUser.displayName?.trim().takeUnless { it.isNullOrBlank() }
-                                ?: userEmail?.substringBefore('@')
-                                ?: "user"
-                            val firebaseResult = authManager.loginWithFirebase(
-                                idToken = firebaseIdToken,
-                                username = userName,
-                                email = userEmail,
-                            )
-                            firebaseResult.fold(
-                                onSuccess = { onAuthenticated() },
-                                onFailure = {
-                                    Napier.w(it) { "Firebase sign-in failed 1" }
-                                    _message.value = it.message ?: "Firebase sign-in failed"
-                                },
-                            )
+                            // First, check if the user is already provisioned on the backend
+                            val existingUserResult = authManager.checkExistingUser()
+                            if (existingUserResult.isSuccess) {
+                                _submitting.value = false
+                                onAuthenticated()
+                            } else {
+                                // User is authenticated in Firebase but not provisioned on backend yet.
+                                // Route to username onboarding.
+                                val suggestedUsername = kmpAuthUser.displayName?.trim().takeUnless { it.isNullOrBlank() }
+                                    ?: userEmail?.substringBefore('@')?.trim().takeUnless { it.isNullOrBlank() }
+                                    ?: ""
+                                _chosenUsername.value = suggestedUsername
+                                _onboardingUser.value = OnboardingUser(
+                                    idToken = firebaseIdToken,
+                                    email = userEmail,
+                                )
+                                _submitting.value = false
+                            }
                         },
                         onFailure = {
+                            _submitting.value = false
                             Napier.w(it) { "Failed to retrieve Firebase ID token" }
                             _message.value = it.message ?: "Failed to retrieve Firebase ID token"
                         },
@@ -85,6 +146,7 @@ class AuthViewModel(
                 }
             },
             onFailure = {
+                _submitting.value = false
                 Napier.w(it) { "Firebase sign-in failed 2" }
                 _message.value = it.message ?: "Firebase sign-in failed"
             },
