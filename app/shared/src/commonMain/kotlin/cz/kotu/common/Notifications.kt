@@ -5,7 +5,6 @@ import com.mmk.kmpnotifier.local.localNotifier
 import com.mmk.kmpnotifier.notification.PayloadData
 import com.mmk.kmpnotifier.push.PushListener
 import com.mmk.kmpnotifier.push.firebase.addPushListener
-import com.mmk.kmpnotifier.push.firebase.firebasePushNotifier
 import cz.kotu.gamearena.AppScope
 import cz.kotu.gamearena.AuthManager
 import cz.kotu.gamearena.NotificationClient
@@ -18,12 +17,12 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
-import kotlin.time.Clock
 
 @AppScope
 class Notifications @Inject constructor(
     private val authManager: AuthManager,
     private val notificationClient: NotificationClient,
+    private val pushTokenIdStore: PushTokenIdStore,
     private val appScope: CoroutineScope,
 ) {
     private val tokenState = MutableStateFlow<String?>(null)
@@ -53,7 +52,7 @@ class Notifications @Inject constructor(
                 override fun onNewToken(token: String) {
                     super.onNewToken(token)
                     Napier.i("New push token: $token")
-                    tokenState.value = token
+                    onPushToken(token)
                 }
 
                 override fun onPayloadData(data: PayloadData) {
@@ -81,12 +80,6 @@ class Notifications @Inject constructor(
         initNotifications()
 
         observeAndSyncTokens()
-
-        appScope.launch {
-            val token = KMPNotifier.firebasePushNotifier.getToken()
-            Napier.i("Game Arena Firebase push token: $token")
-            tokenState.value = token
-        }
     }
 
     private fun observeAndSyncTokens() {
@@ -105,8 +98,8 @@ class Notifications @Inject constructor(
                 if (!username.isNullOrBlank() && !token.isNullOrBlank() && isGranted) {
                     // All conditions met: sync token to server
                     try {
-                        val tokenId = username + ":" + Clock.System.now().epochSeconds
-                        notificationClient.registerToken(tokenId, "fcm", token)
+                        val clientTokenId = pushTokenIdStore.getOrCreate()
+                        notificationClient.registerToken(clientTokenId, "fcm", token)
                     } catch (e: Exception) {
                         // Handle network failure or retry with backoff
                         Napier.e("Failed to register token", e)
@@ -116,8 +109,20 @@ class Notifications @Inject constructor(
             .launchIn(appScope)
     }
 
-    fun onNotificationPermission(granted: Boolean) {
+    fun onNotificationPermission(
+        granted: Boolean,
+        requestPushToken: suspend () -> String?,
+    ) {
         permissionGrantedState.value = granted
+        if (granted) {
+            appScope.launch {
+                requestPushToken()?.let(::onPushToken)
+            }
+        }
+    }
+
+    fun onPushToken(token: String) {
+        tokenState.value = token
     }
 
     fun showNotification() {

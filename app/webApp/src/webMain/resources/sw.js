@@ -1,6 +1,6 @@
 // ── Firebase Messaging (background push) ────────────────────────────────────
 // Firebase compat scripts are required in service workers because SW module
-// imports have limited browser support. Keep the version in sync with pwa.js.
+// imports have limited browser support. Keep the version in sync with web-push.js.
 // Check https://firebase.google.com/docs/web/learn-more#available-libraries for latest.
 const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.14.0';
 importScripts(`${FIREBASE_SDK}/firebase-app-compat.js`);
@@ -38,6 +38,7 @@ const APP_SHELL = [
   '/styles.css',
   '/manifest.webmanifest',
   '/icon.svg',
+  '/web-push.js',
   '/webApp.js',
 ];
 

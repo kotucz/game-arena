@@ -7,7 +7,9 @@ import com.mmk.kmpnotifier.push.firebase.FirebasePush
 
 actual fun initNotifications() {
     KMPNotifier.initialize(
-        NotificationPlatformConfiguration.Ios(),
+        NotificationPlatformConfiguration.Ios(
+            askNotificationPermissionOnStart = false,
+        ),
         LocalNotifications, FirebasePush,
     )
 }

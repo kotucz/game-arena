@@ -32,6 +32,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.savedstate.read
+import com.mmk.kmpnotifier.KMPNotifier
+import com.mmk.kmpnotifier.push.firebase.firebasePushNotifier
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
@@ -49,6 +51,9 @@ internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 @Preview
 fun App(
     appComponent: AppComponent = remember { AppComponent::class.create() },
+    askNotificationPermission: ((onPermissionResult: (isGranted: Boolean) -> Unit) -> Unit) =
+        { onResult -> KMPNotifier.permissionUtil.askNotificationPermission(onResult) },
+    requestPushToken: suspend () -> String? = { KMPNotifier.firebasePushNotifier.getToken() },
 ) {
     LaunchedEffect(Unit) {
         KMPAuth.initialize {
@@ -69,7 +74,22 @@ fun App(
         val navController = rememberNavController()
         val authManager = appComponent.authManager
         val notifications = appComponent.notifications
+        val username by authManager.currentUsername.collectAsState()
         var showAuthModal by remember { mutableStateOf(false) }
+        var showNotificationPermissionPrompt by remember { mutableStateOf(false) }
+
+        LaunchedEffect(username) {
+            if (username.isNullOrBlank()) {
+                showNotificationPermissionPrompt = false
+            } else {
+                KMPNotifier.permissionUtil.hasNotificationPermission { isGranted ->
+                    showNotificationPermissionPrompt = !isGranted
+                    if (isGranted) {
+                        notifications.onNotificationPermission(true, requestPushToken)
+                    }
+                }
+            }
+        }
 
         LaunchedEffect(authManager) {
             authManager.unauthorizedEvent.collect {
@@ -84,6 +104,19 @@ fun App(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (showNotificationPermissionPrompt) {
+                TextButton(
+                    onClick = {
+                        askNotificationPermission { isGranted ->
+                            notifications.onNotificationPermission(isGranted, requestPushToken)
+                            showNotificationPermissionPrompt = false
+                        }
+                    },
+                ) {
+                    Text("Enable notifications")
+                }
+            }
+
             NavHost(navController, startDestination = GAMES_ROUTE) {
                 composable(GAMES_ROUTE) {
                     val gamesViewModel: GamesViewModel = viewModel { appComponent.gamesViewModelFactory() }
@@ -141,7 +174,9 @@ fun App(
                     val authViewModel: AuthViewModel = viewModel { appComponent.authViewModelFactory() }
                     AuthScreen(
                         viewModel = authViewModel,
-                        onAuthenticated = { showAuthModal = false },
+                        onAuthenticated = {
+                            showAuthModal = false
+                        },
                     )
                 }
             }

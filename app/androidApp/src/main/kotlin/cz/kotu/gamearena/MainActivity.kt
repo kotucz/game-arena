@@ -18,12 +18,17 @@ class MainActivity : ComponentActivity() {
         val appComponent: AppComponent = (applicationContext as GameArenaApplication).appComponent
 
         setContent {
-            App(appComponent)
+            App(
+                appComponent = appComponent,
+                askNotificationPermission = ::askNotificationPermission,
+            )
         }
+    }
 
+    private fun askNotificationPermission(onPermissionResult: (isGranted: Boolean) -> Unit) {
         permissionUtil().value.askNotificationPermission {
             Toast.makeText(this, "Notifications: $it", Toast.LENGTH_SHORT).show()
-            appComponent.notifications.onNotificationPermission(it)
+            onPermissionResult(it)
         }
     }
 }
