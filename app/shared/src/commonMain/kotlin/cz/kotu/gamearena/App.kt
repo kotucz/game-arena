@@ -32,6 +32,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.savedstate.read
+import com.mmk.kmpnotifier.KMPNotifier
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
@@ -49,6 +50,8 @@ internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 @Preview
 fun App(
     appComponent: AppComponent = remember { AppComponent::class.create() },
+    askNotificationPermission: ((onPermissionResult: (isGranted: Boolean) -> Unit) -> Unit) =
+        { onResult -> KMPNotifier.permissionUtil.askNotificationPermission(onResult) },
 ) {
     LaunchedEffect(Unit) {
         KMPAuth.initialize {
@@ -141,7 +144,12 @@ fun App(
                     val authViewModel: AuthViewModel = viewModel { appComponent.authViewModelFactory() }
                     AuthScreen(
                         viewModel = authViewModel,
-                        onAuthenticated = { showAuthModal = false },
+                        onAuthenticated = {
+                            showAuthModal = false
+                            askNotificationPermission { isGranted ->
+                                appComponent.notifications.onNotificationPermission(isGranted)
+                            }
+                        },
                     )
                 }
             }
