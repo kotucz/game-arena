@@ -48,17 +48,6 @@ class AuthViewModelTest {
             return checkUserResult
         }
 
-        override suspend fun loginWithFirebase(
-            idToken: String,
-            username: String?,
-            email: String?,
-        ): Result<String> {
-            lastIdToken = idToken
-            lastUsername = username
-            lastEmail = email
-            return firebaseResult
-        }
-
         override suspend fun registerUser(
             idToken: String,
             username: String,
@@ -212,13 +201,4 @@ class AuthViewModelTest {
         assertNull(viewModel.message.value)
     }
 
-    @Test
-    fun authManagerLoginWithFirebaseUpdatesState() = runTest {
-        val fakeManager = FakeAuthManager(firebaseResult = Result.success("alice"))
-        val result = fakeManager.loginWithFirebase(idToken = "test-token", username = "alice", email = "alice@example.com")
-        assertTrue(result.isSuccess)
-        assertEquals("alice", fakeManager.lastUsername)
-        assertEquals("test-token", fakeManager.lastIdToken)
-        assertEquals("alice@example.com", fakeManager.lastEmail)
-    }
 }
