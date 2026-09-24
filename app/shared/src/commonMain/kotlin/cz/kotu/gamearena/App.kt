@@ -72,7 +72,13 @@ fun App(
         val navController = rememberNavController()
         val authManager = appComponent.authManager
         val notifications = appComponent.notifications
+        val username by authManager.currentUsername.collectAsState()
         var showAuthModal by remember { mutableStateOf(false) }
+        var showNotificationPermissionPrompt by remember { mutableStateOf(false) }
+
+        LaunchedEffect(username) {
+            showNotificationPermissionPrompt = !username.isNullOrBlank()
+        }
 
         LaunchedEffect(authManager) {
             authManager.unauthorizedEvent.collect {
@@ -87,6 +93,19 @@ fun App(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (showNotificationPermissionPrompt) {
+                TextButton(
+                    onClick = {
+                        askNotificationPermission { isGranted ->
+                            notifications.onNotificationPermission(isGranted)
+                            showNotificationPermissionPrompt = false
+                        }
+                    },
+                ) {
+                    Text("Enable notifications")
+                }
+            }
+
             NavHost(navController, startDestination = GAMES_ROUTE) {
                 composable(GAMES_ROUTE) {
                     val gamesViewModel: GamesViewModel = viewModel { appComponent.gamesViewModelFactory() }
@@ -146,9 +165,6 @@ fun App(
                         viewModel = authViewModel,
                         onAuthenticated = {
                             showAuthModal = false
-                            askNotificationPermission { isGranted ->
-                                appComponent.notifications.onNotificationPermission(isGranted)
-                            }
                         },
                     )
                 }

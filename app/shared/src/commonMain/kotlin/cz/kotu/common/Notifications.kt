@@ -5,7 +5,6 @@ import com.mmk.kmpnotifier.local.localNotifier
 import com.mmk.kmpnotifier.notification.PayloadData
 import com.mmk.kmpnotifier.push.PushListener
 import com.mmk.kmpnotifier.push.firebase.addPushListener
-import com.mmk.kmpnotifier.push.firebase.firebasePushNotifier
 import cz.kotu.gamearena.AppScope
 import cz.kotu.gamearena.AuthManager
 import cz.kotu.gamearena.NotificationClient
@@ -81,12 +80,6 @@ class Notifications @Inject constructor(
         initNotifications()
 
         observeAndSyncTokens()
-
-        appScope.launch {
-            val token = KMPNotifier.firebasePushNotifier.getToken()
-            Napier.i("Game Arena Firebase push token: $token")
-            tokenState.value = token
-        }
     }
 
     private fun observeAndSyncTokens() {
@@ -105,7 +98,8 @@ class Notifications @Inject constructor(
                 if (!username.isNullOrBlank() && !token.isNullOrBlank() && isGranted) {
                     // All conditions met: sync token to server
                     try {
-                        val tokenId = username + ":" + Clock.System.now().epochSeconds
+                        val tokenId = getPersistentPushTokenId()
+                            ?: (username + ":" + Clock.System.now().epochSeconds)
                         notificationClient.registerToken(tokenId, "fcm", token)
                     } catch (e: Exception) {
                         // Handle network failure or retry with backoff
@@ -118,6 +112,13 @@ class Notifications @Inject constructor(
 
     fun onNotificationPermission(granted: Boolean) {
         permissionGrantedState.value = granted
+        if (granted) {
+            appScope.launch {
+                val token = fetchPushToken()
+                Napier.i("Game Arena Firebase push token: $token")
+                tokenState.value = token
+            }
+        }
     }
 
     fun showNotification() {
@@ -127,3 +128,9 @@ class Notifications @Inject constructor(
 }
 
 expect fun initNotifications()
+
+/** Returns the current platform push token after notification permission is granted. */
+internal expect suspend fun fetchPushToken(): String?
+
+/** Stable client ID when the platform can persist one. */
+internal expect fun getPersistentPushTokenId(): String?

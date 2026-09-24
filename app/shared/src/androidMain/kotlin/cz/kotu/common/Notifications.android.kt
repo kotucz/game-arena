@@ -14,3 +14,7 @@ actual fun initNotifications() {
         LocalNotifications, FirebasePush,
     )
 }
+
+internal actual suspend fun fetchPushToken(): String? = FirebasePush.notifier.getToken()
+
+internal actual fun getPersistentPushTokenId(): String? = null
