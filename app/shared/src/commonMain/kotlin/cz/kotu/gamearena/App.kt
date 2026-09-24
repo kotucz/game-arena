@@ -33,6 +33,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.savedstate.read
 import com.mmk.kmpnotifier.KMPNotifier
+import com.mmk.kmpnotifier.push.firebase.firebasePushNotifier
+import cz.kotu.common.PushToken
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
@@ -52,6 +54,9 @@ fun App(
     appComponent: AppComponent = remember { AppComponent::class.create() },
     askNotificationPermission: ((onPermissionResult: (isGranted: Boolean) -> Unit) -> Unit) =
         { onResult -> KMPNotifier.permissionUtil.askNotificationPermission(onResult) },
+    requestPushToken: suspend () -> PushToken? = {
+        KMPNotifier.firebasePushNotifier.getToken()?.let { PushToken(it) }
+    },
 ) {
     LaunchedEffect(Unit) {
         KMPAuth.initialize {
@@ -97,7 +102,7 @@ fun App(
                 TextButton(
                     onClick = {
                         askNotificationPermission { isGranted ->
-                            notifications.onNotificationPermission(isGranted)
+                            notifications.onNotificationPermission(isGranted, requestPushToken)
                             showNotificationPermissionPrompt = false
                         }
                     },

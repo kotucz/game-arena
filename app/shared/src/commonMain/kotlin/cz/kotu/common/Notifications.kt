@@ -26,6 +26,7 @@ class Notifications @Inject constructor(
     private val appScope: CoroutineScope,
 ) {
     private val tokenState = MutableStateFlow<String?>(null)
+    private val tokenIdState = MutableStateFlow<String?>(null)
     private val permissionGrantedState = MutableStateFlow(false)
 
     init {
@@ -52,7 +53,7 @@ class Notifications @Inject constructor(
                 override fun onNewToken(token: String) {
                     super.onNewToken(token)
                     Napier.i("New push token: $token")
-                    tokenState.value = token
+                    onPushToken(PushToken(token))
                 }
 
                 override fun onPayloadData(data: PayloadData) {
@@ -86,21 +87,21 @@ class Notifications @Inject constructor(
         Napier.d { "observeAndSyncTokens" }
         val authFlow = authManager.currentUsername
         val tokenFlow = tokenState
+        val tokenIdFlow = tokenIdState
         val permissionFlow = permissionGrantedState
 
-        combine(authFlow, tokenFlow, permissionFlow) { user, token, isGranted ->
+        combine(authFlow, tokenFlow, permissionFlow, tokenIdFlow) { user, token, isGranted, tokenId ->
             Napier.d { "push token check1: $user $isGranted $token" }
-            Triple(user, token, isGranted)
+            PushRegistrationState(user, token, isGranted, tokenId)
         }
             .distinctUntilChanged()
-            .onEach { (username, token, isGranted) ->
+            .onEach { (username, token, isGranted, tokenId) ->
                 Napier.d { "push token check: $username $isGranted $token" }
                 if (!username.isNullOrBlank() && !token.isNullOrBlank() && isGranted) {
                     // All conditions met: sync token to server
                     try {
-                        val tokenId = getPersistentPushTokenId()
-                            ?: (username + ":" + Clock.System.now().epochSeconds)
-                        notificationClient.registerToken(tokenId, "fcm", token)
+                        val clientTokenId = tokenId ?: (username + ":" + Clock.System.now().epochSeconds)
+                        notificationClient.registerToken(clientTokenId, "fcm", token)
                     } catch (e: Exception) {
                         // Handle network failure or retry with backoff
                         Napier.e("Failed to register token", e)
@@ -110,15 +111,21 @@ class Notifications @Inject constructor(
             .launchIn(appScope)
     }
 
-    fun onNotificationPermission(granted: Boolean) {
+    fun onNotificationPermission(
+        granted: Boolean,
+        requestPushToken: suspend () -> PushToken?,
+    ) {
         permissionGrantedState.value = granted
         if (granted) {
             appScope.launch {
-                val token = fetchPushToken()
-                Napier.i("Game Arena Firebase push token: $token")
-                tokenState.value = token
+                requestPushToken()?.let(::onPushToken)
             }
         }
+    }
+
+    fun onPushToken(pushToken: PushToken) {
+        tokenState.value = pushToken.token
+        tokenIdState.value = pushToken.tokenId
     }
 
     fun showNotification() {
@@ -129,8 +136,9 @@ class Notifications @Inject constructor(
 
 expect fun initNotifications()
 
-/** Returns the current platform push token after notification permission is granted. */
-internal expect suspend fun fetchPushToken(): String?
-
-/** Stable client ID when the platform can persist one. */
-internal expect fun getPersistentPushTokenId(): String?
+private data class PushRegistrationState(
+    val username: String?,
+    val token: String?,
+    val isGranted: Boolean,
+    val tokenId: String?,
+)
