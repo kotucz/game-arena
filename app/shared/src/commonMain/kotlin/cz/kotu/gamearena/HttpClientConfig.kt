@@ -15,15 +15,24 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 
+fun interface TokenProvider {
+    suspend fun getToken(): String?
+}
+
+class KmpAuthTokenProvider : TokenProvider {
+    override suspend fun getToken(): String? =
+        runCatching { KMPAuth.currentUserIdToken().getOrNull() }.getOrNull()
+}
+
 class BearerAuthConfig {
-    var tokenProvider: (suspend () -> String?)? = null
+    var tokenProvider: TokenProvider? = null
 }
 
 val BearerAuthPlugin = createClientPlugin("BearerAuthPlugin", ::BearerAuthConfig) {
     val tokenProvider = pluginConfig.tokenProvider
     onRequest { request, _ ->
         if (tokenProvider != null && !request.headers.contains(HttpHeaders.Authorization)) {
-            val token = tokenProvider.invoke()
+            val token = tokenProvider.getToken()
             if (!token.isNullOrBlank()) {
                 request.header(HttpHeaders.Authorization, "Bearer $token")
             }
@@ -41,7 +50,7 @@ val BearerAuthPlugin = createClientPlugin("BearerAuthPlugin", ::BearerAuthConfig
  */
 fun HttpClientConfig<*>.commonHttpClientConfig(
     baseUrl: String = "",
-    tokenProvider: (suspend () -> String?)? = null,
+    tokenProvider: TokenProvider? = null,
     onUnauthorized: () -> Unit,
 ) {
     if (baseUrl.isNotBlank()) {
@@ -79,7 +88,7 @@ expect fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Uni
 
 fun createAuthHttpClient(
     baseUrl: String = "",
-    tokenProvider: (suspend () -> String?)? = { runCatching { KMPAuth.currentUserIdToken().getOrNull() }.getOrNull() },
+    tokenProvider: TokenProvider? = KmpAuthTokenProvider(),
     onUnauthorized: () -> Unit,
 ): HttpClient =
     createPlatformAuthHttpClient {

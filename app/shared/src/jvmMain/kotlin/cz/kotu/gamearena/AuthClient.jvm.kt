@@ -31,7 +31,7 @@ actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Uni
  * Creates an in-memory HTTP client isolated from global state. Useful for multi-player testing or isolated sessions.
  */
 fun createInMemoryAuthHttpClient(
-    tokenProvider: (suspend () -> String?)? = null,
+    tokenProvider: TokenProvider,
     onUnauthorized: () -> Unit = {},
 ): HttpClient = HttpClient(OkHttp) {
     install(HttpTimeout) {
@@ -52,4 +52,3 @@ fun createInMemoryAuthHttpClient(
 }
 
 actual fun defaultApiBaseUrl(): String = System.getenv("GAMEARENA_API_URL") ?: "http://localhost:8080"
-

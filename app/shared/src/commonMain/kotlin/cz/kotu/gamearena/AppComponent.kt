@@ -62,6 +62,17 @@ abstract class AppComponent {
 
     @Provides
     @AppScope
-    fun provideHttpClient(unauthorizedEvents: MutableSharedFlow<Unit>, baseUrl: ApiBaseUrl): HttpClient =
-        createAuthHttpClient(baseUrl = baseUrl.value, onUnauthorized = { unauthorizedEvents.tryEmit(Unit) })
+    fun provideTokenProvider(): TokenProvider = KmpAuthTokenProvider()
+
+    @Provides
+    @AppScope
+    fun provideHttpClient(
+        unauthorizedEvents: MutableSharedFlow<Unit>,
+        baseUrl: ApiBaseUrl,
+        tokenProvider: TokenProvider,
+    ): HttpClient = createAuthHttpClient(
+        baseUrl = baseUrl.value,
+        tokenProvider = tokenProvider,
+        onUnauthorized = { unauthorizedEvents.tryEmit(Unit) },
+    )
 }
