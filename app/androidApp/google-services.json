@@ -12,7 +12,20 @@
           "package_name": "cz.kotu.gamearena"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "541489886592-ah7itnucv6lrhs6rgrb3au2qv6sicso2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cz.kotu.gamearena",
+            "certificate_hash": "9f0f1701597b7bee0750f9f23a9b2cd6161d98e5"
+          }
+        },
+        {
+          "client_id": "541489886592-p8aksm43vf7qop0isgla56r0lqj8k27t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBmUpymqf9ziLADa9tV5pg3s-9mzzAAFuc"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "541489886592-p8aksm43vf7qop0isgla56r0lqj8k27t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

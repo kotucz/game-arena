@@ -3,10 +3,8 @@ package cz.kotu.gamearena
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.cookies.HttpCookies
 
 actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(OkHttp) {
-    install(HttpCookies)
     engine {
         preconfigured = okhttp3.OkHttpClient.Builder()
             .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))

@@ -8,6 +8,7 @@ import cz.kotu.gamearena.routes.notificationRoutes
 import cz.kotu.gamearena.routes.staticRoutes
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
+import io.ktor.http.ContentType
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
@@ -21,6 +22,8 @@ import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
 import io.netty.channel.ChannelOption
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.event.Level
 
 fun main() {
@@ -64,9 +67,10 @@ fun Application.module(serverComponent: ServerBindings) {
     val gamesManager = serverComponent.gamesManager
     val serverConfig = serverComponent.serverConfig
     val pushNotificationService = serverComponent.notificationService
+    val tokenVerifier = serverComponent.tokenVerifier
     runBlocking { gamesManager.restorePersistedGames() }
 
-    configureSecurity(database, serverConfig)
+    configureSecurity(database, serverConfig, tokenVerifier)
 
     val webRoot = serverConfig.webRoot
 
@@ -75,13 +79,19 @@ fun Application.module(serverComponent: ServerBindings) {
             call.respondText("OK")
         }
 
-        // Expose VAPID public key (empty if not configured) so clients can subscribe for web push
-        get("/api/notifications/vapidPublicKey") {
-            val key = serverConfig.vapidPublicKey ?: ""
-            call.respondText(key)
+        // Serve public Firebase web SDK config (apiKey, projectId, etc.) plus the FCM VAPID key
+        // so browser clients can initialise the Firebase JS SDK and call getToken().
+        // Update firebase.webConfig and firebase.webVapidKey in application.conf when the Firebase
+        // project settings change — no JS rebuild required.
+        get("/api/firebase-config") {
+            val json = buildJsonObject {
+                serverConfig.firebaseWebConfig.forEach { (k, v) -> put(k, v) }
+                serverConfig.firebaseWebVapidKey?.let { put("vapidKey", it) }
+            }
+            call.respondText(json.toString(), ContentType.Application.Json)
         }
 
-        authRoutes(database)
+        authRoutes(database, tokenVerifier)
         notificationRoutes(database)
         gameRoutes(gamesManager)
         adminRoutes(pushNotificationService)

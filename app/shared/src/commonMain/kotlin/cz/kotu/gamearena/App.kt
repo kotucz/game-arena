@@ -17,6 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.mmk.kmpauth.core.KMPAuth
+import com.mmk.kmpauth.firebase.firebase
+import com.mmk.kmpauth.google.google
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,6 +37,7 @@ import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
+import kotlin.String
 
 internal const val GAMES_ROUTE = "games"
 internal const val GOT_FIVE_ROUTE = "got-five"
@@ -41,12 +45,26 @@ internal const val DEBUG_ROUTE = "debug"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
 internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
 
-
 @Composable
 @Preview
 fun App(
     appComponent: AppComponent = remember { AppComponent::class.create() },
 ) {
+    LaunchedEffect(Unit) {
+        KMPAuth.initialize {
+            google(
+                serverId = ClientAuthConfig.GOOGLE_WEB_CLIENT_ID,
+                // must be configured at https://console.cloud.google.com/auth/clients/ Authorized redirect URIs
+                redirectUri = "http://localhost:8087/callback",
+            )
+            firebase(
+                apiKey = ClientAuthConfig.FIREBASE_API_KEY,
+                projectId = ClientAuthConfig.FIREBASE_PROJECT_ID,
+                applicationId = ClientAuthConfig.FIREBASE_APPLICATION_ID,
+            )
+        }
+    }
+
     MaterialTheme {
         val navController = rememberNavController()
         val authManager = appComponent.authManager
@@ -120,8 +138,9 @@ fun App(
                     shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
+                    val authViewModel: AuthViewModel = viewModel { appComponent.authViewModelFactory() }
                     AuthScreen(
-                        authManager = authManager,
+                        viewModel = authViewModel,
                         onAuthenticated = { showAuthModal = false },
                     )
                 }

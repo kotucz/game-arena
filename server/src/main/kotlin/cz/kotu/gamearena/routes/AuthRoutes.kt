@@ -1,74 +1,113 @@
 package cz.kotu.gamearena.routes
 
 import cz.kotu.gamearena.AppDatabase
-import cz.kotu.gamearena.PasswordHasher
-import cz.kotu.gamearena.SessionTokens
+import cz.kotu.gamearena.TokenVerifier
 import cz.kotu.gamearena.User
 import cz.kotu.gamearena.UserPrincipal
-import cz.kotu.gamearena.plugins.createSession
+import cz.kotu.gamearena.model.RegisterUserRequest
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import io.ktor.server.request.contentType
 import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import io.ktor.server.sessions.clear
-import io.ktor.server.sessions.sessions
+import kotlinx.serialization.json.Json
+import java.util.Locale
 
-fun Route.authRoutes(database: AppDatabase) {
-    post("/api/register") {
-        val form = call.receiveParameters()
-        val username = form["username"]?.trim().orEmpty()
-        val email = form["email"]?.trim().orEmpty()
-        val password = form["password"].orEmpty()
-        val validationError = validateRegistration(username, email, password)
-        if (validationError != null) {
-            call.respond(HttpStatusCode.BadRequest, validationError)
-        } else if (database.userDao().findByUsername(username) != null) {
-            call.respond(HttpStatusCode.Conflict, "Username is already registered")
+fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
+    suspend fun handleUserRegistration(call: ApplicationCall) {
+        val idToken: String?
+        val username: String?
+        val email: String?
+
+        val contentType = call.request.contentType()
+        if (contentType.match(ContentType.Application.Json)) {
+            val body = runCatching {
+                Json.decodeFromString<RegisterUserRequest>(call.receiveText())
+            }.getOrNull()
+            if (body == null) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid JSON body")
+                return
+            }
+            username = body.username.trim()
+            email = body.email?.trim()
+            idToken = body.idToken?.trim()
         } else {
-            database.userDao().insert(User(username, PasswordHasher.hash(password), email))
-            createSession(call, database, username)
-            call.respond(HttpStatusCode.Created, "Registration successful")
+            val form = call.receiveParameters()
+            username = form["username"]?.trim()
+            email = form["email"]?.trim()
+            idToken = form["idToken"]?.trim()
         }
+
+        val authHeader = call.request.headers[HttpHeaders.Authorization]
+        val bearerToken = authHeader?.removePrefix("Bearer ")?.trim()
+        val token = idToken?.takeIf { it.isNotBlank() } ?: bearerToken?.takeIf { it.isNotBlank() }
+
+        if (token.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest, "idToken is required")
+            return
+        }
+
+        if (username.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest, "username is required")
+            return
+        }
+
+        val claims = tokenVerifier.verify(token)
+        if (claims == null) {
+            call.respond(HttpStatusCode.Unauthorized, "Invalid Firebase token")
+            return
+        }
+
+        val firebaseUid = claims.uid
+        val existingByUid = database.userDao().findByFirebaseUid(firebaseUid)
+        if (existingByUid != null) {
+            call.respond(HttpStatusCode.Conflict, "User is already registered")
+            return
+        }
+
+        val usernameLower = username.lowercase(Locale.ROOT)
+        val existingByUsername = database.userDao().findByUsernameLower(usernameLower)
+        if (existingByUsername != null) {
+            call.respond(HttpStatusCode.Conflict, "Username is already taken")
+            return
+        }
+
+        val resolvedEmail = email?.takeIf { it.isNotBlank() } ?: claims.email.orEmpty()
+        val created = User(
+            firebaseUid = firebaseUid,
+            username = username,
+            usernameLower = usernameLower,
+            email = resolvedEmail,
+        )
+        database.userDao().insert(created)
+        call.respond(HttpStatusCode.Created, "User registered successfully")
     }
 
-    post("/api/login") {
-        val form = call.receiveParameters()
-        val username = form["username"]?.trim().orEmpty()
-        val password = form["password"].orEmpty()
-        val user = database.userDao().findByUsername(username)
-        if (user == null || !PasswordHasher.matches(password, user.passwordHash)) {
-            call.respond(HttpStatusCode.Unauthorized, "Invalid username or password")
-        } else {
-            createSession(call, database, user.username)
-            call.respondText("Login successful")
-        }
+    post("/api/auth/register") {
+        handleUserRegistration(call)
+    }
+
+    post("/api/auth/user") {
+        handleUserRegistration(call)
     }
 
     post("/api/logout") {
-        val token = call.request.cookies[SessionTokens.cookieName]
-        if (token != null) {
-            database.sessionDao().deleteByTokenHash(SessionTokens.hash(token))
-        }
-        call.sessions.clear(SessionTokens.cookieName)
         call.respondText("Logout successful")
     }
 
-    authenticate("auth-session") {
+    authenticate("auth-firebase") {
         get("/api/me") {
             val principal = call.principal<UserPrincipal>()!!
             call.respondText(principal.username)
         }
     }
-}
-
-private fun validateRegistration(username: String, email: String, password: String): String? = when {
-    !username.matches(Regex("^[A-Za-z0-9_]{3,32}$")) -> "Username must be 3-32 letters, numbers, or underscores"
-    !email.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) -> "Enter a valid email address"
-    password.length < 8 -> "Password must be at least 8 characters"
-    else -> null
 }

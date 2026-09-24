@@ -4,13 +4,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
-import io.ktor.client.plugins.cookies.HttpCookies
 
 actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient = HttpClient(OkHttp) {
-    install(HttpCookies) {
-        storage = PreferencesCookieStorage()
-    }
     // Default REST timeouts (e.g. 15s)
     install(HttpTimeout) {
         requestTimeoutMillis = 15_000
@@ -33,13 +28,12 @@ actual fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Uni
 }
 
 /**
- * Creates an in-memory HTTP client (using [AcceptAllCookiesStorage]) isolated from the global
- * desktop [PreferencesCookieStorage]. Useful for multi-player testing or isolated sessions.
+ * Creates an in-memory HTTP client isolated from global state. Useful for multi-player testing or isolated sessions.
  */
-fun createInMemoryAuthHttpClient(onUnauthorized: () -> Unit = {}): HttpClient = HttpClient(OkHttp) {
-    install(HttpCookies) {
-        storage = AcceptAllCookiesStorage()
-    }
+fun createInMemoryAuthHttpClient(
+    tokenProvider: (suspend () -> String?)? = null,
+    onUnauthorized: () -> Unit = {},
+): HttpClient = HttpClient(OkHttp) {
     install(HttpTimeout) {
         requestTimeoutMillis = 15_000
         connectTimeoutMillis = 10_000
@@ -54,7 +48,7 @@ fun createInMemoryAuthHttpClient(onUnauthorized: () -> Unit = {}): HttpClient = 
             protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
         }
     }
-    commonHttpClientConfig("", onUnauthorized)
+    commonHttpClientConfig("", tokenProvider, onUnauthorized)
 }
 
 actual fun defaultApiBaseUrl(): String = System.getenv("GAMEARENA_API_URL") ?: "http://localhost:8080"

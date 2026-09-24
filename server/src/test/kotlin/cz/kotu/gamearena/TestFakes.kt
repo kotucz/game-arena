@@ -16,9 +16,29 @@ private fun createTempDatabase(): AppDatabase {
         .build()
 }
 
+class FakeTokenVerifier : TokenVerifier {
+    private val claimsMap = java.util.concurrent.ConcurrentHashMap<String, FirebaseUserClaims>()
+
+    fun setClaims(token: String, claims: FirebaseUserClaims) {
+        claimsMap[token] = claims
+    }
+
+    override fun verify(idToken: String): FirebaseUserClaims? {
+        claimsMap[idToken]?.let { return it }
+        // Bearer tokens must use token68 characters; a colon is not valid.
+        if (idToken.startsWith("test-token-")) {
+            val uid = idToken.removePrefix("test-token-")
+            return FirebaseUserClaims(uid = uid, email = "$uid@example.com", name = uid)
+        }
+        return null
+    }
+}
+
 class TestFakes(
     @get:Provides
     val database: AppDatabase = createTempDatabase(),
+    @get:Provides
+    val notificationService: PushNotificationService = NoopPushNotificationService(),
     @get:Provides
     val serverConfig: ServerConfig = ServerConfig(
         port = 8080,
@@ -28,4 +48,6 @@ class TestFakes(
         adminPassword = "test-secret",
         firebaseConfigFile = File("."),
     ),
+    @get:Provides
+    val tokenVerifier: TokenVerifier = FakeTokenVerifier(),
 )

@@ -17,10 +17,10 @@ import io.ktor.server.routing.route
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
-private val knownServices = setOf("fcm", "webpush")
+private val knownServices = setOf("fcm")
 
 fun Route.notificationRoutes(database: AppDatabase) {
-    authenticate("auth-session") {
+    authenticate("auth-firebase") {
         route("/api/notifications/tokens/{tokenId}") {
             put {
                 val principal = call.principal<UserPrincipal>()!!

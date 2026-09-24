@@ -1,22 +1,35 @@
 package cz.kotu.gamearena
 
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
-import io.ktor.client.plugins.cookies.HttpCookies
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.server.testing.*
-import kotlin.test.*
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.server.testing.ApplicationTestBuilder
+import io.ktor.server.testing.testApplication
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ApplicationTest {
 
-    private suspend fun ensureTestUser(database: AppDatabase, username: String = "test-user") {
-        if (database.userDao().findByUsername(username) == null) {
+    private suspend fun ensureTestUser(
+        database: AppDatabase,
+        username: String = "test-user",
+        firebaseUid: String = "uid-$username",
+    ) {
+        if (database.userDao().findByFirebaseUid(firebaseUid) == null) {
             database.userDao().insert(
                 User(
+                    firebaseUid = firebaseUid,
                     username = username,
-                    passwordHash = PasswordHasher.hash("password123"),
+                    usernameLower = username.lowercase(),
                     email = "$username@example.com",
                 )
             )
@@ -26,22 +39,15 @@ class ApplicationTest {
     private suspend fun ApplicationTestBuilder.createAuthenticatedClient(
         component: ServerBindings,
         username: String = "test-user",
-        password: String = "password123",
+        firebaseUid: String = "uid-$username",
     ): HttpClient {
-        ensureTestUser(component.database, username)
-
-        val authenticatedClient = createClient {
-            install(HttpCookies) {
-                storage = AcceptAllCookiesStorage()
+        ensureTestUser(component.database, username, firebaseUid)
+        val token = "test-token-$firebaseUid"
+        return createClient {
+            defaultRequest {
+                header(HttpHeaders.Authorization, "Bearer $token")
             }
         }
-
-        val loginResponse = authenticatedClient.post("/api/login") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody(listOf("username" to username, "password" to password).formUrlEncode())
-        }
-        assertEquals(HttpStatusCode.OK, loginResponse.status, "Failed to log in test user")
-        return authenticatedClient
     }
 
     @Test
@@ -53,21 +59,6 @@ class ApplicationTest {
         val response = client.get("/health")
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("OK", response.bodyAsText())
-    }
-
-    @Test
-    fun registrationCreatesPersistentSession() = testApplication {
-        val component = TestServerComponent::class.create()
-        application { module(component) }
-
-        val username = "user_${System.currentTimeMillis()}"
-        val registration = client.post("/api/register") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody("username=$username&email=$username%40example.com&password=correctPassword123")
-        }
-
-        assertEquals(HttpStatusCode.Created, registration.status)
-        assertTrue(registration.headers[HttpHeaders.SetCookie]?.startsWith("gamearena_session=") == true)
     }
 
     @Test

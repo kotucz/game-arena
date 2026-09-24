@@ -31,6 +31,7 @@ abstract class AppComponent {
     // username parameter removed — ContactsGameViewModel now injects AuthManager directly
     abstract val contactsGameViewModelFactory: (String) -> ContactsGameViewModel
     abstract val gamesViewModelFactory: () -> GamesViewModel
+    abstract val authViewModelFactory: () -> AuthViewModel
 
     /**
      * Application-wide coroutine scope used by [AuthManager] for background work

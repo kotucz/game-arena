@@ -1,27 +1,58 @@
 package cz.kotu.gamearena
 
+import com.mmk.kmpauth.core.KMPAuth
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpResponseValidator
+import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.sse.SSE
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+
+class BearerAuthConfig {
+    var tokenProvider: (suspend () -> String?)? = null
+}
+
+val BearerAuthPlugin = createClientPlugin("BearerAuthPlugin", ::BearerAuthConfig) {
+    val tokenProvider = pluginConfig.tokenProvider
+    onRequest { request, _ ->
+        if (tokenProvider != null && !request.headers.contains(HttpHeaders.Authorization)) {
+            val token = tokenProvider.invoke()
+            if (!token.isNullOrBlank()) {
+                request.header(HttpHeaders.Authorization, "Bearer $token")
+            }
+        }
+    }
+}
 
 /**
  * Common Ktor plugin configuration shared across all platforms.
  * Each platform actual calls this inside its engine-specific HttpClient block.
  *
  * @param baseUrl optional base URL; if blank, requests remain origin-relative (useful for web).
+ * @param tokenProvider optional dynamic token provider called per request to attach Bearer token.
  * @param onUnauthorized called whenever any response returns HTTP 401.
  */
-fun HttpClientConfig<*>.commonHttpClientConfig(baseUrl: String = "", onUnauthorized: () -> Unit) {
+fun HttpClientConfig<*>.commonHttpClientConfig(
+    baseUrl: String = "",
+    tokenProvider: (suspend () -> String?)? = null,
+    onUnauthorized: () -> Unit,
+) {
     if (baseUrl.isNotBlank()) {
         install(DefaultRequest) {
             url(baseUrl)
+        }
+    }
+
+    if (tokenProvider != null) {
+        install(BearerAuthPlugin) {
+            this.tokenProvider = tokenProvider
         }
     }
 
@@ -43,10 +74,14 @@ fun HttpClientConfig<*>.commonHttpClientConfig(baseUrl: String = "", onUnauthori
     }
 }
 
-/** Platform-specific factory; each actual supplies the engine and cookie storage. */
+/** Platform-specific factory; each actual supplies the engine. */
 expect fun createPlatformAuthHttpClient(configure: HttpClientConfig<*>.() -> Unit): HttpClient
 
-fun createAuthHttpClient(baseUrl: String = "", onUnauthorized: () -> Unit): HttpClient =
+fun createAuthHttpClient(
+    baseUrl: String = "",
+    tokenProvider: (suspend () -> String?)? = { runCatching { KMPAuth.currentUserIdToken().getOrNull() }.getOrNull() },
+    onUnauthorized: () -> Unit,
+): HttpClient =
     createPlatformAuthHttpClient {
-        commonHttpClientConfig(baseUrl, onUnauthorized)
+        commonHttpClientConfig(baseUrl, tokenProvider, onUnauthorized)
     }

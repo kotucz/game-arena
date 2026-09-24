@@ -12,6 +12,7 @@ interface ServerBindings {
     val gamesManager: GamesManager
     val notificationService: PushNotificationService
     val serverConfig: ServerConfig
+    val tokenVerifier: TokenVerifier
 
     @Provides
     @ServerScope
@@ -23,11 +24,4 @@ interface ServerBindings {
         notificationService = notificationService,
     )
 
-    @Provides
-    @ServerScope
-    fun provideNotificationService(database: AppDatabase, serverConfig: ServerConfig): PushNotificationService {
-        val firebase = FirebaseAdminPushNotificationService(database, serverConfig)
-        val webPush = WebPushNotificationService(database, serverConfig)
-        return CompositePushNotificationService(listOf(firebase, webPush))
-    }
 }

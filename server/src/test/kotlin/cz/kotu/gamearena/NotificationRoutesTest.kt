@@ -1,17 +1,16 @@
 package cz.kotu.gamearena
 
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
-import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.delete
-import io.ktor.client.request.post
+import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.formUrlEncode
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
@@ -25,20 +24,24 @@ class NotificationRoutesTest {
     private suspend fun ApplicationTestBuilder.registeredClient(
         component: TestServerComponent,
         username: String = "notif-user",
-        password: String = "password123",
+        firebaseUid: String = "uid-$username",
     ): HttpClient {
-        if (component.database.userDao().findByUsername(username) == null) {
+        if (component.database.userDao().findByFirebaseUid(firebaseUid) == null) {
             component.database.userDao().insert(
-                User(username, PasswordHasher.hash(password), "$username@example.com")
+                User(
+                    firebaseUid = firebaseUid,
+                    username = username,
+                    usernameLower = username.lowercase(),
+                    email = "$username@example.com",
+                )
             )
         }
-        val client = createClient { install(HttpCookies) { storage = AcceptAllCookiesStorage() } }
-        val login = client.post("/api/login") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody(listOf("username" to username, "password" to password).formUrlEncode())
+        val token = "test-token-$firebaseUid"
+        return createClient {
+            defaultRequest {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
         }
-        assertEquals(HttpStatusCode.OK, login.status, "Login failed for $username")
-        return client
     }
 
     private fun tokenBody(service: String = "fcm", token: String = "tok-abc") =
@@ -115,6 +118,22 @@ class NotificationRoutesTest {
         val response = client.put("/api/notifications/tokens/device-1") {
             contentType(ContentType.Application.Json)
             setBody(tokenBody(service = "carrier-pigeon"))
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("Unknown service"))
+    }
+
+    @Test
+    fun registerTokenRejectsWebPush() = testApplication {
+        val component = TestServerComponent::class.create()
+        application { module(component) }
+        val client = registeredClient(component)
+
+        // "webpush" was removed when the web client switched to FCM.
+        val response = client.put("/api/notifications/tokens/web-1") {
+            contentType(ContentType.Application.Json)
+            setBody(tokenBody(service = "webpush"))
         }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
