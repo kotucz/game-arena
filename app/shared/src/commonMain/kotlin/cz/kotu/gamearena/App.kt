@@ -79,7 +79,16 @@ fun App(
         var showNotificationPermissionPrompt by remember { mutableStateOf(false) }
 
         LaunchedEffect(username) {
-            showNotificationPermissionPrompt = !username.isNullOrBlank()
+            if (username.isNullOrBlank()) {
+                showNotificationPermissionPrompt = false
+            } else {
+                KMPNotifier.permissionUtil.hasNotificationPermission { isGranted ->
+                    showNotificationPermissionPrompt = !isGranted
+                    if (isGranted) {
+                        notifications.onNotificationPermission(true, requestPushToken)
+                    }
+                }
+            }
         }
 
         LaunchedEffect(authManager) {
