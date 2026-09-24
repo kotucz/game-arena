@@ -32,7 +32,6 @@ import com.mmk.kmpauth.google.rememberGoogleAuthState
 fun AuthScreen(
     viewModel: AuthViewModel,
     onAuthenticated: () -> Unit,
-    onGoogleSignIn: () -> Unit = {},
 ) {
     val mode by viewModel.mode.collectAsState()
     val email by viewModel.email.collectAsState()
