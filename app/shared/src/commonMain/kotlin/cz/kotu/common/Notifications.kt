@@ -17,16 +17,15 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
-import kotlin.time.Clock
 
 @AppScope
 class Notifications @Inject constructor(
     private val authManager: AuthManager,
     private val notificationClient: NotificationClient,
+    private val pushTokenIdStore: PushTokenIdStore,
     private val appScope: CoroutineScope,
 ) {
     private val tokenState = MutableStateFlow<String?>(null)
-    private val tokenIdState = MutableStateFlow<String?>(null)
     private val permissionGrantedState = MutableStateFlow(false)
 
     init {
@@ -53,7 +52,7 @@ class Notifications @Inject constructor(
                 override fun onNewToken(token: String) {
                     super.onNewToken(token)
                     Napier.i("New push token: $token")
-                    onPushToken(PushToken(token))
+                    onPushToken(token)
                 }
 
                 override fun onPayloadData(data: PayloadData) {
@@ -87,20 +86,19 @@ class Notifications @Inject constructor(
         Napier.d { "observeAndSyncTokens" }
         val authFlow = authManager.currentUsername
         val tokenFlow = tokenState
-        val tokenIdFlow = tokenIdState
         val permissionFlow = permissionGrantedState
 
-        combine(authFlow, tokenFlow, permissionFlow, tokenIdFlow) { user, token, isGranted, tokenId ->
+        combine(authFlow, tokenFlow, permissionFlow) { user, token, isGranted ->
             Napier.d { "push token check1: $user $isGranted $token" }
-            PushRegistrationState(user, token, isGranted, tokenId)
+            Triple(user, token, isGranted)
         }
             .distinctUntilChanged()
-            .onEach { (username, token, isGranted, tokenId) ->
+            .onEach { (username, token, isGranted) ->
                 Napier.d { "push token check: $username $isGranted $token" }
                 if (!username.isNullOrBlank() && !token.isNullOrBlank() && isGranted) {
                     // All conditions met: sync token to server
                     try {
-                        val clientTokenId = tokenId ?: (username + ":" + Clock.System.now().epochSeconds)
+                        val clientTokenId = pushTokenIdStore.getOrCreate()
                         notificationClient.registerToken(clientTokenId, "fcm", token)
                     } catch (e: Exception) {
                         // Handle network failure or retry with backoff
@@ -113,7 +111,7 @@ class Notifications @Inject constructor(
 
     fun onNotificationPermission(
         granted: Boolean,
-        requestPushToken: suspend () -> PushToken?,
+        requestPushToken: suspend () -> String?,
     ) {
         permissionGrantedState.value = granted
         if (granted) {
@@ -123,9 +121,8 @@ class Notifications @Inject constructor(
         }
     }
 
-    fun onPushToken(pushToken: PushToken) {
-        tokenState.value = pushToken.token
-        tokenIdState.value = pushToken.tokenId
+    fun onPushToken(token: String) {
+        tokenState.value = token
     }
 
     fun showNotification() {
@@ -135,10 +132,3 @@ class Notifications @Inject constructor(
 }
 
 expect fun initNotifications()
-
-private data class PushRegistrationState(
-    val username: String?,
-    val token: String?,
-    val isGranted: Boolean,
-    val tokenId: String?,
-)

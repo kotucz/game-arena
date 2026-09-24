@@ -5,4 +5,4 @@ package cz.kotu.gamearena
 
 import kotlin.js.JsQualifier
 
-external fun fetchWebPushToken(onResult: (token: String?, tokenId: String?) -> Unit)
+external fun fetchWebPushToken(onResult: (token: String?) -> Unit)

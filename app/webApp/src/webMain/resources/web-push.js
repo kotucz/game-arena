@@ -5,19 +5,18 @@ window.GameArenaPush = (() => {
 
   return {
     async fetchWebPushToken(onResult) {
-      const tokenId = this.persistentWebPushTokenId();
       try {
         const configResponse = await fetch('/api/firebase-config');
         if (!configResponse.ok) {
           console.warn('Failed to load Firebase config:', configResponse.status);
-          onResult(null, tokenId);
+          onResult(null);
           return null;
         }
 
         const config = await configResponse.json();
         if (!config.vapidKey) {
           console.warn('Firebase web VAPID key is missing.');
-          onResult(null, tokenId);
+          onResult(null);
           return null;
         }
 
@@ -38,22 +37,13 @@ window.GameArenaPush = (() => {
           vapidKey: config.vapidKey,
           serviceWorkerRegistration: registration,
         });
-        onResult(token, tokenId);
+        onResult(token);
         return token;
       } catch (error) {
         console.warn('Failed to obtain web push token', error);
-        onResult(null, tokenId);
+        onResult(null);
         return null;
       }
-    },
-
-    persistentWebPushTokenId() {
-      let tokenId = window.localStorage.getItem('pushTokenId');
-      if (!tokenId) {
-        tokenId = crypto.randomUUID();
-        window.localStorage.setItem('pushTokenId', tokenId);
-      }
-      return tokenId;
     },
   };
 })();

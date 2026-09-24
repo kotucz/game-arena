@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import com.russhwolf.settings.Settings
 import cz.kotu.common.Notifications
 import cz.kotu.game.contacts.ContactsGameViewModel
 import cz.kotu.game.gotfive.GameViewModel
@@ -54,6 +55,10 @@ abstract class AppComponent {
     @Provides
     @AppScope
     fun provideApiBaseUrl(): ApiBaseUrl = ApiBaseUrl(defaultApiBaseUrl())
+
+    @Provides
+    @AppScope
+    fun provideSettings(): Settings = Settings()
 
     @Provides
     @AppScope
