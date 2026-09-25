@@ -26,11 +26,13 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Gradle Tests & Lint
-        run: ./gradlew check --continue
+        run: ./gradlew test jvmTest lintDebug --continue
 
       - name: Upload Test Reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: '**/build/reports/tests/'
+          path: |
+            **/build/reports/tests/
+            **/build/reports/lint-results*.html
