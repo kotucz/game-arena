@@ -1,4 +1,5 @@
 ### Deploy to HA local
+**Deprecated: see [ha-deployment-guide.md](ha-deployment-guide.md) 4. Release & Deployment Workflow** 
 
 ```
 # PowerShell
