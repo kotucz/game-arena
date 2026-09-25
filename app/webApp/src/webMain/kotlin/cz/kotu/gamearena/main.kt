@@ -8,6 +8,7 @@ import kotlin.coroutines.resume
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     initNapier()
+    initKmpAuthWeb()
 
     ComposeViewport {
         App(

@@ -55,20 +55,6 @@ fun App(
         { onResult -> KMPNotifier.permissionUtil.askNotificationPermission(onResult) },
     requestPushToken: suspend () -> String? = { KMPNotifier.firebasePushNotifier.getToken() },
 ) {
-    LaunchedEffect(Unit) {
-        KMPAuth.initialize {
-            google(
-                serverId = ClientAuthConfig.GOOGLE_WEB_CLIENT_ID,
-                // must be configured at https://console.cloud.google.com/auth/clients/ Authorized redirect URIs
-                redirectUri = "http://localhost:8087/callback",
-            )
-            firebase(
-                apiKey = ClientAuthConfig.FIREBASE_API_KEY,
-                projectId = ClientAuthConfig.FIREBASE_PROJECT_ID,
-                applicationId = ClientAuthConfig.FIREBASE_APPLICATION_ID,
-            )
-        }
-    }
 
     MaterialTheme {
         val navController = rememberNavController()
