@@ -1,27 +1,17 @@
-FROM eclipse-temurin:21-jdk AS build
-
-WORKDIR /src
-COPY . .
-
-# Kotlin/Wasm's downloaded Node.js binary requires libatomic on Linux.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libatomic1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Make the Gradle wrapper executable and convert CRLF line endings from Windows checkouts.
-RUN sed -i 's/\r$//' gradlew \
-    && chmod +x gradlew
-
-RUN ./gradlew --no-daemon :app:webApp:wasmJsBrowserDistribution :server:installDist
-
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /opt/gamearena
-COPY --from=build /src/server/build/install/server /opt/gamearena/server
-COPY --from=build /src/app/webApp/build/dist/wasmJs/productionExecutable /opt/gamearena/web
+
+# Copy pre-compiled server distribution and WASM production build
+# (paths relative to workspace root after running Gradle in GitHub Actions)
+COPY server/build/install/server /opt/gamearena/server
+COPY app/webApp/build/dist/wasmJs/productionExecutable /opt/gamearena/web
 
 ENV GAMEARENA_CONFIG=/config/application.conf
 
 EXPOSE 8080
+
+# Grant execution permissions for the start script
+RUN chmod +x /opt/gamearena/server/bin/server
 
 ENTRYPOINT ["/opt/gamearena/server/bin/server"]
