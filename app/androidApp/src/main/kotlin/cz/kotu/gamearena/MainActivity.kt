@@ -10,12 +10,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.mmk.kmpnotifier.permission.permissionUtil
 
 class MainActivity : ComponentActivity() {
+    private val kmpNotifierPermissionUtil by permissionUtil()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         // Component retrieved from Application context
         val appComponent: AppComponent = (applicationContext as GameArenaApplication).appComponent
+
+        // init early to avoid
+        // java.lang.IllegalStateException: LifecycleOwner cz.kotu.gamearena.MainActivity is attempting to register while current state is RESUMED. LifecycleOwners must call register before they are STARTED.
+        kmpNotifierPermissionUtil
 
         setContent {
             App(
@@ -26,7 +32,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun askNotificationPermission(onPermissionResult: (isGranted: Boolean) -> Unit) {
-        permissionUtil().value.askNotificationPermission {
+        kmpNotifierPermissionUtil.askNotificationPermission {
             Toast.makeText(this, "Notifications: $it", Toast.LENGTH_SHORT).show()
             onPermissionResult(it)
         }
