@@ -197,6 +197,7 @@ class GamesManager(
                 ContactsAiPlayer(
                 game.aiPlayer(username),
                     game.metadata.id,
+                    aiPlayerConfig.sessionStorageFile,
                 ).start(notificationScope, aiPlayerConfig)
             }
         }

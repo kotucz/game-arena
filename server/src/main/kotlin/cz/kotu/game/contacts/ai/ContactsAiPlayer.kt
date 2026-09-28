@@ -4,6 +4,8 @@ import com.google.adk.kt.agents.Instruction
 import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.models.Gemini
 import com.google.adk.kt.runners.InMemoryRunner
+import com.google.adk.kt.sessions.room.RoomSessionService
+import java.io.File
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.gamearena.AiPlayerConfig
 import io.github.aakira.napier.Napier
@@ -12,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 class ContactsAiPlayer(
     private val contactsPlayerFacade: ContactsPlayerFacade,
     private val gameId: String,
+    private val sessionStorageFile: File,
 ) {
 
     fun start(coroutineScope: CoroutineScope, aiPlayerConfig: AiPlayerConfig) {
@@ -50,7 +53,12 @@ class ContactsAiPlayer(
         val runner = AiPlayerRunner(
             playerFacade = contactsPlayerFacade,
             scope = coroutineScope,
-            runner = InMemoryRunner(contactsAgent),
+            runner = InMemoryRunner(
+                agent = contactsAgent,
+                appName = "GameArenaContactsAI",
+                // custom port from Android -> JVM
+                sessionService = RoomSessionService.fromPath(sessionStorageFile.absolutePath),
+            ),
             sessionId = gameId,
         )
         runner.startListening()

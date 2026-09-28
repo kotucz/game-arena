@@ -6,6 +6,7 @@ import java.io.File
 
 data class AiPlayerConfig(
     val gemini: GeminiAiPlayerConfig = GeminiAiPlayerConfig(),
+    val sessionStorageFile: File = File("data/adk/adk_sessions.db"),
 )
 
 data class GeminiAiPlayerConfig(
@@ -68,6 +69,13 @@ data class ServerConfig(
                     gemini = GeminiAiPlayerConfig(
                         apiKey = if (geminiConfig.hasPath("api-key")) geminiConfig.getString("api-key") else null,
                         model = geminiConfig.getString("model"),
+                    ),
+                    sessionStorageFile = File(
+                        if (aiPlayerConfig.hasPath("session-storage-directory")) {
+                            aiPlayerConfig.getString("session-storage-directory")
+                        } else {
+                            "data/adk-sessions"
+                        },
                     ),
                 ),
                 firebaseWebConfig = webConfig,
