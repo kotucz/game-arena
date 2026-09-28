@@ -1,9 +1,11 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ai.ContactsAiPlayer
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
@@ -32,6 +34,7 @@ class GamesManager(
     private val clock: () -> Instant = Clock.System::now,
     private val gameDao: GameDao? = null,
     private val notificationService: PushNotificationService = NoopPushNotificationService(),
+    private val aiPlayerConfig: AiPlayerConfig = AiPlayerConfig(),
 ) {
     private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val games = ConcurrentHashMap<String, ManagedGame>()
@@ -68,6 +71,7 @@ class GamesManager(
         gamesUpdated.value++
         persist(game)
         observeGameNotifications(game)
+        startAiPlayers(game)
         game
     }
 
@@ -77,7 +81,10 @@ class GamesManager(
         }
         gamesUpdated.value++
         persist(game)
-        if (game is ContactsGame) observeGameNotifications(game)
+        if (game is ContactsGame) {
+            observeGameNotifications(game)
+            startAiPlayers(game)
+        }
         game
     }
 
@@ -132,6 +139,7 @@ class GamesManager(
                             )
                             games[metadata.id] = game
                             observeGameNotifications(game)
+                            startAiPlayers(game)
                         }
                     }
                 } catch (e: Exception) {
@@ -177,6 +185,19 @@ class GamesManager(
                     Napier.e(error) { "Failed to send game notification for ${game.metadata.id}" }
                 }
                 lastState = phase
+            }
+        }
+    }
+
+    private fun startAiPlayers(game: ContactsGame) {
+        Napier.i("startAiPlayers game $game")
+        game.metadata.players.forEach { username ->
+            if (username == "ai:gemini") {
+                Napier.i("startAiPlayers $username")
+                ContactsAiPlayer(
+                game.aiPlayer(username),
+                    game.metadata.id,
+                ).start(notificationScope, aiPlayerConfig)
             }
         }
     }
@@ -249,6 +270,13 @@ data class ContactsGame(
                 player = ContactsBoardState.Player(username),
                 gameFacade = contactsGameFacade,
             ),
+        )
+    }
+
+    fun aiPlayer(username: String): ContactsPlayerFacade {
+        return ContactsPlayerGameAdapter(
+            player = ContactsBoardState.Player(username),
+            gameFacade = contactsGameFacade,
         )
     }
 }

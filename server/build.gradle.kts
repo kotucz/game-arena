@@ -13,6 +13,11 @@ application {
 dependencies {
     api(project(":core"))
     implementation(libs.firebase.admin)
+    implementation(libs.google.adk)
+    implementation(libs.google.adk.kotlin.core)
+    ksp(libs.google.adk.kotlin.processor)
+    // maven local build with ktor 3.5.2
+    implementation("com.google.genai:google-genai-kotlin:1.3.0-tk")
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)

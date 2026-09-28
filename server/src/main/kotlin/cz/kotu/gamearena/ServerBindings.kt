@@ -19,9 +19,11 @@ interface ServerBindings {
     fun provideGamesManager(
         database: AppDatabase,
         notificationService: PushNotificationService,
+        serverConfig: ServerConfig,
     ): GamesManager = GamesManager(
         gameDao = database.gameDao(),
         notificationService = notificationService,
+        aiPlayerConfig = serverConfig.aiPlayer,
     )
 
 }
