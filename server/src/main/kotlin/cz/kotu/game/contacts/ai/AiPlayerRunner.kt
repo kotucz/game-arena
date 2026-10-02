@@ -1,5 +1,6 @@
 package cz.kotu.game.contacts.ai
 
+import com.google.adk.kt.agents.RunConfig
 import com.google.adk.kt.runners.Runner
 import com.google.adk.kt.types.Content
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
@@ -12,6 +13,7 @@ import kotlinx.coroutines.launch
 
 class AiPlayerRunner(
     private val playerFacade: ContactsPlayerFacade,
+    private val playerFacadeLookup: PlayerFacadeLookup,
     private val scope: CoroutineScope,
     private val runner: Runner,
     private val sessionId: String,
@@ -37,14 +39,24 @@ class AiPlayerRunner(
         // Construct a clean, stateless snapshot prompt
         val prompt = buildPrompt(viewState, currentLogs)
 
-        // ADK receives each game snapshot as a user message. The runner's agent already owns
-        // the generated Contacts tools, so ADK can invoke them while processing this turn.
-        runner.runAsync(
-            userId = "gamearena-contacts-ai",
-            sessionId = sessionId,
-            newMessage = Content.fromText(role = "user", text = prompt),
-        ).collect { event ->
-            event.content?.text()?.takeIf(String::isNotBlank)?.let { Napier.d(it) }
+        val invocationId = playerFacadeLookup.registerInvocation(playerFacade)
+        Napier.i { "executeAiTurn $sessionId -> $invocationId" }
+
+        try {
+            // ADK receives each game snapshot as a user message. The runner's agent already owns
+            // the generated Contacts tools, so ADK can invoke them while processing this turn.
+            runner.runAsync(
+                userId = "gamearena-contacts-ai",
+                sessionId = sessionId,
+                invocationId = invocationId,
+                newMessage = Content.fromText(role = "user", text = prompt),
+                runConfig = RunConfig(maxLlmCalls = 1),
+            ).collect { event ->
+                event.content?.text()?.takeIf(String::isNotBlank)?.let { Napier.d(it) }
+            }
+        } finally {
+            // 3. Clean up facade when turn completes
+            playerFacadeLookup.clear(invocationId)
         }
     }
 
@@ -52,7 +64,7 @@ class AiPlayerRunner(
         return buildString {
             appendLine("=== CURRENT PLAYER VIEW STATE ===")
             appendLine(viewState.toString()) // Ensure PlayerViewState has a clean toString() representation
-            
+
             appendLine("\n=== AVAILABLE ACTIONS ===")
             appendLine(viewState.actions)
 

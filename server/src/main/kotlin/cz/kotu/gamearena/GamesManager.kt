@@ -195,10 +195,12 @@ class GamesManager(
             if (username == "ai:gemini") {
                 Napier.i("startAiPlayers $username")
                 ContactsAiPlayer(
-                game.aiPlayer(username),
-                    game.metadata.id,
-                    aiPlayerConfig.sessionStorageFile,
-                ).start(notificationScope, aiPlayerConfig)
+                    aiPlayerConfig,
+                ).start(
+                    coroutineScope = notificationScope,
+                    playerFacade = game.aiPlayer(username),
+                    sessionId = game.metadata.id,
+                )
             }
         }
     }
