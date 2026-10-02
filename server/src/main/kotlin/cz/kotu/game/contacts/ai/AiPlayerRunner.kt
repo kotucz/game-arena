@@ -46,7 +46,7 @@ class AiPlayerRunner(
             // ADK receives each game snapshot as a user message. The runner's agent already owns
             // the generated Contacts tools, so ADK can invoke them while processing this turn.
             runner.runAsync(
-                userId = "gamearena-contacts-ai",
+                userId = "user", // default for display in dev-ui
                 sessionId = sessionId,
                 invocationId = invocationId,
                 newMessage = Content.fromText(role = "user", text = prompt),

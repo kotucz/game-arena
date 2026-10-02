@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ai.ContactsAiStart
 import me.tatarka.inject.annotations.Provides
 import me.tatarka.inject.annotations.Scope
 
@@ -19,11 +20,11 @@ interface ServerBindings {
     fun provideGamesManager(
         database: AppDatabase,
         notificationService: PushNotificationService,
-        serverConfig: ServerConfig,
+        contactsAi: ContactsAiStart,
     ): GamesManager = GamesManager(
         gameDao = database.gameDao(),
         notificationService = notificationService,
-        aiPlayerConfig = serverConfig.aiPlayer,
+        contactsAi = contactsAi,
     )
 
 }

@@ -5,15 +5,22 @@ import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.models.Gemini
 import com.google.adk.kt.runners.InMemoryRunner
 import com.google.adk.kt.runners.Runner
-import com.google.adk.kt.sessions.room.RoomSessionService
+import com.google.adk.kt.sessions.SessionService
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.gamearena.AiPlayerConfig
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 
+interface ContactsAiStart {
+    fun start(coroutineScope: CoroutineScope, playerFacade: ContactsPlayerFacade, sessionId: String) {}
+}
+
+object NoopContactsAiStart : ContactsAiStart
+
 class ContactsAiPlayer(
     private val aiPlayerConfig: AiPlayerConfig,
-) {
+    private val sessionService: SessionService,
+) : ContactsAiStart {
 
     private val playerFacadeLookup = PlayerFacadeLookup()
 
@@ -27,17 +34,16 @@ class ContactsAiPlayer(
     val runner: Runner by lazy {
         InMemoryRunner(
             agent = agent,
-            appName = "GameArenaContactsAI",
-            // custom port from Android -> JVM
-            sessionService = RoomSessionService.fromPath(aiPlayerConfig.sessionStorageFile.absolutePath),
+            appName = APP_NAME,
+            sessionService = sessionService,
         )
     }
 
-    fun start(
+    override fun start(
         coroutineScope: CoroutineScope,
         playerFacade: ContactsPlayerFacade,
         sessionId: String,
-    ): AiPlayerRunner {
+    ) {
         val aiRunner = AiPlayerRunner(
             playerFacade = playerFacade,
             playerFacadeLookup = playerFacadeLookup,
@@ -46,10 +52,13 @@ class ContactsAiPlayer(
             sessionId = sessionId,
         )
         aiRunner.startListening()
-        return aiRunner
     }
 
     companion object {
+
+        // for dev-ui app and agent name must match
+        const val APP_NAME = "ContactsAI"
+        const val AGENT_NAME = "ContactsAI"
 
         fun createAgent(
             aiPlayerConfig: AiPlayerConfig,
@@ -72,7 +81,7 @@ class ContactsAiPlayer(
 
             // 2. Instantiate the ADK LlmAgent
             return LlmAgent(
-                name = "ContactsDeductionBot",
+                name = AGENT_NAME,
                 description = "Cooperative AI player for Contacts / Bomb Busters",
                 model = model,
                 includeContents = LlmAgent.IncludeContents.NONE,

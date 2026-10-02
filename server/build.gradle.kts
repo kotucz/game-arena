@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.firebase.admin)
     implementation(libs.google.adk.kotlin.core)
     ksp(libs.google.adk.kotlin.processor)
+    implementation(libs.google.adk.kotlin.webserver)
     // maven local build with ktor 3.5.2
     implementation("com.google.genai:google-genai-kotlin:1.3.0-tk")
     implementation(libs.logback)

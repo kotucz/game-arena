@@ -1,5 +1,8 @@
 package cz.kotu.gamearena
 
+import com.google.adk.kt.webserver.AdkServerConfig
+import com.google.adk.kt.webserver.dev.AdkDevServer
+import com.google.adk.kt.webserver.dev.adkDevModule
 import cz.kotu.gamearena.admin.adminRoutes
 import cz.kotu.gamearena.plugins.configureSecurity
 import cz.kotu.gamearena.routes.authRoutes
@@ -28,6 +31,14 @@ import org.slf4j.event.Level
 
 fun main() {
     val serverConfig = ServerConfig.load()
+
+    val serverComponent = ServerComponent::class.create(serverConfig)
+
+    val adkDevServer = AdkDevServer(serverComponent.adkServerConfig)
+
+    // Non-blocking start so the main thread continues
+    adkDevServer.start(wait = false)
+
     embeddedServer(
         factory = Netty,
         configure = {
@@ -48,7 +59,7 @@ fun main() {
             }
         },
         module = {
-            module(ServerComponent::class.create(serverConfig))
+            module(serverComponent)
         }
     ).start(wait = true)
 }

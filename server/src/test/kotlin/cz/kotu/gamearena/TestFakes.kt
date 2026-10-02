@@ -1,8 +1,10 @@
 package cz.kotu.gamearena
 
-import me.tatarka.inject.annotations.Provides
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import cz.kotu.game.contacts.ai.ContactsAiStart
+import cz.kotu.game.contacts.ai.NoopContactsAiStart
+import me.tatarka.inject.annotations.Provides
 import java.io.File
 import java.nio.file.Files
 
@@ -50,4 +52,6 @@ class TestFakes(
     ),
     @get:Provides
     val tokenVerifier: TokenVerifier = FakeTokenVerifier(),
+    @get:Provides
+    val contactsAi: ContactsAiStart = NoopContactsAiStart,
 )

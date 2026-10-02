@@ -1,6 +1,6 @@
 package cz.kotu.gamearena
 
-import cz.kotu.game.contacts.ai.ContactsAiPlayer
+import cz.kotu.game.contacts.ai.ContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
@@ -34,7 +34,7 @@ class GamesManager(
     private val clock: () -> Instant = Clock.System::now,
     private val gameDao: GameDao? = null,
     private val notificationService: PushNotificationService = NoopPushNotificationService(),
-    private val aiPlayerConfig: AiPlayerConfig = AiPlayerConfig(),
+    private val contactsAi: ContactsAiStart,
 ) {
     private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val games = ConcurrentHashMap<String, ManagedGame>()
@@ -194,9 +194,7 @@ class GamesManager(
         game.metadata.players.forEach { username ->
             if (username == "ai:gemini") {
                 Napier.i("startAiPlayers $username")
-                ContactsAiPlayer(
-                    aiPlayerConfig,
-                ).start(
+                contactsAi.start(
                     coroutineScope = notificationScope,
                     playerFacade = game.aiPlayer(username),
                     sessionId = game.metadata.id,
