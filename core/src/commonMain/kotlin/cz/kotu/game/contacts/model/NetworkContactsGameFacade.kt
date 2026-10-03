@@ -164,7 +164,7 @@ class NetworkContactsGameFacade(
 
     private fun onError(error: Throwable) {
         logLocal("Error: " + error.message)
-        logLocal(error.stackTraceToString())
+        Napier.w("Error: ", error)
     }
 
     private fun logLocal(text: String) {
