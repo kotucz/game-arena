@@ -20,8 +20,8 @@ class ContactsAgentTools(
         context: Context,
         @Param("Your step-by-step reasoning and deduction for this turn") rationale: String,
         @Param("The type of action to perform") actionType: ContactsBoardState.ActionType,
-        @Param("Set of ContactIds selected from your own rack") playerContacts: List<Int>,
-        @Param("Set of ContactIds selected from other players' racks") otherContacts: List<Int>,
+        @Param("Set of ContactIds selected from your own rack. Only raw value(s)") playerContacts: List<String>,
+        @Param("Set of ContactIds selected from other players' racks. Only raw value(s)") otherContacts: List<String>,
     ): String {
         val gameId = context.context.session.key.id
             ?: return "Action failed: Missing session ID in context.".also { Napier.w(it) }
@@ -44,8 +44,8 @@ class ContactsAgentTools(
         // 2. Dispatch action via your domain API
         val result = playerFacade.action(
             actionType = actionType,
-            playerContacts = playerContacts.map { ContactsBoardState.ContactId(it) }.toSet(),
-            otherContacts = otherContacts.map { ContactsBoardState.ContactId(it) }.toSet(),
+            playerContacts = playerContacts.map { ContactsBoardState.ContactId(it.toInt()) }.toSet(),
+            otherContacts = otherContacts.map { ContactsBoardState.ContactId(it.toInt()) }.toSet(),
         )
 
         return result.fold(

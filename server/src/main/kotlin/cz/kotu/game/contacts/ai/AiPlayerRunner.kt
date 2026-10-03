@@ -1,6 +1,7 @@
 package cz.kotu.game.contacts.ai
 
 import com.google.adk.kt.agents.RunConfig
+import com.google.adk.kt.agents.StreamingMode
 import com.google.adk.kt.runners.Runner
 import com.google.adk.kt.types.Content
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
@@ -10,6 +11,7 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 class AiPlayerRunner(
     private val playerFacade: ContactsPlayerFacade,
@@ -18,6 +20,10 @@ class AiPlayerRunner(
     private val runner: Runner,
     private val sessionId: String,
 ) {
+
+    private val json: Json = Json {
+        prettyPrint = true
+    }
 
     fun startListening() {
         Napier.i("startListening")
@@ -50,11 +56,15 @@ class AiPlayerRunner(
                 sessionId = sessionId,
                 invocationId = invocationId,
                 newMessage = Content.fromText(role = "user", text = prompt),
-                runConfig = RunConfig(maxLlmCalls = 1),
+                runConfig = RunConfig(
+                    streamingMode = StreamingMode.SSE,
+                    maxLlmCalls = 3,
+                ),
             ).collect { event ->
-                event.content?.text()?.takeIf(String::isNotBlank)?.let { Napier.d(it) }
+                event.content?.text(includeThoughts = true)?.takeIf(String::isNotBlank)?.let { Napier.d(it) }
             }
         } finally {
+            Napier.i { "executeAiTurn clear $sessionId -> $invocationId" }
             // 3. Clean up facade when turn completes
             playerFacadeLookup.clear(invocationId)
         }
@@ -63,10 +73,8 @@ class AiPlayerRunner(
     private fun buildPrompt(viewState: PlayerViewState, logs: List<GameLogEntry>): String {
         return buildString {
             appendLine("=== CURRENT PLAYER VIEW STATE ===")
-            appendLine(viewState.toString()) // Ensure PlayerViewState has a clean toString() representation
 
-            appendLine("\n=== AVAILABLE ACTIONS ===")
-            appendLine(viewState.actions)
+            appendLine(json.encodeToString(viewState))
 
             appendLine("\n=== RECENT MATCH LOGS ===")
             logs.takeLast(10).forEach { log ->

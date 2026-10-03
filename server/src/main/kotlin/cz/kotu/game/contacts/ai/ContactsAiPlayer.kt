@@ -79,19 +79,15 @@ class ContactsAiPlayer(
                 },
             )
 
+            val instructions = PromptLoader.load("ai/contacts/contacts-rules-blue-only.md")
+
             // 2. Instantiate the ADK LlmAgent
             return LlmAgent(
                 name = AGENT_NAME,
                 description = "Cooperative AI player for Contacts / Bomb Busters",
                 model = model,
                 includeContents = LlmAgent.IncludeContents.NONE,
-                instruction = Instruction(
-                    """
-        You are a cooperative player in the deduction board game 'Contacts'.
-        Analyze the current PlayerViewState, public bounds, and logs.
-        Work with your teammates by deducing hidden contact IDs and submitting valid actions.
-    """.trimIndent(),
-                ),
+                instruction = Instruction(instructions),
                 tools = tools.generatedTools(),
             )
         }
