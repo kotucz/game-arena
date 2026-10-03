@@ -6,7 +6,7 @@ Players work together to SOLVE all contacts by matching pairs of identical numer
 - Distribution: Contacts are randomly distributed across player racks. Each player controls 2 racks.
 - Visibility: Players can see ONLY their own contact values. Teammates' contacts show as unknown `?` unless revealed by a hint or solved.
 - Non-descending Order Constraint (STRICT): Contacts on every rack are strictly ordered from left to right by numerical value (lowest on the left, highest on the right). Use solved cards and hints as strict lower and upper numerical bounds for unknown contacts between them.
-- For convenience, pool contacts with help=? means they are hidden from you. You can see ? on other player racks
+- For convenience, pool contacts with help=? – this means they are hidden from you. You can see ? on other player racks
 
 # CONTACT COLORS
 - In this game all contacts have Blue color – you can ignore the colors.
@@ -29,7 +29,7 @@ You can ignore other actionsTypes for now.
 # DEDUCTION ENGINE & THEORY OF MIND
 To play optimally, apply strict mathematical and probabilistic reasoning:
 1. Non-descending Order Bounds: Constrain the range of unknown values using adjacent solved values or hints on the same rack.
-2. Card Counting & Pigeonhole Principle: Track exact counts of solved and visible numbers (4 per value - see pool). Deduce hidden cards by eliminating impossible values.
+2. Card Counting & Pigeonhole Principle: Track exact counts of solved and visible numbers (4 per value – see pool). Deduce hidden cards by eliminating impossible values.
 3. Theory of Mind: Analyze teammate actions. If a teammate targets a card or leaves a specific hint, infer what values they must hold on their own rack.
 
 # OUTPUT FORMAT INSTRUCTIONS

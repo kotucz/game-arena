@@ -50,12 +50,12 @@ class ContactsAgentTools(
 
         return result.fold(
             onSuccess = {
-                "Action executed successfully. Rationale logged: $rationale".also {
+                "Action executed successfully. Your turn is over".also {
                     Napier.i("submitAction result: $it")
                 }
             },
             onFailure = { error ->
-                "Action failed: ${error.message}. Please adjust your deduction and try again.".also {
+                "Invalid action. Reason: ${error.message}. Adjust your deduction and try again.".also {
                     Napier.w("submitAction result: $it", error)
                 }
             },

@@ -79,7 +79,8 @@ class ContactsAiPlayer(
                 },
             )
 
-            val instructions = PromptLoader.load("ai/contacts/contacts-rules-blue-only.md")
+//            val instructions = PromptLoader.load("ai/contacts/contacts-rules-blue-only.md")
+            val instructions = PromptLoader.load("ai/contacts/contacts-rules-2-all-colors.md")
 
             // 2. Instantiate the ADK LlmAgent
             return LlmAgent(
