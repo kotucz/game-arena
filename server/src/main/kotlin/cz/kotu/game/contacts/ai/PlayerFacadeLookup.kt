@@ -9,19 +9,21 @@ import kotlin.uuid.Uuid
 class PlayerFacadeLookup {
 
     /** invocationId -> ContactsPlayerFacade */
-    private val playerFacades: MutableMap<String, ContactsPlayerFacade> = mutableMapOf()
+    val playerFacades: MutableMap<String, ContactsPlayerFacade> = mutableMapOf()
 
-    fun registerInvocation(playerFacade: ContactsPlayerFacade): String {
+    val lock = Any()
+
+    fun registerInvocation(playerFacade: ContactsPlayerFacade): String  = synchronized(lock) {
         val invocationId = Uuid.random().toString()
         playerFacades[invocationId] = playerFacade
         return invocationId
     }
 
-    fun clear(invocationId: String) {
+    fun clear(invocationId: String) = synchronized(lock) {
         playerFacades.remove(invocationId)
     }
 
-    fun getPlayerFacade(invocationId: String): ContactsPlayerFacade? {
+    fun getPlayerFacade(invocationId: String): ContactsPlayerFacade? = synchronized(lock) {
         return playerFacades[invocationId]
     }
 
