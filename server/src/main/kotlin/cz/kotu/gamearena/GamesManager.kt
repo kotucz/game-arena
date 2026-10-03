@@ -60,12 +60,14 @@ class GamesManager(
         players: List<String>,
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame = gamesMutex.withLock {
+        val metadata = newMetadata(players)
+        val facade = ContactsGameFacadeImpl(
+            players.map(ContactsBoardState::Player),
+            config,
+        )
         val game = ContactsGame(
-            metadata = newMetadata(players),
-            contactsGameFacade = ContactsGameFacadeImpl(
-                players.map(ContactsBoardState::Player),
-                config,
-            ),
+            metadata = metadata,
+            contactsGameFacade = persistingFacade(metadata, facade),
         )
         games[game.metadata.id] = game
         gamesUpdated.value++
@@ -76,16 +78,27 @@ class GamesManager(
     }
 
     suspend fun register(game: ManagedGame): ManagedGame = gamesMutex.withLock {
-        check(games.putIfAbsent(game.metadata.id, game) == null) {
-            "Game ID is already registered: ${game.metadata.id}"
+        val registeredGame = when (game) {
+            is ContactsGame -> game.copy(
+                contactsGameFacade = if (game.contactsGameFacade is PersistingContactsGameFacade) {
+                    game.contactsGameFacade
+                } else {
+                    persistingFacade(game.metadata, game.contactsGameFacade)
+                },
+            )
+
+            else -> game
+        }
+        check(games.putIfAbsent(registeredGame.metadata.id, registeredGame) == null) {
+            "Game ID is already registered: ${registeredGame.metadata.id}"
         }
         gamesUpdated.value++
-        persist(game)
-        if (game is ContactsGame) {
-            observeGameNotifications(game)
-            startAiPlayers(game)
+        persist(registeredGame)
+        if (registeredGame is ContactsGame) {
+            observeGameNotifications(registeredGame)
+            startAiPlayers(registeredGame)
         }
-        game
+        registeredGame
     }
 
     fun game(id: String): ManagedGame? = games[id]
@@ -97,24 +110,29 @@ class GamesManager(
     }
 
     suspend fun persist(game: ManagedGame) {
-        val dao = gameDao ?: return
         when (game) {
-            is ContactsGame -> {
-                val state = game.contactsGameFacade.gameState.value
-                val logs = game.contactsGameFacade.logs.value
-                val record = StoredGame(
-                    id = game.metadata.id,
-                    type = game.metadata.type,
-                    playersJson = json.encodeToString(game.metadata.players),
-                    createdAtMillis = game.metadata.createdAt.toEpochMilliseconds(),
-                    stateJson = json.encodeToString(state),
-                    logsJson = json.encodeToString(logs),
-                    updatedAtMillis = clock().toEpochMilliseconds(),
-                )
-                dao.upsert(record)
-            }
+            is ContactsGame -> persist(game.metadata, game.contactsGameFacade)
         }
     }
+
+    private suspend fun persist(metadata: GameMetadata, facade: ContactsGameFacade) {
+        val dao = gameDao ?: return
+        val record = StoredGame(
+            id = metadata.id,
+            type = metadata.type,
+            playersJson = json.encodeToString(metadata.players),
+            createdAtMillis = metadata.createdAt.toEpochMilliseconds(),
+            stateJson = json.encodeToString(facade.gameState.value),
+            logsJson = json.encodeToString(facade.logs.value),
+            updatedAtMillis = clock().toEpochMilliseconds(),
+        )
+        dao.upsert(record)
+    }
+
+    private fun persistingFacade(metadata: GameMetadata, facade: ContactsGameFacade): ContactsGameFacade =
+        PersistingContactsGameFacade(facade) {
+            persist(metadata, facade)
+        }
 
     suspend fun restorePersistedGames() {
         val dao = gameDao ?: return
@@ -132,9 +150,12 @@ class GamesManager(
                             )
                             val game = ContactsGame(
                                 metadata = metadata,
-                                contactsGameFacade = ContactsGameFacadeImpl(
-                                    initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
-                                    initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
+                                contactsGameFacade = persistingFacade(
+                                    metadata,
+                                    ContactsGameFacadeImpl(
+                                        initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
+                                        initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
+                                    ),
                                 ),
                             )
                             games[metadata.id] = game

@@ -129,7 +129,6 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                 val game = call.contactsGame
                 val result = game.forUser(principal.username).handleAction(call.receiveText())
                 if (result.isSuccess) {
-                    gamesManager.persist(game)
                     call.respond(HttpStatusCode.Accepted)
                 } else {
                     call.respond(HttpStatusCode.BadRequest, result.exceptionOrNull()?.message ?: "Invalid action")
