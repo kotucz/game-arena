@@ -6,6 +6,8 @@ import com.google.adk.kt.models.Gemini
 import com.google.adk.kt.runners.InMemoryRunner
 import com.google.adk.kt.runners.Runner
 import com.google.adk.kt.sessions.SessionService
+import com.google.adk.kt.types.GenerateContentConfig
+import com.google.adk.kt.types.ThinkingConfig
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.gamearena.AiPlayerConfig
 import io.github.aakira.napier.Napier
@@ -88,6 +90,12 @@ class ContactsAiPlayer(
                 description = "Cooperative AI player for Contacts / Bomb Busters",
                 model = model,
                 includeContents = LlmAgent.IncludeContents.NONE,
+                generateContentConfig =  GenerateContentConfig(
+                    thinkingConfig = ThinkingConfig(
+                        includeThoughts = true,
+                        thinkingBudget = 1024,
+                    ),
+                ),
                 instruction = Instruction(instructions),
                 tools = tools.generatedTools(),
             )

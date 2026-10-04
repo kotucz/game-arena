@@ -22,7 +22,8 @@ Players work together to SOLVE all contacts by matching pairs of identical numer
 1. **StandardConnect** #yourContactId #teammateContactId
     - Choose one UNSOLVED contact from your own rack and target one UNSOLVED contact on a teammate's rack.
     - Guess success (matching numbers): Both contacts become SOLVED.
-    - Guess failure (mismatched numbers): Teammate's actual contact number is revealed as a public (hint), and the FAILURE counter increases.
+    - Guess failure (mismatched numbers): Teammate's actual contact number is revealed as a public (hint), and the FAILURE counter increases. 
+    - CRITICAL: Minimize risk of matching with Red contacts as it would result in GAME OVER
 
 2. **SoloConnectRest** + players contacts #contactId1 #contactId2 [#contactId3 #contactId4]
     - Use when you hold ALL remaining UNSOLVED instances of matching contacts in the game (either all 4 four, or the remaining 2 if 2 are already solved). Matching contacts are either Blue with the same number. Or Yellow regardless of their number.  

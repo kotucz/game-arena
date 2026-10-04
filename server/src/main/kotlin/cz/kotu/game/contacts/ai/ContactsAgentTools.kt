@@ -14,7 +14,7 @@ class ContactsAgentTools(
     @Tool(
         description =
             "Execute a game action on your turn. " +
-                    "You MUST provide your full rationale and deduction process before picking action targets.",
+                    "You MUST provide and output your full rationale and deduction process before picking and outputting the action type and contacts.",
     )
     suspend fun submitAction(
         context: Context,
