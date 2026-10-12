@@ -1,9 +1,10 @@
 package cz.kotu.game.contacts.ai
 
-import com.google.adk.kt.agents.RunConfig
-import com.google.adk.kt.agents.StreamingMode
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.llm.LLModel
 import com.google.adk.kt.runners.Runner
-import com.google.adk.kt.types.Content
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.PlayerViewState
@@ -15,14 +16,34 @@ import kotlinx.serialization.json.Json
 
 class AiPlayerRunner(
     private val playerFacade: ContactsPlayerFacade,
-    private val playerFacadeLookup: PlayerFacadeLookup,
+    private val playerFacadeLookup: PlayerFacadeLookup? = null,
     private val scope: CoroutineScope,
-    private val runner: Runner,
+    private val runner: Runner? = null,
+    private val promptExecutor: PromptExecutor,
+    private val model: LLModel,
+    private val instructions: String,
     private val sessionId: String,
 ) {
 
     private val json: Json = Json {
         prettyPrint = true
+    }
+
+    private val agent: AIAgent<String, String> by lazy {
+        val tools = ContactsKoogTools(
+            playerFacade = playerFacade,
+            onThoughtLogged = { reasoning ->
+                Napier.i("[AI DEDUCTION]: $reasoning")
+            },
+        )
+        AIAgent(
+            promptExecutor = promptExecutor,
+            llmModel = model,
+            systemPrompt = instructions,
+            toolRegistry = ToolRegistry {
+                tools(tools)
+            },
+        )
     }
 
     fun startListening() {
@@ -45,28 +66,13 @@ class AiPlayerRunner(
         // Construct a clean, stateless snapshot prompt
         val prompt = buildPrompt(viewState, currentLogs)
 
-        val invocationId = playerFacadeLookup.registerInvocation(playerFacade)
-        Napier.i { "executeAiTurn $sessionId -> $invocationId" }
+        Napier.i { "executeAiTurn $sessionId starting Koog agent run" }
 
         try {
-            // ADK receives each game snapshot as a user message. The runner's agent already owns
-            // the generated Contacts tools, so ADK can invoke them while processing this turn.
-            runner.runAsync(
-                userId = "user", // default for display in dev-ui
-                sessionId = sessionId,
-                invocationId = invocationId,
-                newMessage = Content.fromText(role = "user", text = prompt),
-                runConfig = RunConfig(
-                    streamingMode = StreamingMode.SSE,
-                    maxLlmCalls = 3,
-                ),
-            ).collect { event ->
-                event.content?.text(includeThoughts = true)?.takeIf(String::isNotBlank)?.let { Napier.d(it) }
-            }
-        } finally {
-            Napier.i { "executeAiTurn clear $sessionId -> $invocationId" }
-            // 3. Clean up facade when turn completes
-            playerFacadeLookup.clear(invocationId)
+            val response = agent.run(prompt)
+            Napier.d { "Koog agent response: $response" }
+        } catch (e: Exception) {
+            Napier.e("Error executing Koog AI turn", e)
         }
     }
 

@@ -1,5 +1,11 @@
 package cz.kotu.game.contacts.ai
 
+import ai.koog.http.client.ktor.KtorKoogHttpClient
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
+import ai.koog.prompt.llm.LLMCapability
+import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
 import com.google.adk.kt.agents.Instruction
 import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.models.Gemini
@@ -26,6 +32,7 @@ class ContactsAiPlayer(
 
     private val playerFacadeLookup = PlayerFacadeLookup()
 
+    // ADK Agent & Runner (kept for compatibility)
     val agent: LlmAgent by lazy {
         createAgent(
             playerFacadeLookup = playerFacadeLookup,
@@ -41,6 +48,37 @@ class ContactsAiPlayer(
         )
     }
 
+    // JetBrains Koog prompt executor and model configuration
+    val promptExecutor: MultiLLMPromptExecutor by lazy {
+        val apiKey = checkNotNull(aiPlayerConfig.gemini.apiKey) {
+            "GEMINI_API_KEY must be configured to run the Contacts AI player"
+        }
+        MultiLLMPromptExecutor(
+            LLMProvider.Google to GoogleLLMClient(
+                apiKey = apiKey,
+                httpClientFactory = KtorKoogHttpClient.Factory(),
+            )
+        )
+    }
+
+    val koogModel: LLModel by lazy {
+        LLModel(
+            provider = LLMProvider.Google,
+            id = aiPlayerConfig.gemini.model,
+            capabilities = listOf(
+                LLMCapability.Temperature,
+                LLMCapability.Completion,
+                LLMCapability.MultipleChoices,
+                LLMCapability.Tools,
+                LLMCapability.ToolChoice,
+            ),
+        )
+    }
+
+    val instructions: String by lazy {
+        PromptLoader.load("ai/contacts/contacts-rules-2-all-colors.md")
+    }
+
     override fun start(
         coroutineScope: CoroutineScope,
         playerFacade: ContactsPlayerFacade,
@@ -51,6 +89,9 @@ class ContactsAiPlayer(
             playerFacadeLookup = playerFacadeLookup,
             scope = coroutineScope,
             runner = runner,
+            promptExecutor = promptExecutor,
+            model = koogModel,
+            instructions = instructions,
             sessionId = sessionId,
         )
         aiRunner.startListening()
