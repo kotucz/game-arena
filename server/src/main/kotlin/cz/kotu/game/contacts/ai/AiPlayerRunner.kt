@@ -9,20 +9,20 @@ import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.PlayerViewState
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 class AiPlayerRunner(
     private val playerFacade: ContactsPlayerFacade,
-    private val playerFacadeLookup: PlayerFacadeLookup? = null,
     private val scope: CoroutineScope,
-    private val runner: Runner? = null,
     private val promptExecutor: PromptExecutor,
     private val model: LLModel,
     private val instructions: String,
     private val sessionId: String,
+    private val playerFacadeLookup: PlayerFacadeLookup? = null,
+    private val runner: Runner? = null,
 ) {
 
     private val json: Json = Json {
@@ -49,7 +49,7 @@ class AiPlayerRunner(
     fun startListening() {
         Napier.i("startListening")
         scope.launch {
-            playerFacade.gameState.collectLatest { viewState ->
+            playerFacade.gameState.collect { viewState ->
                 // Only trigger execution when it's actively this AI player's turn
                 if (viewState.actions.allowedActionTypes.isNotEmpty()) {
                     Napier.i("executeAiTurn START")
@@ -71,6 +71,10 @@ class AiPlayerRunner(
         try {
             val response = agent.run(prompt)
             Napier.d { "Koog agent response: $response" }
+        } catch (e: CancellationException) {
+            // collect now waits until this is finished.
+            // but if the parent scope is canceled, this ensures to finish gracefully
+            throw e
         } catch (e: Exception) {
             Napier.e("Error executing Koog AI turn", e)
         }
