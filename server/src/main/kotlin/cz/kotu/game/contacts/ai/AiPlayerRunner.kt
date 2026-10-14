@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
+typealias GameMessageSender = (String) -> Unit
+
 class AiPlayerRunner(
     private val playerFacade: ContactsPlayerFacade,
     private val scope: CoroutineScope,
@@ -23,6 +25,7 @@ class AiPlayerRunner(
     private val sessionId: String,
     private val playerFacadeLookup: PlayerFacadeLookup? = null,
     private val runner: Runner? = null,
+    private val messageSender: GameMessageSender? = null,
 ) {
 
     private val json: Json = Json {
@@ -34,6 +37,7 @@ class AiPlayerRunner(
             playerFacade = playerFacade,
             onThoughtLogged = { reasoning ->
                 Napier.i("[AI DEDUCTION]: $reasoning")
+                messageSender?.invoke(reasoning)
             },
         )
         AIAgent(
@@ -71,6 +75,7 @@ class AiPlayerRunner(
         try {
             val response = agent.run(prompt)
             Napier.d { "Koog agent response: $response" }
+            messageSender?.invoke(response)
         } catch (e: CancellationException) {
             // collect now waits until this is finished.
             // but if the parent scope is canceled, this ensures to finish gracefully

@@ -24,6 +24,7 @@ interface ContactsAiStart {
         coroutineScope: CoroutineScope,
         playerFacade: ContactsPlayerFacade,
         sessionId: String,
+        messageSender: GameMessageSender? = null,
     ): AiPlayerRunner? {
         return null
     }
@@ -89,6 +90,7 @@ class ContactsAiPlayer(
         coroutineScope: CoroutineScope,
         playerFacade: ContactsPlayerFacade,
         sessionId: String,
+        messageSender: GameMessageSender?,
     ): AiPlayerRunner {
         val aiRunner = AiPlayerRunner(
             playerFacade = playerFacade,
@@ -99,6 +101,7 @@ class ContactsAiPlayer(
             model = koogModel,
             instructions = instructions,
             sessionId = sessionId,
+            messageSender = messageSender,
         )
         aiRunner.startListening()
         return aiRunner

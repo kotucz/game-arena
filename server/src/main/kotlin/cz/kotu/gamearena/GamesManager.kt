@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ai.AiPlayerRunner
 import cz.kotu.game.contacts.ai.ContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
@@ -61,15 +62,14 @@ class GamesManager(
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame = gamesMutex.withLock {
         val metadata = newMetadata(players)
+        val impl = ContactsGameFacadeImpl(
+            players.map(ContactsBoardState::Player),
+            config,
+        )
         val game = ContactsGame(
             metadata = metadata,
-            contactsGameFacade = persistingFacade(
-                metadata,
-                ContactsGameFacadeImpl(
-                    players.map(ContactsBoardState::Player),
-                    config,
-                ),
-            ),
+            contactsGameFacade = persistingFacade(metadata, impl),
+            messageSender = { player, text -> impl.sendMessage(player, text) },
         )
         persist(metadata, game.contactsGameFacade)
         games[metadata.id] = game
@@ -138,15 +138,14 @@ class GamesManager(
                                 players = json.decodeFromString<List<String>>(record.playersJson),
                                 createdAt = Instant.fromEpochMilliseconds(record.createdAtMillis),
                             )
+                            val impl = ContactsGameFacadeImpl(
+                                initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
+                                initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
+                            )
                             val game = ContactsGame(
                                 metadata = metadata,
-                                contactsGameFacade = persistingFacade(
-                                    metadata,
-                                    ContactsGameFacadeImpl(
-                                        initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
-                                        initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
-                                    ),
-                                ),
+                                contactsGameFacade = persistingFacade(metadata, impl),
+                                messageSender = impl::sendMessage,
                             )
                             games[metadata.id] = game
                             activate(game)
@@ -202,11 +201,15 @@ class GamesManager(
         game.metadata.players.forEach { username ->
             if (username == "ai:gemini") {
                 Napier.i("startAiPlayers $username")
-                contactsAi.start(
+                val runner = contactsAi.start(
                     coroutineScope = notificationScope,
                     playerFacade = game.aiPlayer(username),
                     sessionId = game.metadata.id,
+                    messageSender = { message -> game.messageSender?.invoke(ContactsBoardState.Player(username), message) },
                 )
+                if (runner != null) {
+                    game.aiRunners[username] = runner
+                }
             }
         }
     }
@@ -262,6 +265,8 @@ interface ManagedGame {
 data class ContactsGame(
     override val metadata: GameMetadata,
     val contactsGameFacade: ContactsGameFacade,
+    val messageSender: ((ContactsBoardState.Player, String) -> Unit)? = null,
+    val aiRunners: MutableMap<String, AiPlayerRunner> = mutableMapOf(),
 ) : ManagedGame {
 
     override val statusText: Flow<String> = contactsGameFacade.gameState.map { state ->
@@ -270,6 +275,12 @@ data class ContactsGame(
             is ContactsGameState.GamePhase.ResolveMultiConnect -> gamePhase.resolveMultiConnect.targetPlayer.username
             is ContactsGameState.GamePhase.StandardTurn -> gamePhase.activePlayer.username
         }
+    }
+
+    suspend fun commandAiPlayer(playerUsername: String, command: String): Boolean {
+        val runner = aiRunners[playerUsername] ?: return false
+        runner.command(command)
+        return true
     }
 
     fun forUser(username: String): ServerContactsGameFacade {
