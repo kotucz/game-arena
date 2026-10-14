@@ -80,6 +80,11 @@ class AiPlayerRunner(
         }
     }
 
+    suspend fun command(command: String) {
+        // TODO: Implement prompt handling
+        Napier.i { "AI prompt received: $command" }
+    }
+
     private fun buildPrompt(viewState: PlayerViewState, logs: List<GameLogEntry>): String {
         return buildString {
             appendLine("=== CURRENT PLAYER VIEW STATE ===")

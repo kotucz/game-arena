@@ -20,7 +20,13 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 
 interface ContactsAiStart {
-    fun start(coroutineScope: CoroutineScope, playerFacade: ContactsPlayerFacade, sessionId: String) {}
+    fun start(
+        coroutineScope: CoroutineScope,
+        playerFacade: ContactsPlayerFacade,
+        sessionId: String,
+    ): AiPlayerRunner? {
+        return null
+    }
 }
 
 object NoopContactsAiStart : ContactsAiStart
@@ -83,7 +89,7 @@ class ContactsAiPlayer(
         coroutineScope: CoroutineScope,
         playerFacade: ContactsPlayerFacade,
         sessionId: String,
-    ) {
+    ): AiPlayerRunner {
         val aiRunner = AiPlayerRunner(
             playerFacade = playerFacade,
             playerFacadeLookup = playerFacadeLookup,
@@ -95,6 +101,7 @@ class ContactsAiPlayer(
             sessionId = sessionId,
         )
         aiRunner.startListening()
+        return aiRunner
     }
 
     companion object {

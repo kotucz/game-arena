@@ -1,5 +1,6 @@
 package cz.kotu.gamearena.routes
 
+import cz.kotu.game.contacts.ai.AiCommandRequest
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.ContactsGame
 import cz.kotu.gamearena.GamesManager
@@ -143,6 +144,29 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                 val principal = call.principal<UserPrincipal>()!!
                 val lastSentLogIndex = call.request.queryParameters["lastSentLogIndex"]?.toIntOrNull() ?: -1
                 call.contactsGame.forUser(principal.username).handleLogs(this, lastSentLogIndex)
+            }
+
+            post("/ai/{id}/command") {
+                val aiId = call.parameters["id"] ?: run {
+                    call.respond(HttpStatusCode.BadRequest, "Missing AI player ID")
+                    return@post
+                }
+                val request = try {
+                    Json.decodeFromString(AiCommandRequest.serializer(), call.receiveText())
+                } catch (_: SerializationException) {
+                    null
+                }
+                if (request == null || request.prompt.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, "Prompt must not be empty")
+                } else {
+                    val game = call.contactsGame
+                    val found = game.commandAiPlayer(aiId, request.prompt)
+                    if (found) {
+                        call.respond(HttpStatusCode.Accepted)
+                    } else {
+                        call.respond(HttpStatusCode.NotFound, "AI player not found: $aiId")
+                    }
+                }
             }
         }
     }
