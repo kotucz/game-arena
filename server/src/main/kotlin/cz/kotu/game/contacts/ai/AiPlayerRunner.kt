@@ -4,7 +4,6 @@ import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
-import com.google.adk.kt.runners.Runner
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.PlayerViewState
@@ -24,8 +23,6 @@ class AiPlayerRunner(
     private val model: LLModel,
     private val instructions: String,
     private val sessionId: String,
-    private val playerFacadeLookup: PlayerFacadeLookup? = null,
-    private val runner: Runner? = null,
     private val messageSender: GameMessageSender? = null,
 ) {
 
