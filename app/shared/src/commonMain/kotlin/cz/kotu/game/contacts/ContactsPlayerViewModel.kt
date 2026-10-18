@@ -24,6 +24,11 @@ class ContactsPlayerViewModel(
     private val aiPlayerAdapter: AiPlayerAdapter? = null,
 ) : ViewModel() {
 
+    val aiPanelViewModel = AiPanelViewModel(
+        scope = viewModelScope,
+        commandAiPlayer = ::commandAiPlayer,
+    )
+
     val hasAiPlayer: Boolean
         get() = gameState.value?.players?.any { player ->
             player.username == AiPlayerAdapter.GEMINI_AI_PLAYER_USERNAME
