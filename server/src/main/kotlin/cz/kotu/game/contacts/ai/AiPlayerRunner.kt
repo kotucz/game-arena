@@ -11,6 +11,7 @@ import cz.kotu.game.contacts.model.PlayerViewState
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -68,7 +69,9 @@ class AiPlayerRunner(
         val currentLogs = playerFacade.logs.value
 
         // Construct a clean, stateless snapshot prompt
-        val prompt = buildPrompt(viewState, currentLogs)
+        val prompt = buildPrompt(viewState, currentLogs) {
+            playTurnInstructions()
+        }
 
         Napier.i { "executeAiTurn $sessionId starting Koog agent run" }
 
@@ -86,13 +89,35 @@ class AiPlayerRunner(
     }
 
     suspend fun command(command: String) {
-        // TODO: Implement prompt handling
-        Napier.i { "AI prompt received: $command" }
+        Napier.i { "AI prompt command received: $command" }
+
+        val viewState = playerFacade.gameState.first()
+        val currentLogs = playerFacade.logs.value
+
+        val prompt = buildPrompt(viewState, currentLogs) {
+            appendLine(command)
+        }
+
+        try {
+            val response = agent.run(prompt)
+            Napier.d { "Koog agent command response: $response" }
+            messageSender?.invoke(response)
+        } catch (e: CancellationException) {
+            // collect now waits until this is finished.
+            // but if the parent scope is canceled, this ensures to finish gracefully
+            throw e
+        } catch (e: Exception) {
+            Napier.e("Error executing Koog AI turn", e)
+        }
     }
 
-    private fun buildPrompt(viewState: PlayerViewState, logs: List<GameLogEntry>): String {
+    private fun buildPrompt(
+        viewState: PlayerViewState,
+        logs: List<GameLogEntry>,
+        instructions: StringBuilder.() -> Unit,
+    ): String {
         return buildString {
-            appendLine("=== CURRENT PLAYER VIEW STATE ===")
+            appendLine("\n=== CURRENT PLAYER VIEW STATE ===")
 
             appendLine(json.encodeToString(viewState))
 
@@ -101,9 +126,14 @@ class AiPlayerRunner(
                 appendLine("- $log")
             }
 
-            appendLine("\n=== INSTRUCTIONS ===")
-            appendLine("Analyze the board state, known bounds, and past logs.")
-            appendLine("Call 'submitAction' with your full rationale and chosen contacts.")
+            appendLine("\n=== INSTRUCTIONS ===\n")
+
+            instructions()
         }
+    }
+
+    private fun StringBuilder.playTurnInstructions() {
+        appendLine("Analyze the board state, known bounds, and past logs. ")
+        appendLine("Call 'submitAction' with your full rationale and chosen contacts.")
     }
 }
