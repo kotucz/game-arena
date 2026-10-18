@@ -17,9 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.mmk.kmpauth.core.KMPAuth
-import com.mmk.kmpauth.firebase.firebase
-import com.mmk.kmpauth.google.google
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -196,7 +193,14 @@ private fun ContactsGameScreen(
             Text("Not logged in")
         } else {
             val playerViewModel: ContactsPlayerViewModel = viewModel {
-                ContactsPlayerViewModel(gameViewModel.gameFacade)
+                ContactsPlayerViewModel(
+                    gameFacade = gameViewModel.gameFacade,
+                    aiPlayerAdapter = AiPlayerAdapter(
+                        aiClient = appComponent.aiClient,
+                        gameId = gameId,
+                        aiPlayerId = AiPlayerAdapter.GEMINI_AI_PLAYER_USERNAME,
+                    ),
+                )
             }
             ContactsPlayerScreen(viewModel = playerViewModel)
         }

@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PlayerViewState(
+    val players: List<Player> = emptyList(),
     val you: Player,
     val pool: List<PoolContact>,
     val racks: List<Rack>,
@@ -38,6 +39,7 @@ data class PlayerViewState(
 
     companion object {
         fun empty() = PlayerViewState(
+            players = emptyList(),
             you = Player(""),
             pool = listOf(),
             racks = listOf(),
@@ -93,6 +95,7 @@ fun ContactsGameState.sanitizedPlayerView(player: Player, actions: ContactsGameS
     }
 
     return PlayerViewState(
+        players = players,
         you = player,
         pool = pool,
         racks = racks,
