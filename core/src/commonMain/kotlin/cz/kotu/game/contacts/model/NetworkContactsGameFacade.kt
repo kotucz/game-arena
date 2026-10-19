@@ -61,16 +61,15 @@ class NetworkContactsGameFacade(
         playerContacts: Set<ContactsBoardState.ContactId>,
         otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
+        val networkAction: ContactsNetworkAction = ContactsNetworkAction.Action(
+            actionType = actionType,
+            playerContacts = playerContacts,
+            otherContacts = otherContacts,
+        )
         return runCatching {
             val response = httpClient.post(actionsEndpoint) {
                 contentType(ContentType.Application.Json)
-                setBody(
-                    ContactsNetworkAction.Action(
-                        actionType = actionType,
-                        playerContacts = playerContacts,
-                        otherContacts = otherContacts,
-                    )
-                )
+                setBody(networkAction)
             }
             if (response.status == HttpStatusCode.NotFound) {
                 onGameNotFound?.invoke()
