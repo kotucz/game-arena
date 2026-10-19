@@ -55,7 +55,8 @@ class ContactsAiPlayer(
     }
 
     val instructions: String by lazy {
-        PromptLoader.load("ai/contacts/contacts-rules-2-all-colors.md")
+//        PromptLoader.load("ai/contacts/contacts-rules-2-all-colors.md")
+        PromptLoader.load("ai/contacts/contacts-rules-3-all-colors-sol-6.1.md")
     }
 
     override fun start(
