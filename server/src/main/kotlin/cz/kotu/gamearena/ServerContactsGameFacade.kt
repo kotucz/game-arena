@@ -31,9 +31,8 @@ class ServerContactsGameFacade(
         }
     }
 
-    suspend fun handleAction(payload: String): Result<Unit> {
+    suspend fun handleAction(action: ContactsNetworkAction): Result<Unit> {
         return try {
-            val action = json.decodeFromString<ContactsNetworkAction>(payload)
             when (action) {
                 is ContactsNetworkAction.Action -> {
                     delegate.action(

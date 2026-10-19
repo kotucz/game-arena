@@ -8,7 +8,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
 
 @AppScope
@@ -22,7 +21,7 @@ class AiClient(private val httpClient: HttpClient) {
         require(prompt.isNotBlank()) { "Prompt must not be empty" }
         val response = httpClient.post("/api/games/$gameId/ai/$playerUsername/command") {
             contentType(ContentType.Application.Json)
-            setBody(Json.encodeToString(AiCommandRequest.serializer(), AiCommandRequest(prompt)))
+            setBody(AiCommandRequest(prompt))
         }
         if (!response.status.isSuccess()) {
             error(response.bodyAsText().ifBlank { "AI command failed: ${response.status}" })

@@ -8,20 +8,27 @@ import cz.kotu.gamearena.routes.notificationRoutes
 import cz.kotu.gamearena.routes.staticRoutes
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
-import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.UnsupportedMediaTypeException
 import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.sse.SSE
 import io.netty.channel.ChannelOption
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.event.Level
@@ -64,6 +71,18 @@ fun Application.module(serverComponent: ServerBindings) {
         level = Level.INFO
         logger = org.slf4j.LoggerFactory.getLogger("Ktor.Server")
     }
+    install(StatusPages) {
+        exception<BadRequestException> { call, cause ->
+            Napier.w(cause) { "Invalid request body" }
+            call.respond(HttpStatusCode.BadRequest, "Invalid request body")
+        }
+        exception<UnsupportedMediaTypeException> { call, _ ->
+            call.respond(HttpStatusCode.UnsupportedMediaType, "Unsupported content type")
+        }
+    }
+    install(ContentNegotiation) {
+        json(Json { })
+    }
     install(SSE)
 
     val database = serverComponent.database
@@ -91,7 +110,7 @@ fun Application.module(serverComponent: ServerBindings) {
                 serverConfig.firebaseWebConfig.forEach { (k, v) -> put(k, v) }
                 serverConfig.firebaseWebVapidKey?.let { put("vapidKey", it) }
             }
-            call.respondText(json.toString(), ContentType.Application.Json)
+            call.respond(json)
         }
 
         authRoutes(database, tokenVerifier)

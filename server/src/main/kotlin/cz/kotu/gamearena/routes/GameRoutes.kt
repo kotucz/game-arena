@@ -2,20 +2,19 @@ package cz.kotu.gamearena.routes
 
 import cz.kotu.game.contacts.ai.AiCommandRequest
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsNetworkAction
 import cz.kotu.gamearena.ContactsGame
 import cz.kotu.gamearena.GamesManager
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.model.CreateGameRequest
 import cz.kotu.gamearena.model.RunningGame
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.createRouteScopedPlugin
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
-import io.ktor.server.request.receiveText
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -50,11 +49,7 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
     authenticate("auth-firebase") {
         get("/api/games") {
             val principal = call.principal<UserPrincipal>()!!
-            val games = Json.encodeToString(
-                ListSerializer(RunningGame.serializer()),
-                gamesManager.runningGames(),
-            )
-            call.respondText(games, ContentType.Application.Json)
+            call.respond(gamesManager.runningGames())
         }
 
         sse("/api/games/events") {
@@ -75,40 +70,31 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
 
         post("/api/games") {
             val principal = call.principal<UserPrincipal>()!!
-            val request = try {
-                Json.decodeFromString(CreateGameRequest.serializer(), call.receiveText())
-            } catch (_: SerializationException) {
-                null
-            }
+            val request = call.receive<CreateGameRequest>()
+            val players = request.players.map(String::trim)
+            when {
+                request.type != "contacts" ->
+                    call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
 
-            if (request == null) {
-                call.respond(HttpStatusCode.BadRequest, "Invalid game request")
-            } else {
-                val players = request.players.map(String::trim)
-                val config =
-                    Json.decodeFromString(ContactsBoardState.ContactsGameConfig.serializer(), request.config)
-                when {
-                    request.type != "contacts" ->
-                        call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
+                players.isEmpty() || players.any(String::isEmpty) ->
+                    call.respond(HttpStatusCode.BadRequest, "At least one player is required")
 
-                    players.isEmpty() || players.any(String::isEmpty) ->
-                        call.respond(HttpStatusCode.BadRequest, "At least one player is required")
-
-                    else -> {
-                        val game = gamesManager.createContactsGame(players, config)
-                        val response = RunningGame(
-                            id = game.metadata.id,
-                            type = game.metadata.type,
-                            players = game.metadata.players,
-                            createdAt = game.metadata.createdAt,
-                            status = "created",
-                        )
-                        call.respondText(
-                            Json.encodeToString(RunningGame.serializer(), response),
-                            ContentType.Application.Json,
-                            HttpStatusCode.Created,
-                        )
+                else -> {
+                    val config = try {
+                        Json.decodeFromString(ContactsBoardState.ContactsGameConfig.serializer(), request.config)
+                    } catch (_: SerializationException) {
+                        call.respond(HttpStatusCode.BadRequest, "Invalid game configuration")
+                        return@post
                     }
+                    val game = gamesManager.createContactsGame(players, config)
+                    val response = RunningGame(
+                        id = game.metadata.id,
+                        type = game.metadata.type,
+                        players = game.metadata.players,
+                        createdAt = game.metadata.createdAt,
+                        status = "created",
+                    )
+                    call.respond(HttpStatusCode.Created, response)
                 }
             }
         }
@@ -128,7 +114,8 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
             post("/contacts/actions") {
                 val principal = call.principal<UserPrincipal>()!!
                 val game = call.contactsGame
-                val result = game.forUser(principal.username).handleAction(call.receiveText())
+                val action = call.receive<ContactsNetworkAction>()
+                val result = game.forUser(principal.username).handleAction(action)
                 if (result.isSuccess) {
                     call.respond(HttpStatusCode.Accepted)
                 } else {
@@ -151,12 +138,8 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                     call.respond(HttpStatusCode.BadRequest, "Missing AI player ID")
                     return@post
                 }
-                val request = try {
-                    Json.decodeFromString(AiCommandRequest.serializer(), call.receiveText())
-                } catch (_: SerializationException) {
-                    null
-                }
-                if (request == null || request.prompt.isBlank()) {
+                val request = call.receive<AiCommandRequest>()
+                if (request.prompt.isBlank()) {
                     call.respond(HttpStatusCode.BadRequest, "Prompt must not be empty")
                 } else {
                     val game = call.contactsGame

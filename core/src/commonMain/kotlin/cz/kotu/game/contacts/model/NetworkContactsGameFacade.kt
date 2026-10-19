@@ -65,13 +65,10 @@ class NetworkContactsGameFacade(
             val response = httpClient.post(actionsEndpoint) {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    json.encodeToString(
-                        ContactsNetworkAction.serializer(),
-                        ContactsNetworkAction.Action(
-                            actionType = actionType,
-                            playerContacts = playerContacts,
-                            otherContacts = otherContacts,
-                        )
+                    ContactsNetworkAction.Action(
+                        actionType = actionType,
+                        playerContacts = playerContacts,
+                        otherContacts = otherContacts,
                     )
                 )
             }

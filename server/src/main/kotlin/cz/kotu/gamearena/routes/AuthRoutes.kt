@@ -13,13 +13,12 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.request.contentType
 import io.ktor.server.request.receiveParameters
-import io.ktor.server.request.receiveText
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.json.Json
 import java.util.Locale
 
 fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
@@ -30,13 +29,7 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
 
         val contentType = call.request.contentType()
         if (contentType.match(ContentType.Application.Json)) {
-            val body = runCatching {
-                Json.decodeFromString<RegisterUserRequest>(call.receiveText())
-            }.getOrNull()
-            if (body == null) {
-                call.respond(HttpStatusCode.BadRequest, "Invalid JSON body")
-                return
-            }
+            val body = call.receive<RegisterUserRequest>()
             username = body.username.trim()
             email = body.email?.trim()
             idToken = body.idToken?.trim()

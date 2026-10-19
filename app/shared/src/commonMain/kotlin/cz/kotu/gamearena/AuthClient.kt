@@ -12,7 +12,6 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
 
 @AppScope
@@ -26,7 +25,7 @@ class AuthClient(private val httpClient: HttpClient) {
         val response = httpClient.post("/api/auth/register") {
             header(HttpHeaders.Authorization, "Bearer $idToken")
             contentType(ContentType.Application.Json)
-            setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = username, email = email)))
+            setBody(RegisterUserRequest(username = username, email = email))
         }
         val message = response.bodyAsText()
         if (!response.status.isSuccess()) error(message.ifBlank { "Registration failed" })

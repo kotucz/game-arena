@@ -4,14 +4,12 @@ import cz.kotu.gamearena.model.RegisterTokenRequest
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
-import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
 
 @AppScope
@@ -23,8 +21,8 @@ class NotificationClient(private val httpClient: HttpClient) {
 
     suspend fun registerToken(tokenId: String, request: RegisterTokenRequest): Result<Unit> = runCatching {
         val response = httpClient.put("/api/notifications/tokens/$tokenId") {
-            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(Json.encodeToString(RegisterTokenRequest.serializer(), request))
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }
         val body = response.bodyAsText()
         if (!response.status.isSuccess()) {
