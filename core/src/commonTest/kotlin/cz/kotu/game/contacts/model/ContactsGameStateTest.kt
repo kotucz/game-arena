@@ -63,6 +63,100 @@ class ContactsGameStateTest {
     }
 
     @Test
+    fun standardConnectRemainsAvailableAlongsideSoloGroupsAndReds() {
+        val sharedBlue = Contact(ContactId(1), number = 3)
+        val soloBlue = Contact(ContactId(2), number = 7)
+        val red = Contact(ContactId(3), number = 9, type = ContactType.Red)
+        val teammateBlue = Contact(ContactId(4), number = 3)
+        val board = ContactsBoardState(
+            pool = listOf(sharedBlue, soloBlue, red, teammateBlue),
+            racks = listOf(
+                Rack(alice, listOf(sharedBlue.id, soloBlue.id, red.id)),
+                Rack(bob, listOf(teammateBlue.id)),
+            ),
+            solved = emptySet(),
+        )
+        val state = createBaseState(board)
+
+        val actions = state.getAvailablePlayerActions(alice)
+
+        assertTrue(ActionType.StandardConnect in actions.allowedActionTypes)
+        assertEquals(listOf(setOf(soloBlue.id)), actions.soloConnectRestGroups)
+        assertFalse(ActionType.FinishReds in actions.allowedActionTypes)
+        assertFalse(ActionType.StandardConnect in state.getAvailablePlayerActions(bob).allowedActionTypes)
+        assertFalse(
+            ActionType.StandardConnect in state.copy(gamePhase = GamePhase.GameOver("Done"))
+                .getAvailablePlayerActions(alice).allowedActionTypes,
+        )
+
+        val afterSolvingSharedGroup = createBaseState(board.withSolvedContacts(sharedBlue, teammateBlue))
+        assertFalse(ActionType.StandardConnect in afterSolvingSharedGroup.getAvailablePlayerActions(alice).allowedActionTypes)
+    }
+
+    @Test
+    fun standardConnectIsUnavailableWhenOnlySoloGroupsAndRedsRemain() {
+        val blue = Contact(ContactId(1), number = 3)
+        val yellow = Contact(ContactId(2), number = 5, type = ContactType.Yellow)
+        val otherYellow = Contact(ContactId(3), number = 9, type = ContactType.Yellow)
+        val red = Contact(ContactId(4), number = 9, type = ContactType.Red)
+        val teammateBlue = Contact(ContactId(5), number = 8)
+        val board = ContactsBoardState(
+            pool = listOf(blue, yellow, otherYellow, red, teammateBlue),
+            racks = listOf(
+                Rack(alice, listOf(blue.id, yellow.id)),
+                Rack(alice, listOf(otherYellow.id, red.id)),
+                Rack(bob, listOf(teammateBlue.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        val actions = createBaseState(board).getAvailablePlayerActions(alice)
+
+        assertFalse(ActionType.StandardConnect in actions.allowedActionTypes)
+        assertTrue(ActionType.SoloConnectRest in actions.allowedActionTypes)
+    }
+
+    @Test
+    fun standardConnectForYellowRemainsAvailableUntilTeammateYellowsAreSolved() {
+        val yellow = Contact(ContactId(1), number = 3, type = ContactType.Yellow)
+        val teammateYellow = Contact(ContactId(2), number = 9, type = ContactType.Yellow)
+        val board = ContactsBoardState(
+            pool = listOf(yellow, teammateYellow),
+            racks = listOf(
+                Rack(alice, listOf(yellow.id)),
+                Rack(bob, listOf(teammateYellow.id)),
+            ),
+            solved = emptySet(),
+        )
+
+        assertTrue(ActionType.StandardConnect in createBaseState(board).getAvailablePlayerActions(alice).allowedActionTypes)
+        assertFalse(
+            ActionType.StandardConnect in createBaseState(board.withSolvedContacts(teammateYellow))
+                .getAvailablePlayerActions(alice).allowedActionTypes,
+        )
+    }
+
+    @Test
+    fun standardConnectIsUnavailableWithoutOwnUnsolvedNonRedContacts() {
+        val red = Contact(ContactId(1), number = 3, type = ContactType.Red)
+        val blue = Contact(ContactId(2), number = 7)
+        val teammateBlue = Contact(ContactId(3), number = 7)
+        val board = ContactsBoardState(
+            pool = listOf(red, blue, teammateBlue),
+            racks = listOf(
+                Rack(alice, listOf(red.id, blue.id)),
+                Rack(bob, listOf(teammateBlue.id)),
+            ),
+            solved = setOf(blue.id),
+        )
+
+        for (candidate in listOf(board, board.withSolvedContacts(red), ContactsBoardState.empty())) {
+            assertFalse(candidate.canStandardConnect(alice))
+            assertFalse(ActionType.StandardConnect in createBaseState(candidate).getAvailablePlayerActions(alice).allowedActionTypes)
+        }
+    }
+
+    @Test
     fun soloConnectRestIsAvailableForAnyNonemptyBlueGroupOwnedAcrossRacks() {
         for (count in 1..4) {
             val ownContacts = (1..count).map { Contact(ContactId(it), number = 7) }

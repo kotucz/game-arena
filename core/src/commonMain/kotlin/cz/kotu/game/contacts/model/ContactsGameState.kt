@@ -55,7 +55,9 @@ data class ContactsGameState(
                             setOf(ActionType.FinishReds)
                         } else {
                             buildSet {
-                                add(ActionType.StandardConnect)
+                                if (board.canStandardConnect(player)) {
+                                    add(ActionType.StandardConnect)
+                                }
                                 add(ActionType.DoubleConnect)
                                 add(ActionType.TripleConnect)
                                 add(ActionType.MyDoubleConnect)

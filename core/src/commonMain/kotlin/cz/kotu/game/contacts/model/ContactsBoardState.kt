@@ -192,6 +192,16 @@ data class ContactsBoardState internal constructor(
         return playerRacks(player).flatMap(::rackContacts).filterNot(::isSolved)
     }
 
+    fun hasUnsolvedMatchOnAnotherPlayer(player: Player, contact: Contact): Boolean {
+        return pool.any { contactsMatch(it, contact) && !isSolved(it) && isOwnedByAnotherPlayer(player, it) }
+    }
+
+    fun canStandardConnect(player: Player): Boolean {
+        return unsolvedContacts(player).any {
+            it.type != ContactType.Red && hasUnsolvedMatchOnAnotherPlayer(player, it)
+        }
+    }
+
     /** Complete selections for each matching group the player can solo connect. */
     fun soloConnectRestGroups(player: Player): List<Set<ContactId>> {
         return unsolvedContacts(player).groupBy { it.matchKey }.values
@@ -206,7 +216,7 @@ data class ContactsBoardState internal constructor(
     /** Whether the player owns every unsolved contact matching this non-Red contact. */
     fun canSoloConnectRest(player: Player, contact: Contact): Boolean {
         return contact.type != ContactType.Red && !isSolved(contact) && isOwnedBy(player, contact) &&
-            pool.none { contactsMatch(it, contact) && !isSolved(it) && !isOwnedBy(player, it) }
+            !hasUnsolvedMatchOnAnotherPlayer(player, contact)
     }
 
     fun canFinishReds(player: Player): Boolean {
