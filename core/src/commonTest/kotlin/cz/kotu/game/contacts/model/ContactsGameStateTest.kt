@@ -11,6 +11,7 @@ import cz.kotu.game.contacts.model.ContactsGameState.GamePhase
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class ContactsGameStateTest {
@@ -52,12 +53,86 @@ class ContactsGameStateTest {
             ActionType.TripleConnect,
             ActionType.MyDoubleConnect,
             ActionType.SoloConnectRest,
-            ActionType.FinishReds,
             ActionType.AddHint,
         )
         assertEquals(expectedActions, actions.allowedActionTypes)
         assertNull(actions.actionStatusText)
         assertNull(actions.resolveMultiConnectContacts)
+    }
+
+    @Test
+    fun finishRedsIsTheOnlyActionWhenOnlyOwnUnsolvedContactsAreRed() {
+        val red = Contact(ContactId(1), number = 7, type = ContactType.Red)
+        val otherRed = Contact(ContactId(2), number = 9, type = ContactType.Red)
+        val solvedBlue = Contact(ContactId(3), number = 8)
+        val solvedYellow = Contact(ContactId(4), number = 8, type = ContactType.Yellow)
+        val teammateBlue = Contact(ContactId(5), number = 8)
+        val board = ContactsBoardState(
+            pool = listOf(red, otherRed, solvedBlue, solvedYellow, teammateBlue),
+            racks = listOf(
+                Rack(alice, listOf(red.id, solvedBlue.id)),
+                Rack(alice, listOf(solvedYellow.id, otherRed.id)),
+                Rack(bob, listOf(teammateBlue.id)),
+            ),
+            solved = setOf(solvedBlue.id, solvedYellow.id),
+        )
+        val state = createBaseState(board)
+
+        val actions = state.getAvailablePlayerActions(alice)
+
+        assertEquals(setOf(ActionType.FinishReds), actions.allowedActionTypes)
+        assertNull(actions.actionStatusText)
+        assertNull(actions.resolveMultiConnectContacts)
+        assertEquals(emptySet(), state.getAvailablePlayerActions(bob).allowedActionTypes)
+        assertEquals(
+            emptySet(),
+            state.copy(gamePhase = StandardTurn(bob)).getAvailablePlayerActions(alice).allowedActionTypes,
+        )
+        assertEquals(
+            emptySet(),
+            state.copy(gamePhase = GamePhase.GameOver("Done")).getAvailablePlayerActions(alice).allowedActionTypes,
+        )
+    }
+
+    @Test
+    fun finishRedsIsUnavailableWhileAnyOwnNonRedContactRemainsUnsolved() {
+        for (type in listOf(ContactType.Blue, ContactType.Yellow)) {
+            val red = Contact(ContactId(1), number = 7, type = ContactType.Red)
+            val nonRed = Contact(ContactId(2), number = 8, type = type)
+            val board = ContactsBoardState(
+                pool = listOf(red, nonRed),
+                racks = listOf(
+                    Rack(alice, listOf(red.id)),
+                    Rack(alice, listOf(nonRed.id)),
+                ),
+                solved = emptySet(),
+            )
+
+            val actions = createBaseState(board).getAvailablePlayerActions(alice)
+
+            assertFalse(ActionType.FinishReds in actions.allowedActionTypes, "Unsolved $type remains")
+        }
+    }
+
+    @Test
+    fun finishRedsIsUnavailableWhenAllOwnContactsAreSolved() {
+        val red = Contact(ContactId(1), number = 7, type = ContactType.Red)
+        val board = ContactsBoardState(
+            pool = listOf(red),
+            racks = listOf(Rack(alice, listOf(red.id))),
+            solved = setOf(red.id),
+        )
+
+        val actions = createBaseState(board).getAvailablePlayerActions(alice)
+
+        assertFalse(ActionType.FinishReds in actions.allowedActionTypes)
+    }
+
+    @Test
+    fun finishRedsIsUnavailableWhenPlayerHasNoContacts() {
+        val actions = createBaseState(ContactsBoardState.empty()).getAvailablePlayerActions(alice)
+
+        assertFalse(ActionType.FinishReds in actions.allowedActionTypes)
     }
 
     @Test

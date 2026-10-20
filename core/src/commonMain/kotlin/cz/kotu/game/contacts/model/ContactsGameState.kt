@@ -47,15 +47,18 @@ data class ContactsGameState(
             is StandardTurn -> {
                 if (player == gamePhase.activePlayer) {
                     PlayerActions(
-                        allowedActionTypes = setOf(
-                            ActionType.StandardConnect,
-                            ActionType.DoubleConnect,
-                            ActionType.TripleConnect,
-                            ActionType.MyDoubleConnect,
-                            ActionType.SoloConnectRest,
-                            ActionType.FinishReds,
-                            ActionType.AddHint,
-                        ),
+                        allowedActionTypes = if (board.canFinishReds(player)) {
+                            setOf(ActionType.FinishReds)
+                        } else {
+                            setOf(
+                                ActionType.StandardConnect,
+                                ActionType.DoubleConnect,
+                                ActionType.TripleConnect,
+                                ActionType.MyDoubleConnect,
+                                ActionType.SoloConnectRest,
+                                ActionType.AddHint,
+                            )
+                        },
                     )
                 } else {
                     PlayerActions(

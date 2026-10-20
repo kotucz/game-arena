@@ -197,12 +197,8 @@ fun ContactsBoardState.handleFinishReds(
                 it,
             ) || isSolved(it)
         }) throw InvalidActionException("Selected contact must be an unsolved contact owned by the player")
-    val unsolvedPlayerContacts =
-        playerRacks(player).flatMap { rack -> rackContacts(rack) }.filter { !isSolved(it) }.toSet()
-    if (unsolvedPlayerContacts.any { it.type != ContactsBoardState.ContactType.Red }) throw InvalidActionException(
-        "All other contacts must be solved",
-    )
-    if (playerContacts != unsolvedPlayerContacts) throw InvalidActionException("All remaining red contacts must be selected")
+    if (!canFinishReds(player)) throw InvalidActionException("All other contacts must be solved")
+    if (playerContacts != unsolvedContacts(player).toSet()) throw InvalidActionException("All remaining red contacts must be selected")
 
     val newState = withSolvedContacts(*playerContacts.toTypedArray())
         .withLastActionResult(ContactsBoardState.ActionResult())

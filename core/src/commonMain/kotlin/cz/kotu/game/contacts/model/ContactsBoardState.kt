@@ -188,6 +188,15 @@ data class ContactsBoardState internal constructor(
         return playerRacks(player).any { rack -> !solved.containsAll(rack.contactIds) }
     }
 
+    fun unsolvedContacts(player: Player): List<Contact> {
+        return playerRacks(player).flatMap(::rackContacts).filterNot(::isSolved)
+    }
+
+    fun canFinishReds(player: Player): Boolean {
+        val remainingContacts = unsolvedContacts(player)
+        return remainingContacts.isNotEmpty() && remainingContacts.all { it.type == ContactType.Red }
+    }
+
     fun playerRacks(player: Player): List<Rack> {
         return racks.filter { it.owner == player }
     }
