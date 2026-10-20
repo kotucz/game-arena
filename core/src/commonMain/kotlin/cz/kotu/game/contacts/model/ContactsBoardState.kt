@@ -3,6 +3,8 @@ package cz.kotu.game.contacts.model
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 
+internal typealias ContactQuery = Sequence<ContactsBoardState.Contact>
+
 // internal constructor for testing
 @Serializable
 @ConsistentCopyVisibility
@@ -176,6 +178,20 @@ data class ContactsBoardState internal constructor(
         }
     }
 
+    internal fun contacts(): ContactQuery = pool.asSequence()
+
+    internal fun ContactQuery.unsolved(): ContactQuery = filter { !isSolved(it) }
+
+    internal fun ContactQuery.ownedBy(player: Player): ContactQuery = filter { isOwnedBy(player, it) }
+
+    internal fun ContactQuery.ownedByOthers(player: Player): ContactQuery = filter { isOwnedByAnotherPlayer(player, it) }
+
+    internal fun ContactQuery.excludingReds(): ContactQuery = filter { it.type != ContactType.Red }
+
+    internal fun ContactQuery.matching(contact: Contact): ContactQuery = filter { contactsMatch(it, contact) }
+
+    internal fun ContactQuery.ids(): Set<ContactId> = map { it.id }.toSet()
+
     fun contact(contactId: ContactId): Contact? {
         return pool.firstOrNull { it.id == contactId }
     }
@@ -185,26 +201,25 @@ data class ContactsBoardState internal constructor(
     }
 
     fun hasUnsolvedContacts(player: Player): Boolean {
-        return playerRacks(player).any { rack -> !solved.containsAll(rack.contactIds) }
+        return contacts().ownedBy(player).unsolved().any()
     }
 
     fun unsolvedContacts(player: Player): List<Contact> {
-        return playerRacks(player).flatMap(::rackContacts).filterNot(::isSolved)
+        return contacts().ownedBy(player).unsolved().toList()
     }
 
     fun hasUnsolvedMatchOnAnotherPlayer(player: Player, contact: Contact): Boolean {
-        return pool.any { contactsMatch(it, contact) && !isSolved(it) && isOwnedByAnotherPlayer(player, it) }
+        return contacts().unsolved().ownedByOthers(player).matching(contact).any()
     }
 
     fun canStandardConnect(player: Player): Boolean {
-        return unsolvedContacts(player).any {
-            it.type != ContactType.Red && hasUnsolvedMatchOnAnotherPlayer(player, it)
-        }
+        return contacts().unsolved().ownedBy(player).excludingReds()
+            .any { hasUnsolvedMatchOnAnotherPlayer(player, it) }
     }
 
     /** Complete selections for each matching group the player can solo connect. */
     fun soloConnectRestGroups(player: Player): List<Set<ContactId>> {
-        return unsolvedContacts(player).groupBy { it.matchKey }.values
+        return contacts().unsolved().ownedBy(player).excludingReds().groupBy { it.matchKey }.values
             .filter { canSoloConnectRest(player, it.first()) }
             .map { contacts -> contacts.map { it.id }.toSet() }
     }
