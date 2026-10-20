@@ -50,14 +50,16 @@ data class ContactsGameState(
                         allowedActionTypes = if (board.canFinishReds(player)) {
                             setOf(ActionType.FinishReds)
                         } else {
-                            setOf(
-                                ActionType.StandardConnect,
-                                ActionType.DoubleConnect,
-                                ActionType.TripleConnect,
-                                ActionType.MyDoubleConnect,
-                                ActionType.SoloConnectRest,
-                                ActionType.AddHint,
-                            )
+                            buildSet {
+                                add(ActionType.StandardConnect)
+                                add(ActionType.DoubleConnect)
+                                add(ActionType.TripleConnect)
+                                add(ActionType.MyDoubleConnect)
+                                if (board.canSoloConnectRest(player)) {
+                                    add(ActionType.SoloConnectRest)
+                                }
+                                add(ActionType.AddHint)
+                            }
                         },
                     )
                 } else {

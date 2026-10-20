@@ -168,9 +168,7 @@ fun ContactsBoardState.handleSoloConnectRest(
             ) || isSolved(it)
         }) throw InvalidActionException("Selected contact must be an unsolved contact owned by the player")
     val matchKey = playerContacts.first().matchKey
-    val remainingNotOwnedContacts =
-        pool.filter { it.matchKey == matchKey && !isOwnedBy(player, it) && !isSolved(it) }.toSet()
-    if (remainingNotOwnedContacts.isNotEmpty()) throw InvalidActionException("Some other player still has that contact")
+    if (!canSoloConnectRest(player, playerContacts.first())) throw InvalidActionException("Some other player still has that contact")
     val remainingOwnedContacts =
         pool.filter { it.matchKey == matchKey && isOwnedBy(player, it) && !isSolved(it) }.toSet()
     if (playerContacts != remainingOwnedContacts) throw InvalidActionException("All remaining contacts with the number must be selected")

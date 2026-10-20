@@ -192,6 +192,16 @@ data class ContactsBoardState internal constructor(
         return playerRacks(player).flatMap(::rackContacts).filterNot(::isSolved)
     }
 
+    fun canSoloConnectRest(player: Player): Boolean {
+        return unsolvedContacts(player).any { canSoloConnectRest(player, it) }
+    }
+
+    /** Whether the player owns every unsolved contact matching this non-Red contact. */
+    fun canSoloConnectRest(player: Player, contact: Contact): Boolean {
+        return contact.type != ContactType.Red && !isSolved(contact) && isOwnedBy(player, contact) &&
+            pool.none { contactsMatch(it, contact) && !isSolved(it) && !isOwnedBy(player, it) }
+    }
+
     fun canFinishReds(player: Player): Boolean {
         val remainingContacts = unsolvedContacts(player)
         return remainingContacts.isNotEmpty() && remainingContacts.all { it.type == ContactType.Red }
