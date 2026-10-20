@@ -5,6 +5,7 @@ import cz.kotu.gamearena.plugins.configureSecurity
 import cz.kotu.gamearena.routes.authRoutes
 import cz.kotu.gamearena.routes.gameRoutes
 import cz.kotu.gamearena.routes.notificationRoutes
+import cz.kotu.gamearena.routes.playerRoutes
 import cz.kotu.gamearena.routes.staticRoutes
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
@@ -116,6 +117,8 @@ fun Application.module(serverComponent: ServerBindings) {
         authRoutes(database, tokenVerifier)
         notificationRoutes(database)
         gameRoutes(gamesManager)
+        playerRoutes(database)
+
         adminRoutes(pushNotificationService)
         staticRoutes(webRoot)
     }

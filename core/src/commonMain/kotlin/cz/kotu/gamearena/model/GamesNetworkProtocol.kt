@@ -33,3 +33,8 @@ data class RegisterUserRequest(
     val email: String? = null,
     val idToken: String? = null,
 )
+
+@Serializable
+data class AvailablePlayer(
+    val username: String,
+)
