@@ -114,6 +114,16 @@ class ContactsPlayerViewModel(
         selectedActionType = actionType
     }
 
+    fun selectSoloConnectRestGroup(contactIds: Set<ContactsBoardState.ContactId>) {
+        val actions = gameState.value?.actions ?: return
+        if (actionInProgress || ContactsBoardState.ActionType.SoloConnectRest !in actions.allowedActionTypes ||
+            contactIds !in actions.soloConnectRestGroups
+        ) return
+
+        selectActionType(ContactsBoardState.ActionType.SoloConnectRest)
+        actionSelectionState = ActionSelectionState(playerContacts = contactIds)
+    }
+
     fun validationError(): String? {
         // TODO client validation on sanitized data
         return null

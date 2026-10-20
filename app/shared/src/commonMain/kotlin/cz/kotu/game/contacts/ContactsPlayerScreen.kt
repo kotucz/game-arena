@@ -5,11 +5,11 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +44,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
+import cz.kotu.game.contacts.model.findContact
 
 private const val phi = 1.618f
 
@@ -175,23 +176,39 @@ fun ContactsPlayerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     val selectedActionType = viewModel.selectedActionType
                     gameState.actions.allowedActionTypes.forEach { actionType ->
-                        val isSelected = actionType == selectedActionType
-                        Button(
-                            onClick = { viewModel.selectActionType(actionType) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) Color(0xFF1976D2) else Color(0xFFBDBDBD),
-                                contentColor = if (isSelected) Color.White else Color.Black,
-                            ),
-                        ) {
-                            Text(actionType.name)
+                        if (actionType == ContactsBoardState.ActionType.SoloConnectRest) {
+                            gameState.actions.soloConnectRestGroups.forEach groupLoop@ { group ->
+                                val value = group.firstOrNull()?.let { gameState.findContact(it)?.value }
+                                    ?: return@groupLoop
+                                val category = if (value.type == ContactsBoardState.ContactType.Yellow) {
+                                    "Yellow"
+                                } else {
+                                    "${value.number}s"
+                                }
+                                val count = if (group.size == 1) "1 contact" else "${group.size} contacts"
+                                ActionSelectionButton(
+                                    text = "Solo $category · $count",
+                                    selected = selectedActionType == actionType &&
+                                        actionSelectionState.playerContacts == group &&
+                                        actionSelectionState.otherContacts.isEmpty(),
+                                    enabled = !viewModel.actionInProgress,
+                                    onClick = { viewModel.selectSoloConnectRestGroup(group) },
+                                )
+                            }
+                        } else {
+                            ActionSelectionButton(
+                                text = actionType.name,
+                                selected = actionType == selectedActionType,
+                                enabled = !viewModel.actionInProgress,
+                                onClick = { viewModel.selectActionType(actionType) },
+                            )
                         }
                     }
                 }
@@ -230,6 +247,25 @@ fun ContactsPlayerScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ActionSelectionButton(
+    text: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) selectedContactColor else Color(0xFFBDBDBD),
+            contentColor = if (selected) Color.White else Color.Black,
+        ),
+    ) {
+        Text(text)
     }
 }
 

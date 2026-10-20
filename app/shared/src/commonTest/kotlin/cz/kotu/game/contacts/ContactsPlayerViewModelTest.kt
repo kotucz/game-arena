@@ -52,6 +52,7 @@ class ContactsPlayerViewModelTest {
         allowedActionTypes: Set<ActionType> = setOf(ActionType.StandardConnect),
         resolveMultiConnectContacts: Set<ContactId>? = null,
         racks: List<PlayerViewState.Rack> = emptyList(),
+        soloConnectRestGroups: List<Set<ContactId>> = emptyList(),
     ): PlayerViewState {
         return PlayerViewState(
             you = you,
@@ -61,6 +62,7 @@ class ContactsPlayerViewModelTest {
             actions = ContactsGameState.PlayerActions(
                 allowedActionTypes = allowedActionTypes,
                 resolveMultiConnectContacts = resolveMultiConnectContacts,
+                soloConnectRestGroups = soloConnectRestGroups,
             ),
             lastActionResult = ContactsBoardState.ActionResult(),
         )
@@ -87,6 +89,41 @@ class ContactsPlayerViewModelTest {
 
         viewModel.onOtherContactClick(otherContact)
         assertEquals(emptySet(), viewModel.actionSelectionState.otherContacts)
+    }
+
+    @Test
+    fun selectingSoloGroupReplacesSelectionAndWaitsForConfirmation() = runTest {
+        val firstGroup = setOf(ContactId(1), ContactId(2))
+        val secondGroup = setOf(ContactId(3))
+        val facade = FakeContactsPlayerFacade(
+            createPlayerViewState(
+                allowedActionTypes = setOf(ActionType.StandardConnect, ActionType.SoloConnectRest),
+                soloConnectRestGroups = listOf(firstGroup, secondGroup),
+            ),
+        )
+        val viewModel = ContactsPlayerViewModel(facade)
+        waitForGameState(viewModel)
+        viewModel.onPlayerContactClick(ContactId(9))
+        viewModel.onOtherContactClick(ContactId(10))
+        viewModel.actionResultError = "Previous error"
+
+        viewModel.selectSoloConnectRestGroup(firstGroup)
+
+        assertEquals(ActionType.SoloConnectRest, viewModel.selectedActionType)
+        assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
+        assertNull(viewModel.actionResultError)
+        assertNull(facade.lastActionType)
+
+        viewModel.selectSoloConnectRestGroup(secondGroup)
+
+        assertEquals(ActionSelectionState(playerContacts = secondGroup), viewModel.actionSelectionState)
+        assertNull(facade.lastActionType)
+
+        viewModel.confirmAction()
+
+        assertEquals(ActionType.SoloConnectRest, facade.lastActionType)
+        assertEquals(secondGroup, facade.lastPlayerContacts)
+        assertEquals(emptySet(), facade.lastOtherContacts)
     }
 
     @Test
