@@ -46,6 +46,8 @@ unsolved. For ordinary turns, focus on these four actions:
 - **SoloConnectRest**: Select ALL remaining unsolved contacts in one matching
   group: Blue of one number, or all Yellow. You must own all of them across your
   racks; no teammate may hold an unsolved member. Any nonempty count is valid.
+  `actions.soloConnectRestGroups` lists the complete legal selections for this
+  turn. Choose one whole group as `playerContacts`; do not combine groups.
 - **AddHint**: Select one of YOUR contacts to publish its hint without solving it.
 - **FinishReds**: When all YOUR remaining unsolved contacts are Red, select all
   of them (at least one). Teammates may still have unsolved non-Red contacts.

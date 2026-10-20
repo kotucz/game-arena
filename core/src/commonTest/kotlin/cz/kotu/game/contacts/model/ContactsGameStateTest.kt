@@ -9,6 +9,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState.Rack
 import cz.kotu.game.contacts.model.ContactsBoardState.ResolveMultiConnect
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,6 +77,7 @@ class ContactsGameStateTest {
             val actions = createBaseState(board).getAvailablePlayerActions(alice)
 
             assertTrue(ActionType.SoloConnectRest in actions.allowedActionTypes, "Group size: $count")
+            assertEquals(listOf(ownContacts.map { it.id }.toSet()), actions.soloConnectRestGroups)
         }
     }
 
@@ -97,6 +99,7 @@ class ContactsGameStateTest {
         val actions = createBaseState(board).getAvailablePlayerActions(alice)
 
         assertTrue(ActionType.SoloConnectRest in actions.allowedActionTypes)
+        assertEquals(listOf(setOf(ownBlue.id)), actions.soloConnectRestGroups)
     }
 
     @Test
@@ -117,7 +120,12 @@ class ContactsGameStateTest {
         assertFalse(
             ActionType.SoloConnectRest in createBaseState(board).getAvailablePlayerActions(alice).allowedActionTypes,
         )
+        assertEquals(emptyList(), createBaseState(board).getAvailablePlayerActions(alice).soloConnectRestGroups)
         val readyBoard = board.withSolvedContacts(teammateYellow)
+        assertEquals(
+            listOf(setOf(yellow.id, otherYellow.id)),
+            createBaseState(readyBoard).getAvailablePlayerActions(alice).soloConnectRestGroups,
+        )
         assertTrue(
             ActionType.SoloConnectRest in createBaseState(readyBoard).getAvailablePlayerActions(alice).allowedActionTypes,
         )
@@ -145,10 +153,61 @@ class ContactsGameStateTest {
         val actions = createBaseState(board).getAvailablePlayerActions(alice)
 
         assertTrue(ActionType.SoloConnectRest in actions.allowedActionTypes)
+        assertEquals(listOf(setOf(ownBlue.id)), actions.soloConnectRestGroups)
         val error = assertFailsWith<InvalidActionException> {
             board.applyAction(alice, ActionType.SoloConnectRest, setOf(sharedBlue), emptySet())
         }
         assertEquals("Some other player still has that contact", error.message)
+    }
+
+    @Test
+    fun soloGroupsReachPlayerViewAndJsonAsSeparateCompleteSelections() {
+        val blue = Contact(ContactId(1), number = 3)
+        val matchingBlue = Contact(ContactId(2), number = 3)
+        val otherBlue = Contact(ContactId(3), number = 7)
+        val yellow = Contact(ContactId(4), number = 3, type = ContactType.Yellow)
+        val otherYellow = Contact(ContactId(5), number = 9, type = ContactType.Yellow)
+        val red = Contact(ContactId(6), number = 9, type = ContactType.Red)
+        val solvedBlue = Contact(ContactId(7), number = 3)
+        val teammateBlue = Contact(ContactId(8), number = 8)
+        val board = ContactsBoardState(
+            pool = listOf(blue, matchingBlue, otherBlue, yellow, otherYellow, red, solvedBlue, teammateBlue),
+            racks = listOf(
+                Rack(alice, listOf(blue.id, yellow.id, otherBlue.id)),
+                Rack(alice, listOf(matchingBlue.id, solvedBlue.id, otherYellow.id, red.id)),
+                Rack(bob, listOf(teammateBlue.id)),
+            ),
+            solved = setOf(solvedBlue.id),
+        )
+        val state = createBaseState(board)
+        val actions = state.getAvailablePlayerActions(alice)
+        val view = state.sanitizedPlayerView(alice, actions)
+        val expectedGroups = setOf(setOf(blue.id, matchingBlue.id), setOf(otherBlue.id), setOf(yellow.id, otherYellow.id))
+
+        assertEquals(expectedGroups, view.actions.soloConnectRestGroups.toSet())
+        assertEquals(expectedGroups.size, view.actions.soloConnectRestGroups.size)
+        val encoded = Json.encodeToString(PlayerViewState.serializer(), view)
+        val decoded = Json.decodeFromString(PlayerViewState.serializer(), encoded)
+        assertEquals(view, decoded)
+        for (group in view.actions.soloConnectRestGroups) {
+            val result = board.applyActionIds(alice, ActionType.SoloConnectRest, group, emptySet())
+            assertEquals(board.solved + group, result.state.solved)
+        }
+
+        val unavailableStates = listOf(
+            state.copy(gamePhase = StandardTurn(bob)),
+            state.copy(gamePhase = GamePhase.GameOver("Done")),
+            state.copy(
+                gamePhase = GamePhase.ResolveMultiConnect(
+                    ResolveMultiConnect(alice, bob, blue.id, setOf(teammateBlue.id)),
+                ),
+            ),
+        )
+        assertEquals(emptyList(), state.getAvailablePlayerActions(bob).soloConnectRestGroups)
+        for (unavailableState in unavailableStates) {
+            assertEquals(emptyList(), unavailableState.getAvailablePlayerActions(alice).soloConnectRestGroups)
+        }
+        assertEquals(emptyList(), unavailableStates.last().getAvailablePlayerActions(bob).soloConnectRestGroups)
     }
 
     @Test
@@ -163,6 +222,7 @@ class ContactsGameStateTest {
 
         for (candidate in listOf(board, board.withSolvedContacts(red), ContactsBoardState.empty())) {
             assertFalse(candidate.canSoloConnectRest(alice))
+            assertEquals(emptyList(), createBaseState(candidate).getAvailablePlayerActions(alice).soloConnectRestGroups)
             assertFalse(
                 ActionType.SoloConnectRest in createBaseState(candidate).getAvailablePlayerActions(alice).allowedActionTypes,
             )

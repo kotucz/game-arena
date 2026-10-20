@@ -1,6 +1,7 @@
 package cz.kotu.game.contacts.model
 
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
+import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.GameOver
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.ResolveMultiConnect
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
@@ -40,12 +41,15 @@ data class ContactsGameState(
         val actionStatusText: String? = null,
         val allowedActionTypes: Set<ActionType> = setOf(),
         val resolveMultiConnectContacts: Set<ContactsBoardState.ContactId>? = null,
+        /** Each group is a complete legal SoloConnectRest selection for this turn. */
+        val soloConnectRestGroups: List<Set<ContactId>> = emptyList(),
     )
 
     fun getAvailablePlayerActions(player: ContactsBoardState.Player): PlayerActions {
         return when (gamePhase) {
             is StandardTurn -> {
                 if (player == gamePhase.activePlayer) {
+                    val soloConnectRestGroups = board.soloConnectRestGroups(player)
                     PlayerActions(
                         allowedActionTypes = if (board.canFinishReds(player)) {
                             setOf(ActionType.FinishReds)
@@ -55,12 +59,13 @@ data class ContactsGameState(
                                 add(ActionType.DoubleConnect)
                                 add(ActionType.TripleConnect)
                                 add(ActionType.MyDoubleConnect)
-                                if (board.canSoloConnectRest(player)) {
+                                if (soloConnectRestGroups.isNotEmpty()) {
                                     add(ActionType.SoloConnectRest)
                                 }
                                 add(ActionType.AddHint)
                             }
                         },
+                        soloConnectRestGroups = soloConnectRestGroups,
                     )
                 } else {
                     PlayerActions(
