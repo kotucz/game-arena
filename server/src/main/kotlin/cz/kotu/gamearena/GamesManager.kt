@@ -1,9 +1,12 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ai.AiPlayerRunner
+import cz.kotu.game.contacts.ai.ContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.RunningGame
@@ -32,6 +35,7 @@ class GamesManager(
     private val clock: () -> Instant = Clock.System::now,
     private val gameDao: GameDao? = null,
     private val notificationService: PushNotificationService = NoopPushNotificationService(),
+    private val contactsAi: ContactsAiStart,
 ) {
     private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val games = ConcurrentHashMap<String, ManagedGame>()
@@ -57,27 +61,38 @@ class GamesManager(
         players: List<String>,
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame = gamesMutex.withLock {
-        val game = ContactsGame(
-            metadata = newMetadata(players),
-            contactsGameFacade = ContactsGameFacadeImpl(
-                players.map(ContactsBoardState::Player),
-                config,
-            ),
+        val metadata = newMetadata(players)
+        val impl = ContactsGameFacadeImpl(
+            players.map(ContactsBoardState::Player),
+            config,
         )
-        games[game.metadata.id] = game
+        val game = ContactsGame(
+            metadata = metadata,
+            contactsGameFacade = persistingFacade(metadata, impl),
+            messageSender = { player, text -> impl.sendMessage(player, text) },
+        )
+        persist(metadata, game.contactsGameFacade)
+        games[metadata.id] = game
         gamesUpdated.value++
-        persist(game)
-        observeGameNotifications(game)
+        activate(game)
         game
     }
 
+    private fun activate(game: ContactsGame) {
+        observeGameNotifications(game)
+        startAiPlayers(game)
+    }
+
     suspend fun register(game: ManagedGame): ManagedGame = gamesMutex.withLock {
-        check(games.putIfAbsent(game.metadata.id, game) == null) {
-            "Game ID is already registered: ${game.metadata.id}"
+        require(game !is ContactsGame) {
+            "Contacts games must be created or restored through GamesManager"
+        }
+        val id = game.metadata.id
+        require(id.isNotBlank()) { "Game ID must not be blank" }
+        check(games.putIfAbsent(id, game) == null) {
+            "Game ID is already registered: $id"
         }
         gamesUpdated.value++
-        persist(game)
-        if (game is ContactsGame) observeGameNotifications(game)
         game
     }
 
@@ -89,23 +104,23 @@ class GamesManager(
         game.metadata.toRunningGame()
     }
 
-    suspend fun persist(game: ManagedGame) {
+    private suspend fun persist(metadata: GameMetadata, facade: ContactsGameFacade) {
         val dao = gameDao ?: return
-        when (game) {
-            is ContactsGame -> {
-                val state = game.contactsGameFacade.gameState.value
-                val logs = game.contactsGameFacade.logs.value
-                val record = StoredGame(
-                    id = game.metadata.id,
-                    type = game.metadata.type,
-                    playersJson = json.encodeToString(game.metadata.players),
-                    createdAtMillis = game.metadata.createdAt.toEpochMilliseconds(),
-                    stateJson = json.encodeToString(state),
-                    logsJson = json.encodeToString(logs),
-                    updatedAtMillis = clock().toEpochMilliseconds(),
-                )
-                dao.upsert(record)
-            }
+        val record = StoredGame(
+            id = metadata.id,
+            type = metadata.type,
+            playersJson = json.encodeToString(metadata.players),
+            createdAtMillis = metadata.createdAt.toEpochMilliseconds(),
+            stateJson = json.encodeToString(facade.gameState.value),
+            logsJson = json.encodeToString(facade.logs.value),
+            updatedAtMillis = clock().toEpochMilliseconds(),
+        )
+        dao.upsert(record)
+    }
+
+    private fun persistingFacade(metadata: GameMetadata, facade: ContactsGameFacade): ContactsGameFacade {
+        return PersistingContactsGameFacade(facade) {
+            persist(metadata, facade)
         }
     }
 
@@ -123,24 +138,24 @@ class GamesManager(
                                 players = json.decodeFromString<List<String>>(record.playersJson),
                                 createdAt = Instant.fromEpochMilliseconds(record.createdAtMillis),
                             )
+                            val impl = ContactsGameFacadeImpl(
+                                initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
+                                initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
+                            )
                             val game = ContactsGame(
                                 metadata = metadata,
-                                contactsGameFacade = ContactsGameFacadeImpl(
-                                    initialState = json.decodeFromString<ContactsGameState>(record.stateJson),
-                                    initialLogs = json.decodeFromString<List<GameLogEntry>>(record.logsJson),
-                                ),
+                                contactsGameFacade = persistingFacade(metadata, impl),
+                                messageSender = impl::sendMessage,
                             )
                             games[metadata.id] = game
-                            observeGameNotifications(game)
+                            activate(game)
                         }
                     }
                 } catch (e: Exception) {
                     Napier.e("Failed to load game: $record", e)
                 }
             }
-            if (games.isNotEmpty()) {
-                gamesUpdated.value++
-            }
+            gamesUpdated.value++
         }
     }
 
@@ -177,6 +192,24 @@ class GamesManager(
                     Napier.e(error) { "Failed to send game notification for ${game.metadata.id}" }
                 }
                 lastState = phase
+            }
+        }
+    }
+
+    private fun startAiPlayers(game: ContactsGame) {
+        Napier.i("startAiPlayers game $game")
+        game.metadata.players.forEach { username ->
+            if (username == "ai:gemini") {
+                Napier.i("startAiPlayers $username")
+                val runner = contactsAi.start(
+                    coroutineScope = notificationScope,
+                    playerFacade = game.aiPlayer(username),
+                    sessionId = game.metadata.id,
+                    messageSender = { message -> game.messageSender?.invoke(ContactsBoardState.Player(username), message) },
+                )
+                if (runner != null) {
+                    game.aiRunners[username] = runner
+                }
             }
         }
     }
@@ -232,16 +265,23 @@ interface ManagedGame {
 data class ContactsGame(
     override val metadata: GameMetadata,
     val contactsGameFacade: ContactsGameFacade,
+    val messageSender: ((ContactsBoardState.Player, String) -> Unit)? = null,
+    val aiRunners: MutableMap<String, AiPlayerRunner> = mutableMapOf(),
 ) : ManagedGame {
 
-    override val statusText: Flow<String> =
-        contactsGameFacade.gameState.map { state ->
-            when (val gamePhase = state.gamePhase) {
-                is ContactsGameState.GamePhase.GameOver -> gamePhase.message
-                is ContactsGameState.GamePhase.ResolveMultiConnect -> gamePhase.resolveMultiConnect.targetPlayer.username
-                is ContactsGameState.GamePhase.StandardTurn -> gamePhase.activePlayer.username
-            }
+    override val statusText: Flow<String> = contactsGameFacade.gameState.map { state ->
+        when (val gamePhase = state.gamePhase) {
+            is ContactsGameState.GamePhase.GameOver -> gamePhase.message
+            is ContactsGameState.GamePhase.ResolveMultiConnect -> gamePhase.resolveMultiConnect.targetPlayer.username
+            is ContactsGameState.GamePhase.StandardTurn -> gamePhase.activePlayer.username
         }
+    }
+
+    suspend fun commandAiPlayer(playerUsername: String, command: String): Boolean {
+        val runner = aiRunners[playerUsername] ?: return false
+        runner.command(command)
+        return true
+    }
 
     fun forUser(username: String): ServerContactsGameFacade {
         return ServerContactsGameFacade(
@@ -249,6 +289,13 @@ data class ContactsGame(
                 player = ContactsBoardState.Player(username),
                 gameFacade = contactsGameFacade,
             ),
+        )
+    }
+
+    fun aiPlayer(username: String): ContactsPlayerFacade {
+        return ContactsPlayerGameAdapter(
+            player = ContactsBoardState.Player(username),
+            gameFacade = contactsGameFacade,
         )
     }
 }

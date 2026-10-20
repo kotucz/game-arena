@@ -4,6 +4,15 @@ import com.typesafe.config.ConfigFactory
 import io.github.aakira.napier.Napier
 import java.io.File
 
+data class AiPlayerConfig(
+    val gemini: GeminiAiPlayerConfig = GeminiAiPlayerConfig(),
+)
+
+data class GeminiAiPlayerConfig(
+    val apiKey: String? = null,
+    val model: String = "gemini-2.0-flash",
+)
+
 data class ServerConfig(
     val port: Int,
     val webRoot: File,
@@ -11,6 +20,7 @@ data class ServerConfig(
     val firebaseConfigFile: File,
     val adminUsername: String,
     val adminPassword: String,
+    val aiPlayer: AiPlayerConfig = AiPlayerConfig(),
     /** Public Firebase web SDK config served to the browser at /api/firebase-config. */
     val firebaseWebConfig: Map<String, String> = emptyMap(),
     /** FCM Web Push VAPID key — included in /api/firebase-config so the browser can call getToken(). */
@@ -32,6 +42,8 @@ data class ServerConfig(
             val config = resolvedConfig.getConfig("gamearena")
             val adminConfig = config.getConfig("admin")
             val firebaseConfig = config.getConfig("firebase")
+            val aiPlayerConfig = config.getConfig("ai-player")
+            val geminiConfig = aiPlayerConfig.getConfig("gemini")
 
             val webConfig: Map<String, String> =
                 if (firebaseConfig.hasPath("webConfig")) {
@@ -52,6 +64,12 @@ data class ServerConfig(
                 adminUsername = adminConfig.getString("username"),
                 adminPassword = adminConfig.getString("password"),
                 firebaseConfigFile = File(firebaseConfig.getString("googleCredentialsPath")),
+                aiPlayer = AiPlayerConfig(
+                    gemini = GeminiAiPlayerConfig(
+                        apiKey = if (geminiConfig.hasPath("api-key")) geminiConfig.getString("api-key") else null,
+                        model = geminiConfig.getString("model"),
+                    ),
+                ),
                 firebaseWebConfig = webConfig,
                 firebaseWebVapidKey = webVapidKey,
             )

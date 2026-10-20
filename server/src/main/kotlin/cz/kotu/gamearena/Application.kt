@@ -28,6 +28,9 @@ import org.slf4j.event.Level
 
 fun main() {
     val serverConfig = ServerConfig.load()
+
+    val serverComponent = ServerComponent::class.create(serverConfig)
+
     embeddedServer(
         factory = Netty,
         configure = {
@@ -48,7 +51,7 @@ fun main() {
             }
         },
         module = {
-            module(ServerComponent::class.create(serverConfig))
+            module(serverComponent)
         }
     ).start(wait = true)
 }

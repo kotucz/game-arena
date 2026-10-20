@@ -77,6 +77,11 @@ fun ContactsPlayerScreen(
 
     val logItemContent: @Composable (GameLogEntry) -> Unit =
         { RichGameLogItem(it, gameState, player, viewModel.hoveredLogs) }
+    val aiPanel: (@Composable () -> Unit)? = if (viewModel.hasAiPlayer) {
+        { AiPanel(viewModel.aiPanelViewModel) }
+    } else {
+        null
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isDualPane = maxWidth >= 600.dp
@@ -86,6 +91,7 @@ fun ContactsPlayerScreen(
                 logs = logs,
                 logItemContent = logItemContent,
                 onClose = { viewModel.isLogsExpanded = false },
+                aiPanel = aiPanel,
             )
         }
 
@@ -125,6 +131,7 @@ fun ContactsPlayerScreen(
                             lastActionResult = gameState.lastActionResult,
                             hoveredLogs = viewModel.hoveredLogs,
                             selectedContacts = actionSelectionState.otherContacts,
+                            aiEnabled = viewModel.hasAiPlayer,
                             onContactClick = { contact ->
                                 viewModel.onOtherContactClick(contact)
                             },
@@ -139,6 +146,7 @@ fun ContactsPlayerScreen(
                             lastActionResult = gameState.lastActionResult,
                             hoveredLogs = viewModel.hoveredLogs,
                             selectedContacts = actionSelectionState.playerContacts,
+                            aiEnabled = viewModel.hasAiPlayer,
                         ) { contact ->
                             viewModel.onPlayerContactClick(contact)
                         }
@@ -154,6 +162,7 @@ fun ContactsPlayerScreen(
                             .fillMaxHeight()
                             .weight(1f)
                             .border(1.dp, Color(0xFFDDDDDD)),
+                        aiPanel = aiPanel,
                     )
                 }
             }
@@ -292,6 +301,7 @@ private fun RackView(
     lastActionResult: ContactsBoardState.ActionResult,
     hoveredLogs: MutableState<List<LogToken>>,
     selectedContacts: Set<ContactsBoardState.ContactId>,
+    aiEnabled: Boolean,
     onContactClick: (ContactsBoardState.ContactId) -> Unit,
 ) {
     Column {
@@ -351,34 +361,46 @@ private fun RackView(
                             }
                         }
 
-                        FlippableContactTile(
-                            contact = contact.value,
-                            size = DpSize(tileWidth, tileHeight),
-                            isSolved = contact.solved,
-                            isOwned = isOwner,
-                            solvedBackgroundColor = Color(0xFF808080),
-                            unsolvedBackgroundColor = when {
-                                contact.id in selectedContacts -> selectedContactColor
-                                isResolutionContact -> highlightedContactColor
-                                else -> Color(0xFF4A4A4A)
-                            },
-                            modifier = Modifier
-                                .graphicsLayer {
-                                    translationX = shakeOffset.value
-                                }
-                                .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
-                                .shadow(
-                                    elevation = if (shadowColor != null) 8.dp else 0.dp,
-                                    shape = cornerShape,
-                                    ambientColor = shadowColor ?: DefaultShadowColor,
-                                    spotColor = shadowColor ?: DefaultShadowColor,
+                        Box {
+                            FlippableContactTile(
+                                contact = contact.value,
+                                size = DpSize(tileWidth, tileHeight),
+                                isSolved = contact.solved,
+                                isOwned = isOwner,
+                                solvedBackgroundColor = Color(0xFF808080),
+                                unsolvedBackgroundColor = when {
+                                    contact.id in selectedContacts -> selectedContactColor
+                                    isResolutionContact -> highlightedContactColor
+                                    else -> Color(0xFF4A4A4A)
+                                },
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        translationX = shakeOffset.value
+                                    }
+                                    .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
+                                    .shadow(
+                                        elevation = if (shadowColor != null) 8.dp else 0.dp,
+                                        shape = cornerShape,
+                                        ambientColor = shadowColor ?: DefaultShadowColor,
+                                        spotColor = shadowColor ?: DefaultShadowColor,
+                                    )
+                                    .clickable(
+                                        enabled = !contact.solved &&
+                                                (resolveMultiConnectContacts == null || isResolutionContact),
+                                        onClick = { onContactClick(contact.id) },
+                                    ),
+                            )
+                            if (aiEnabled) {
+                                Text(
+                                    text = "#" + contact.id.value,
+                                    modifier = Modifier.align(Alignment.BottomCenter),
+                                    color = Color.White,
+                                    fontSize = (tileHeight / 6.dp).sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
                                 )
-                                .clickable(
-                                    enabled = !contact.solved &&
-                                            (resolveMultiConnectContacts == null || isResolutionContact),
-                                    onClick = { onContactClick(contact.id) },
-                                ),
-                        )
+                            }
+                        }
 
                         Box(
                             modifier = Modifier

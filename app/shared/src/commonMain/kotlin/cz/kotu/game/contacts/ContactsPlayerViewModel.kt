@@ -12,6 +12,7 @@ import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
 import cz.kotu.game.contacts.model.isSolved
+import cz.kotu.gamearena.AiPlayerAdapter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.onEach
@@ -20,7 +21,18 @@ import kotlinx.coroutines.launch
 
 class ContactsPlayerViewModel(
     val gameFacade: ContactsPlayerFacade,
+    private val aiPlayerAdapter: AiPlayerAdapter? = null,
 ) : ViewModel() {
+
+    val aiPanelViewModel = AiPanelViewModel(
+        scope = viewModelScope,
+        commandAiPlayer = ::commandAiPlayer,
+    )
+
+    val hasAiPlayer: Boolean
+        get() = gameState.value?.players?.any { player ->
+            player.username == AiPlayerAdapter.GEMINI_AI_PLAYER_USERNAME
+        } == true
 
     var actionSelectionState by mutableStateOf<ActionSelectionState>(ActionSelectionState.None)
         private set
@@ -134,4 +146,9 @@ class ContactsPlayerViewModel(
             }
         }
     }
+
+    suspend fun commandAiPlayer(prompt: String): Result<Unit> =
+        aiPlayerAdapter?.command(prompt)
+            ?: Result.failure(IllegalStateException("AI player command is unavailable"))
+
 }

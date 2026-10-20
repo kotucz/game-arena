@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ai.AiComponent
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.Provides
 
@@ -7,12 +8,16 @@ import me.tatarka.inject.annotations.Provides
 @Component
 abstract class ServerComponent(
     @get:Provides @get:ServerScope override val serverConfig: ServerConfig,
-) : ServerBindings {
+) : ServerBindings, AiComponent {
 
     abstract override val database: AppDatabase
     abstract override val gamesManager: GamesManager
     abstract override val notificationService: PushNotificationService
     abstract override val tokenVerifier: TokenVerifier
+
+    @Provides
+    @ServerScope
+    fun provideAiConfig(serverConfig: ServerConfig): AiPlayerConfig = serverConfig.aiPlayer
 
     @Provides
     @ServerScope

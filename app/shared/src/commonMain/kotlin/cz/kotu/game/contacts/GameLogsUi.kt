@@ -62,7 +62,11 @@ fun GameLogsCollapsedView(
             )
         }
 
-        GameLogsList(logs, logItemContent)
+        GameLogsList(
+            logs = logs,
+            modifier = Modifier.fillMaxSize(),
+            logItemContent = logItemContent,
+        )
     }
 }
 
@@ -71,6 +75,7 @@ fun GameLogsDialog(
     logs: List<GameLogEntry>,
     logItemContent: LogItemContent = ::DefaultItemRenderer,
     onClose: () -> Unit,
+    aiPanel: (@Composable () -> Unit)? = null,
 ) {
     Dialog(onDismissRequest = onClose) {
         Surface(
@@ -83,6 +88,7 @@ fun GameLogsDialog(
                 logs = logs,
                 logItemContent = logItemContent,
                 onClose = onClose,
+                aiPanel = aiPanel,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -95,6 +101,7 @@ fun GameLogsSidePane(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     logItemContent: LogItemContent = ::DefaultItemRenderer,
+    aiPanel: (@Composable () -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier,
@@ -104,6 +111,7 @@ fun GameLogsSidePane(
             logs = logs,
             logItemContent = logItemContent,
             onClose = onClose,
+            aiPanel = aiPanel,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -115,6 +123,7 @@ fun GameLogsFullView(
     modifier: Modifier = Modifier,
     logItemContent: LogItemContent = ::DefaultItemRenderer,
     onClose: () -> Unit,
+    aiPanel: (@Composable () -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.padding(12.dp),
@@ -135,14 +144,23 @@ fun GameLogsFullView(
             }
         }
 
-        GameLogsList(logs, logItemContent)
+        GameLogsList(
+            logs = logs,
+            logItemContent = logItemContent,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        )
+        aiPanel?.invoke()
     }
 }
 
 @Composable
-private fun GameLogsList(logs: List<GameLogEntry>, logItemContent: LogItemContent = ::DefaultItemRenderer) {
+private fun GameLogsList(
+    logs: List<GameLogEntry>,
+    modifier: Modifier = Modifier,
+    logItemContent: LogItemContent = ::DefaultItemRenderer,
+) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         reverseLayout = true,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {

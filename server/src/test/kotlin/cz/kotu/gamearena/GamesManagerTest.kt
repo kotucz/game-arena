@@ -1,7 +1,9 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.ai.NoopContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -23,6 +25,7 @@ class GamesManagerTest {
         val manager = GamesManager(
             idGenerator = { "game-1" },
             clock = { createdAt },
+            contactsAi = NoopContactsAiStart,
         )
 
         val game = manager.createContactsGame(
@@ -44,7 +47,10 @@ class GamesManagerTest {
     @Test
     fun createsIndependentGames() = runBlocking {
         val ids = ArrayDeque(listOf("game-1", "game-2"))
-        val manager = GamesManager(idGenerator = { ids.removeFirst() })
+        val manager = GamesManager(
+            idGenerator = { ids.removeFirst() },
+            contactsAi = NoopContactsAiStart,
+        )
 
         val first = manager.createContactsGame(
             players = players,
@@ -73,7 +79,10 @@ class GamesManagerTest {
 
     @Test
     fun contactsLookupDoesNotReturnOtherGameTypes() = runBlocking {
-        val manager = GamesManager(idGenerator = { "gotfive-1" })
+        val manager = GamesManager(
+            idGenerator = { "gotfive-1" },
+            contactsAi = NoopContactsAiStart,
+        )
         val otherGame = object : ManagedGame {
             override val metadata = GameMetadata(
                 id = "gotfive-1",
@@ -93,9 +102,12 @@ class GamesManagerTest {
 
     @Test
     fun runningGamesFlowEmitsUpdatesOnGameCreation() = runBlocking {
-        val manager = GamesManager(idGenerator = { "game-1" })
+        val manager = GamesManager(
+            idGenerator = { "game-1" },
+            contactsAi = NoopContactsAiStart,
+        )
         val emissions = mutableListOf<List<RunningGame>>()
-        val job = launch(kotlinx.coroutines.Dispatchers.Unconfined) {
+        val job = launch(Dispatchers.Unconfined) {
             manager.runningGames.collect { emissions.add(it) }
         }
 

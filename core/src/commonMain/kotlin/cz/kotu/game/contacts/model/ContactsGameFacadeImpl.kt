@@ -66,6 +66,20 @@ class ContactsGameFacadeImpl(
         )
     }
 
+    fun sendMessage(
+        player: ContactsBoardState.Player,
+        text: String,
+    ) {
+        val logTokens = LogBuilder().apply {
+            player(player)
+            text(text)
+        }.build()
+        _logs.value += GameLogEntry(
+            Clock.System.now(),
+            Json.encodeToString(logTokens),
+        )
+    }
+
     private fun addRichGameLog(block: LogBuilder.() -> Unit) {
         val logTokens = LogBuilder().apply(block).build()
         _logs.value += GameLogEntry(

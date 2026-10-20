@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
+import cz.kotu.gamearena.AiPlayerAdapter
 import cz.kotu.gamearena.AppComponent
 import cz.kotu.gamearena.create
 import cz.kotu.gamearena.createAuthHttpClient
@@ -35,6 +36,13 @@ fun MultiPlayerScreen(
                 initializer = {
                     ContactsPlayerViewModel(
                         gameFacade = viewModel.gameFacadeForPlayer(player.username),
+                        aiPlayerAdapter = remoteGameId.takeIf(String::isNotBlank)?.let { gameId ->
+                            AiPlayerAdapter(
+                                aiClient = appComponent.aiClient,
+                                gameId = gameId,
+                                aiPlayerId = AiPlayerAdapter.GEMINI_AI_PLAYER_USERNAME,
+                            )
+                        },
                     )
                 },
             )

@@ -23,6 +23,7 @@ abstract class AppComponent {
     abstract val httpClient: HttpClient
     abstract val authClient: AuthClient
     abstract val authManager: AuthManager
+    abstract val aiClient: AiClient
     abstract val gamesClient: GamesClient
     abstract val notificationClient: NotificationClient
     abstract val notifications: Notifications
