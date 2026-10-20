@@ -127,6 +127,55 @@ class ContactsPlayerViewModelTest {
     }
 
     @Test
+    fun selectingFinishRedsSelectsRemainingOwnContactsAndWaitsForConfirmation() = runTest {
+        val firstRed = ContactId(1)
+        val secondRed = ContactId(2)
+        val solvedContact = ContactId(3)
+        val teammateContact = ContactId(4)
+        val redValue = ContactsBoardState.ContactValue(7, ContactsBoardState.ContactType.Red)
+        val facade = FakeContactsPlayerFacade(
+            createPlayerViewState(
+                allowedActionTypes = setOf(ActionType.FinishReds),
+                racks = listOf(
+                    PlayerViewState.Rack(
+                        alice,
+                        listOf(
+                            PlayerViewState.RackContact(firstRed, redValue, solved = false, hint = null),
+                            PlayerViewState.RackContact(solvedContact, redValue, solved = true, hint = null),
+                        ),
+                    ),
+                    PlayerViewState.Rack(
+                        alice,
+                        listOf(PlayerViewState.RackContact(secondRed, redValue, solved = false, hint = null)),
+                    ),
+                    PlayerViewState.Rack(
+                        bob,
+                        listOf(PlayerViewState.RackContact(teammateContact, null, solved = false, hint = null)),
+                    ),
+                ),
+            ),
+        )
+        val viewModel = ContactsPlayerViewModel(facade)
+        waitForGameState(viewModel)
+        viewModel.onOtherContactClick(teammateContact)
+        viewModel.actionResultError = "Previous error"
+
+        viewModel.selectActionType(ActionType.FinishReds)
+
+        val expectedContacts = setOf(firstRed, secondRed)
+        assertEquals(ActionType.FinishReds, viewModel.selectedActionType)
+        assertEquals(ActionSelectionState(playerContacts = expectedContacts), viewModel.actionSelectionState)
+        assertNull(viewModel.actionResultError)
+        assertNull(facade.lastActionType)
+
+        viewModel.confirmAction()
+
+        assertEquals(ActionType.FinishReds, facade.lastActionType)
+        assertEquals(expectedContacts, facade.lastPlayerContacts)
+        assertEquals(emptySet(), facade.lastOtherContacts)
+    }
+
+    @Test
     fun solvedContactsAreAutomaticallyClearedFromSelectionWhenNewStateArrives() = runTest {
         val playerContact = ContactId(1)
         val otherContact = ContactId(2)

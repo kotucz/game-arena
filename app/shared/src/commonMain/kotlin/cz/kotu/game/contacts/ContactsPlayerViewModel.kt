@@ -110,6 +110,18 @@ class ContactsPlayerViewModel(
     }
 
     fun selectActionType(actionType: ContactsBoardState.ActionType) {
+        if (actionType == ContactsBoardState.ActionType.FinishReds) {
+            val state = gameState.value ?: return
+            if (actionInProgress || actionType !in state.actions.allowedActionTypes) return
+
+            val remainingContactIds = state.racks.asSequence()
+                .filter { it.owner == state.you }
+                .flatMap { it.contacts.asSequence() }
+                .filterNot { it.solved }
+                .map { it.id }
+                .toSet()
+            actionSelectionState = ActionSelectionState(playerContacts = remainingContactIds)
+        }
         dismissActionResultError()
         selectedActionType = actionType
     }
