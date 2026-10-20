@@ -13,6 +13,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -50,6 +53,7 @@ private fun CreateContactsGameForm(
     val creatingGame by viewModel.creatingGame.collectAsState()
     val playersText by viewModel.playersText.collectAsState()
     val configText by viewModel.configText.collectAsState()
+    var playerPickerVisible by remember { mutableStateOf(false) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
@@ -62,6 +66,16 @@ private fun CreateContactsGameForm(
             minLines = 3,
             maxLines = 10,
         )
+
+        Button(
+            onClick = {
+                playerPickerVisible = true
+                viewModel.playerPickerViewModel.prepareForOpen()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Add player")
+        }
 
         TextField(
             value = configText,
@@ -80,5 +94,17 @@ private fun CreateContactsGameForm(
         ) {
             Text(if (creatingGame) "Creating game…" else "Create Contacts game")
         }
+    }
+
+    if (playerPickerVisible) {
+        PlayerPickerDialog(
+            viewModel = viewModel.playerPickerViewModel,
+            selectedPlayers = playersText.lines().map(String::trim).filter(String::isNotEmpty),
+            onPlayerSelected = { player ->
+                viewModel.addPlayer(player.username)
+                playerPickerVisible = false
+            },
+            onClose = { playerPickerVisible = false },
+        )
     }
 }

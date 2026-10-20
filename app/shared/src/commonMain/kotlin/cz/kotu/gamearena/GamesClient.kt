@@ -1,6 +1,7 @@
 package cz.kotu.gamearena
 
 import cz.kotu.gamearena.model.CreateGameRequest
+import cz.kotu.gamearena.model.AvailablePlayer
 import cz.kotu.gamearena.model.RunningGame
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -25,6 +26,14 @@ import me.tatarka.inject.annotations.Inject
 @AppScope
 @Inject
 class GamesClient(private val httpClient: HttpClient) {
+    suspend fun availablePlayers(): Result<List<AvailablePlayer>> = runCatching {
+        val response = httpClient.get("/api/players")
+        if (!response.status.isSuccess()) {
+            error(response.bodyAsText().ifBlank { "Could not load players" })
+        }
+        response.body<List<AvailablePlayer>>()
+    }
+
     suspend fun runningGames(): Result<List<RunningGame>> = runCatching {
         val response = httpClient.get("/api/games")
         if (!response.status.isSuccess()) {

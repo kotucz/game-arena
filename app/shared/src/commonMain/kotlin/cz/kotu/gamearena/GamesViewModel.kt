@@ -25,6 +25,8 @@ class GamesViewModel(
 ) : ViewModel() {
     val username: StateFlow<String?> = authManager.currentUsername
 
+    val playerPickerViewModel = PlayerPickerViewModel(gamesClient, viewModelScope)
+
     private val _games = MutableStateFlow<List<RunningGame>?>(null)
     val games: StateFlow<List<RunningGame>?> = _games.asStateFlow()
 
@@ -95,6 +97,13 @@ class GamesViewModel(
 
     fun updatePlayersText(text: String) {
         _playersText.value = text
+    }
+
+    fun addPlayer(username: String) {
+        if (_playersText.value.lines().any { it.trim().equals(username, ignoreCase = true) }) return
+
+        val currentText = _playersText.value.trimEnd()
+        _playersText.value = if (currentText.isEmpty()) username else "$currentText\n$username"
     }
 
     fun updateConfigText(text: String) {
