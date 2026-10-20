@@ -92,6 +92,9 @@ class AiPlayerRunner(
         val currentLogs = playerFacade.logs.value
 
         val prompt = buildPrompt(viewState, currentLogs) {
+            appendLine("Respond to the user's feedback or question below.")
+            appendLine("Only submit a game action if the user asks you to play or retry your turn and an action is currently available.")
+            appendLine()
             appendLine(command)
         }
 
@@ -132,5 +135,6 @@ class AiPlayerRunner(
     private fun StringBuilder.playTurnInstructions() {
         appendLine("Analyze the board state, known bounds, and past logs. ")
         appendLine("Call 'submitAction' with your full rationale and chosen contacts.")
+        appendLine("If the action is rejected, use the returned reason to correct it and retry. A successful action ends your turn.")
     }
 }
