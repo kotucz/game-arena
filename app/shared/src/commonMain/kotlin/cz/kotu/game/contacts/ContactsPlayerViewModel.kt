@@ -94,16 +94,22 @@ class ContactsPlayerViewModel(
 
     fun onPlayerContactClick(contact: ContactsBoardState.ContactId) {
         if (actionInProgress) return
-        when (selectedActionType) {
-            ActionType.SoloConnectRest -> {
-                val group = gameState.value?.actions?.soloConnectRestGroups?.firstOrNull { contact in it }
-                    ?: return
+        val actions = gameState.value?.actions ?: return
+        if (ActionType.SoloConnectRest in actions.allowedActionTypes) {
+            val group = actions.soloConnectRestGroups.firstOrNull { contact in it }
+            if (group != null) {
                 selectSoloConnectRestGroup(group)
                 return
             }
-            ActionType.FinishReds -> return
-            else -> Unit
         }
+        if (selectedActionType == ActionType.SoloConnectRest) {
+            val actionType = listOf(ActionType.StandardConnect, ActionType.AddHint)
+                .firstOrNull { it in actions.allowedActionTypes } ?: return
+            selectActionType(actionType)
+            actionSelectionState = ActionSelectionState(playerContacts = setOf(contact))
+            return
+        }
+        if (selectedActionType == ActionType.FinishReds) return
         dismissActionResultError()
         actionSelectionState = actionSelectionState.copy(
             playerContacts = actionSelectionState.playerContacts.toggled(contact),
@@ -111,9 +117,13 @@ class ContactsPlayerViewModel(
     }
 
     fun onOtherContactClick(contact: ContactsBoardState.ContactId) {
-        if (actionInProgress || selectedActionType == ActionType.SoloConnectRest ||
-            selectedActionType == ActionType.FinishReds
-        ) return
+        if (actionInProgress) return
+        if (selectedActionType == ActionType.SoloConnectRest || selectedActionType == ActionType.FinishReds) {
+            if (ActionType.StandardConnect !in gameState.value?.actions?.allowedActionTypes.orEmpty()) return
+            selectActionType(ActionType.StandardConnect)
+            actionSelectionState = ActionSelectionState(otherContacts = setOf(contact))
+            return
+        }
         dismissActionResultError()
         actionSelectionState = actionSelectionState.copy(
             otherContacts = actionSelectionState.otherContacts.toggled(contact),
@@ -131,6 +141,9 @@ class ContactsPlayerViewModel(
         if (actionInProgress || actionType !in state.actions.allowedActionTypes) return
 
         dismissActionResultError()
+        if (selectedActionType == ActionType.SoloConnectRest && actionType != selectedActionType) {
+            actionSelectionState = ActionSelectionState.None
+        }
         selectedActionType = actionType
         updateContactSelection(state)
     }

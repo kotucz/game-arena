@@ -151,6 +151,85 @@ class ContactsPlayerViewModelTest {
     }
 
     @Test
+    fun clickingTeammateContactSwitchesFromSoloToStandardAndClearsSoloSelection() = runTest {
+        val group = setOf(ContactId(1), ContactId(2))
+        val target = ContactId(3)
+        val facade = FakeContactsPlayerFacade(
+            createPlayerViewState(
+                allowedActionTypes = setOf(ActionType.SoloConnectRest, ActionType.StandardConnect),
+                soloConnectRestGroups = listOf(group),
+            ),
+        )
+        val viewModel = ContactsPlayerViewModel(facade)
+        waitForGameState(viewModel)
+        viewModel.actionResultError = "Previous error"
+
+        viewModel.onOtherContactClick(target)
+
+        assertEquals(ActionType.StandardConnect, viewModel.selectedActionType)
+        assertEquals(ActionSelectionState(otherContacts = setOf(target)), viewModel.actionSelectionState)
+        assertNull(viewModel.actionResultError)
+        assertNull(facade.lastActionType)
+    }
+
+    @Test
+    fun clickingSoloContactSwitchesFromStandardConnectOrAddHintToItsWholeGroup() = runTest {
+        val group = setOf(ContactId(1), ContactId(2))
+        for (initialAction in listOf(ActionType.StandardConnect, ActionType.AddHint)) {
+            val facade = FakeContactsPlayerFacade(
+                createPlayerViewState(
+                    allowedActionTypes = setOf(initialAction, ActionType.SoloConnectRest),
+                    soloConnectRestGroups = listOf(group),
+                ),
+            )
+            val viewModel = ContactsPlayerViewModel(facade)
+            waitForGameState(viewModel)
+            viewModel.onPlayerContactClick(ContactId(9))
+            viewModel.onOtherContactClick(ContactId(10))
+
+            viewModel.onPlayerContactClick(ContactId(2))
+
+            assertEquals(ActionType.SoloConnectRest, viewModel.selectedActionType)
+            assertEquals(ActionSelectionState(playerContacts = group), viewModel.actionSelectionState)
+            assertNull(facade.lastActionType)
+        }
+    }
+
+    @Test
+    fun clickingOwnContactOutsideSoloGroupsChoosesStandardConnectOrAddHint() = runTest {
+        val group = setOf(ContactId(1), ContactId(2))
+        val outsideContact = ContactId(3)
+        for (expectedAction in listOf(ActionType.StandardConnect, ActionType.AddHint)) {
+            val initialState = createPlayerViewState(
+                allowedActionTypes = setOf(ActionType.SoloConnectRest, expectedAction),
+                soloConnectRestGroups = listOf(group),
+            )
+            val facade = FakeContactsPlayerFacade(initialState)
+            val viewModel = ContactsPlayerViewModel(facade)
+            waitForGameState(viewModel)
+
+            viewModel.actionInProgress = true
+            viewModel.onPlayerContactClick(outsideContact)
+            assertEquals(ActionType.SoloConnectRest, viewModel.selectedActionType)
+            assertEquals(ActionSelectionState(playerContacts = group), viewModel.actionSelectionState)
+            viewModel.actionInProgress = false
+
+            viewModel.onPlayerContactClick(outsideContact)
+
+            assertEquals(expectedAction, viewModel.selectedActionType)
+            assertEquals(ActionSelectionState(playerContacts = setOf(outsideContact)), viewModel.actionSelectionState)
+            assertNull(facade.lastActionType)
+
+            facade.stateFlow.value = initialState.copy(
+                actions = initialState.actions.copy(allowedActionTypes = setOf(ActionType.SoloConnectRest)),
+            )
+            viewModel.onPlayerContactClick(outsideContact)
+            assertEquals(ActionType.SoloConnectRest, viewModel.selectedActionType)
+            assertEquals(ActionSelectionState(playerContacts = group), viewModel.actionSelectionState)
+        }
+    }
+
+    @Test
     fun soloSelectionSurvivesUpdatesAndFallsBackWhenGroupDisappears() = runTest {
         val firstGroup = setOf(ContactId(1), ContactId(2))
         val secondGroup = setOf(ContactId(3))
@@ -161,8 +240,8 @@ class ContactsPlayerViewModelTest {
         val facade = FakeContactsPlayerFacade(initialState)
         val viewModel = ContactsPlayerViewModel(facade)
         waitForGameState(viewModel)
-        viewModel.onPlayerContactClick(ContactId(3))
         viewModel.onOtherContactClick(ContactId(10))
+        viewModel.onPlayerContactClick(ContactId(3))
 
         viewModel.selectActionType(ActionType.SoloConnectRest)
 
@@ -175,8 +254,11 @@ class ContactsPlayerViewModelTest {
         assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
 
         viewModel.selectActionType(ActionType.StandardConnect)
+        assertEquals(ActionType.StandardConnect, viewModel.selectedActionType)
+        assertEquals(ActionSelectionState.None, viewModel.actionSelectionState)
         viewModel.onPlayerContactClick(ContactId(1))
-        assertEquals(setOf(ContactId(2)), viewModel.actionSelectionState.playerContacts)
+        assertEquals(ActionType.SoloConnectRest, viewModel.selectedActionType)
+        assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
         facade.stateFlow.value = initialState.copy(
             actions = initialState.actions.copy(allowedActionTypes = setOf(ActionType.SoloConnectRest)),
         )
