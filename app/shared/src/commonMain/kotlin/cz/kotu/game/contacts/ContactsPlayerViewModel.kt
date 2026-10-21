@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
@@ -77,6 +78,8 @@ class ContactsPlayerViewModel(
             selectedActionType = availableActionTypes.firstOrNull()
         }
 
+        updateContactSelection(newState)
+
         // clear selection when player resolves multi-connect
         if (newState.actions.resolveMultiConnectContacts != null) {
             actionSelectionState = ActionSelectionState.None
@@ -90,6 +93,17 @@ class ContactsPlayerViewModel(
     }
 
     fun onPlayerContactClick(contact: ContactsBoardState.ContactId) {
+        if (actionInProgress) return
+        when (selectedActionType) {
+            ActionType.SoloConnectRest -> {
+                val group = gameState.value?.actions?.soloConnectRestGroups?.firstOrNull { contact in it }
+                    ?: return
+                selectSoloConnectRestGroup(group)
+                return
+            }
+            ActionType.FinishReds -> return
+            else -> Unit
+        }
         dismissActionResultError()
         actionSelectionState = actionSelectionState.copy(
             playerContacts = actionSelectionState.playerContacts.toggled(contact),
@@ -97,6 +111,9 @@ class ContactsPlayerViewModel(
     }
 
     fun onOtherContactClick(contact: ContactsBoardState.ContactId) {
+        if (actionInProgress || selectedActionType == ActionType.SoloConnectRest ||
+            selectedActionType == ActionType.FinishReds
+        ) return
         dismissActionResultError()
         actionSelectionState = actionSelectionState.copy(
             otherContacts = actionSelectionState.otherContacts.toggled(contact),
@@ -110,20 +127,30 @@ class ContactsPlayerViewModel(
     }
 
     fun selectActionType(actionType: ContactsBoardState.ActionType) {
-        if (actionType == ContactsBoardState.ActionType.FinishReds) {
-            val state = gameState.value ?: return
-            if (actionInProgress || actionType !in state.actions.allowedActionTypes) return
+        val state = gameState.value ?: return
+        if (actionInProgress || actionType !in state.actions.allowedActionTypes) return
 
-            val remainingContactIds = state.racks.asSequence()
+        dismissActionResultError()
+        selectedActionType = actionType
+        updateContactSelection(state)
+    }
+
+    private fun updateContactSelection(state: PlayerViewState) {
+        val contactIds = when (selectedActionType) {
+            ActionType.SoloConnectRest -> {
+                val groups = state.actions.soloConnectRestGroups
+                groups.firstOrNull { it == actionSelectionState.playerContacts }
+                    ?: groups.firstOrNull().orEmpty()
+            }
+            ActionType.FinishReds -> state.racks.asSequence()
                 .filter { it.owner == state.you }
                 .flatMap { it.contacts.asSequence() }
                 .filterNot { it.solved }
                 .map { it.id }
                 .toSet()
-            actionSelectionState = ActionSelectionState(playerContacts = remainingContactIds)
+            else -> return
         }
-        dismissActionResultError()
-        selectedActionType = actionType
+        actionSelectionState = ActionSelectionState(playerContacts = contactIds)
     }
 
     fun selectSoloConnectRestGroup(contactIds: Set<ContactsBoardState.ContactId>) {

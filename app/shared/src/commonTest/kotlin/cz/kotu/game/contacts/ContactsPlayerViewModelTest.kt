@@ -127,6 +127,64 @@ class ContactsPlayerViewModelTest {
     }
 
     @Test
+    fun automaticSoloSelectionAndContactClicksAlwaysSelectWholeGroups() = runTest {
+        val firstGroup = setOf(ContactId(1), ContactId(2))
+        val secondGroup = setOf(ContactId(3), ContactId(4))
+        val facade = FakeContactsPlayerFacade(
+            createPlayerViewState(
+                allowedActionTypes = setOf(ActionType.SoloConnectRest),
+                soloConnectRestGroups = listOf(firstGroup, secondGroup),
+            ),
+        )
+        val viewModel = ContactsPlayerViewModel(facade)
+        waitForGameState(viewModel)
+
+        assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
+        viewModel.onPlayerContactClick(ContactId(1))
+        assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
+        viewModel.onPlayerContactClick(ContactId(4))
+        assertEquals(ActionSelectionState(playerContacts = secondGroup), viewModel.actionSelectionState)
+        viewModel.onPlayerContactClick(ContactId(99))
+        viewModel.onOtherContactClick(ContactId(100))
+        assertEquals(ActionSelectionState(playerContacts = secondGroup), viewModel.actionSelectionState)
+        assertNull(facade.lastActionType)
+    }
+
+    @Test
+    fun soloSelectionSurvivesUpdatesAndFallsBackWhenGroupDisappears() = runTest {
+        val firstGroup = setOf(ContactId(1), ContactId(2))
+        val secondGroup = setOf(ContactId(3))
+        val initialState = createPlayerViewState(
+            allowedActionTypes = setOf(ActionType.StandardConnect, ActionType.SoloConnectRest),
+            soloConnectRestGroups = listOf(firstGroup, secondGroup),
+        )
+        val facade = FakeContactsPlayerFacade(initialState)
+        val viewModel = ContactsPlayerViewModel(facade)
+        waitForGameState(viewModel)
+        viewModel.onPlayerContactClick(ContactId(3))
+        viewModel.onOtherContactClick(ContactId(10))
+
+        viewModel.selectActionType(ActionType.SoloConnectRest)
+
+        assertEquals(ActionSelectionState(playerContacts = secondGroup), viewModel.actionSelectionState)
+        facade.stateFlow.value = initialState.copy(faults = 1)
+        assertEquals(ActionSelectionState(playerContacts = secondGroup), viewModel.actionSelectionState)
+        facade.stateFlow.value = initialState.copy(
+            actions = initialState.actions.copy(soloConnectRestGroups = listOf(firstGroup)),
+        )
+        assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
+
+        viewModel.selectActionType(ActionType.StandardConnect)
+        viewModel.onPlayerContactClick(ContactId(1))
+        assertEquals(setOf(ContactId(2)), viewModel.actionSelectionState.playerContacts)
+        facade.stateFlow.value = initialState.copy(
+            actions = initialState.actions.copy(allowedActionTypes = setOf(ActionType.SoloConnectRest)),
+        )
+        assertEquals(ActionSelectionState(playerContacts = firstGroup), viewModel.actionSelectionState)
+        assertNull(facade.lastActionType)
+    }
+
+    @Test
     fun selectingFinishRedsSelectsRemainingOwnContactsAndWaitsForConfirmation() = runTest {
         val firstRed = ContactId(1)
         val secondRed = ContactId(2)
@@ -157,12 +215,16 @@ class ContactsPlayerViewModelTest {
         )
         val viewModel = ContactsPlayerViewModel(facade)
         waitForGameState(viewModel)
+        val expectedContacts = setOf(firstRed, secondRed)
+        assertEquals(ActionSelectionState(playerContacts = expectedContacts), viewModel.actionSelectionState)
+        viewModel.onPlayerContactClick(firstRed)
+        viewModel.onPlayerContactClick(solvedContact)
         viewModel.onOtherContactClick(teammateContact)
+        assertEquals(ActionSelectionState(playerContacts = expectedContacts), viewModel.actionSelectionState)
         viewModel.actionResultError = "Previous error"
 
         viewModel.selectActionType(ActionType.FinishReds)
 
-        val expectedContacts = setOf(firstRed, secondRed)
         assertEquals(ActionType.FinishReds, viewModel.selectedActionType)
         assertEquals(ActionSelectionState(playerContacts = expectedContacts), viewModel.actionSelectionState)
         assertNull(viewModel.actionResultError)
