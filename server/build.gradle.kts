@@ -37,4 +37,5 @@ dependencies {
     kspTest(libs.kotlin.inject.compiler.ksp)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.mockk)
 }
