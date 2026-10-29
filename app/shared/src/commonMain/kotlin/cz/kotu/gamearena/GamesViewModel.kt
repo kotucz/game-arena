@@ -36,8 +36,8 @@ class GamesViewModel(
     private val _creatingGame = MutableStateFlow(false)
     val creatingGame: StateFlow<Boolean> = _creatingGame.asStateFlow()
 
-    private val _playersText = MutableStateFlow("")
-    val playersText: StateFlow<String> = _playersText.asStateFlow()
+    private val _selectedPlayers = MutableStateFlow<List<String>>(emptyList())
+    val selectedPlayers: StateFlow<List<String>> = _selectedPlayers.asStateFlow()
 
     private val _configText = MutableStateFlow(
         Json.encodeToString(
@@ -60,9 +60,11 @@ class GamesViewModel(
         viewModelScope.launch { authManager.ensureLoaded() }
 
         authManager.currentUsername
-//        authManager.authState
-//            .map { (it as? AuthState.Authorized)?.username }
-            .onEach { _playersText.value = it ?: "" }
+            .onEach { username ->
+                if (!username.isNullOrBlank() && _selectedPlayers.value.isEmpty()) {
+                    _selectedPlayers.value = listOf(username)
+                }
+            }
             .launchIn(viewModelScope)
     }
 
@@ -95,15 +97,16 @@ class GamesViewModel(
             }
     }
 
-    fun updatePlayersText(text: String) {
-        _playersText.value = text
+    fun addPlayer(username: String) {
+        val trimmed = username.trim()
+        if (trimmed.isEmpty()) return
+        if (_selectedPlayers.value.any { it.equals(trimmed, ignoreCase = true) }) return
+        _selectedPlayers.value += trimmed
     }
 
-    fun addPlayer(username: String) {
-        if (_playersText.value.lines().any { it.trim().equals(username, ignoreCase = true) }) return
-
-        val currentText = _playersText.value.trimEnd()
-        _playersText.value = if (currentText.isEmpty()) username else "$currentText\n$username"
+    fun removePlayer(username: String) {
+        val trimmed = username.trim()
+        _selectedPlayers.value = _selectedPlayers.value.filterNot { it.equals(trimmed, ignoreCase = true) }
     }
 
     fun updateConfigText(text: String) {
@@ -126,7 +129,7 @@ class GamesViewModel(
             _creatingGame.value = true
             _error.value = null
             val username = authManager.currentUsername.value
-            val players = _playersText.value.lines()
+            val players = _selectedPlayers.value
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
                 .ifEmpty { listOfNotNull(username) }
