@@ -4,6 +4,7 @@ import cz.kotu.gamearena.AppDatabase
 import cz.kotu.gamearena.TokenVerifier
 import cz.kotu.gamearena.User
 import cz.kotu.gamearena.UserPrincipal
+import cz.kotu.gamearena.model.LoggedUser
 import cz.kotu.gamearena.model.RegisterUserRequest
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -12,8 +13,8 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.request.contentType
-import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveParameters
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
@@ -101,7 +102,13 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
     authenticate("auth-firebase") {
         get("/api/me") {
             val principal = call.principal<UserPrincipal>()!!
-            call.respondText(principal.username)
+            call.respond(
+                LoggedUser(
+                    uid = principal.userId,
+                    username = principal.username,
+                    pictureUrl = principal.pictureUrl,
+                ),
+            )
         }
     }
 }

@@ -1,8 +1,10 @@
 package cz.kotu.gamearena
 
+import cz.kotu.gamearena.model.LoggedUser
 import cz.kotu.gamearena.model.RegisterUserRequest
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -41,10 +43,11 @@ class AuthClient(private val httpClient: HttpClient) {
         message
     }
 
-    suspend fun currentUser(): Result<String> = runCatching {
+    suspend fun currentUser(): Result<LoggedUser> = runCatching {
         val response = httpClient.get("/api/me")
-        val message = response.bodyAsText()
-        if (!response.status.isSuccess()) error(message.ifBlank { "Not authenticated" })
-        message
+        if (!response.status.isSuccess()) {
+            error(response.bodyAsText().ifBlank { "Not authenticated" })
+        }
+        response.body<LoggedUser>()
     }
 }

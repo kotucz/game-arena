@@ -94,9 +94,9 @@ open class AuthManager(
             if (initialFetchDone) return       // double-check inside the lock
             initialFetchDone = true
             _authState.value = AuthState.Pending
-            val username = authClient.currentUser().getOrNull()
-            _authState.value = if (username != null) {
-                AuthState.Authorized(username)
+            val user = authClient.currentUser().getOrNull()
+            _authState.value = if (user != null) {
+                AuthState.Authorized(user.username)
             } else {
                 AuthState.Unauthorized
             }
@@ -117,7 +117,9 @@ open class AuthManager(
 
     // ── Auth actions ────────────────────────────────────────────────────────
 
-    open suspend fun checkExistingUser(): Result<String> = authClient.currentUser().onSuccess { serverUsername ->
+    open suspend fun checkExistingUser(): Result<String> = authClient.currentUser().map { user ->
+        user.username
+    }.onSuccess { serverUsername ->
         _authState.value = AuthState.Authorized(serverUsername)
     }
 

@@ -43,3 +43,10 @@ data class AvailablePlayer(
     val username: String,
     val pictureUrl: String? = null,
 )
+
+@Serializable
+data class LoggedUser(
+    val uid: String,
+    val username: String,
+    val pictureUrl: String? = null,
+)

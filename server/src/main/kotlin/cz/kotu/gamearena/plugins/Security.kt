@@ -25,6 +25,7 @@ fun Application.configureSecurity(
                 UserPrincipal(
                     userId = claims.uid,
                     username = user.username,
+                    pictureUrl = user.pictureUrl,
                 )
             }
         }

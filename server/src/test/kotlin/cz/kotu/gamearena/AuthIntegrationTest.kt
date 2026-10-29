@@ -16,6 +16,7 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AuthIntegrationTest {
 
@@ -143,6 +144,7 @@ class AuthIntegrationTest {
             username = username,
             usernameLower = username.lowercase(),
             email = "$username@example.com",
+            pictureUrl = "https://example.com/avatar.png",
         )
         component.database.userDao().insert(user)
 
@@ -157,7 +159,10 @@ class AuthIntegrationTest {
             header(HttpHeaders.Authorization, "Bearer test-token-$firebaseUid")
         }
         assertEquals(HttpStatusCode.OK, meResponse.status)
-        assertEquals(username, meResponse.bodyAsText())
+        val body = meResponse.bodyAsText()
+        assertTrue(body.contains("\"uid\":\"$firebaseUid\""))
+        assertTrue(body.contains("\"username\":\"$username\""))
+        assertTrue(body.contains("\"pictureUrl\":\"https://example.com/avatar.png\""))
 
         // Logout returns 200 OK
         val logoutResponse: HttpResponse = client.post("/api/logout")
