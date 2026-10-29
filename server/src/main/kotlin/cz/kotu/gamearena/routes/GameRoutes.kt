@@ -5,6 +5,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsNetworkAction
 import cz.kotu.gamearena.ContactsGame
 import cz.kotu.gamearena.GamesManager
+import cz.kotu.gamearena.UnknownPlayerException
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.model.CreateGameRequest
 import cz.kotu.gamearena.model.RunningGame
@@ -71,32 +72,36 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
         post("/api/games") {
             val principal = call.principal<UserPrincipal>()!!
             val request = call.receive<CreateGameRequest>()
-            val players = request.players.map(String::trim)
-            when {
-                request.type != "contacts" ->
-                    call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
-
-                players.isEmpty() || players.any(String::isEmpty) ->
-                    call.respond(HttpStatusCode.BadRequest, "At least one player is required")
-
-                else -> {
-                    val config = try {
-                        Json.decodeFromString(ContactsBoardState.ContactsGameConfig.serializer(), request.config)
-                    } catch (_: SerializationException) {
-                        call.respond(HttpStatusCode.BadRequest, "Invalid game configuration")
-                        return@post
-                    }
-                    val game = gamesManager.createContactsGame(players, config)
-                    val response = RunningGame(
-                        id = game.metadata.id,
-                        type = game.metadata.type,
-                        players = game.metadata.players,
-                        createdAt = game.metadata.createdAt,
-                        status = "created",
-                    )
-                    call.respond(HttpStatusCode.Created, response)
-                }
+            if (request.type != "contacts") {
+                call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
+                return@post
             }
+            if (request.players.isEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, "At least one player is required")
+                return@post
+            }
+            val config = try {
+                Json.decodeFromString(ContactsBoardState.ContactsGameConfig.serializer(), request.config)
+            } catch (_: SerializationException) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid game configuration")
+                return@post
+            }
+            val game = try {
+                gamesManager.createContactsGame(request.players, config)
+            } catch (e: UnknownPlayerException) {
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Unknown player")
+                return@post
+            }
+            call.respond(
+                HttpStatusCode.Created,
+                RunningGame(
+                    id = game.metadata.id,
+                    type = game.metadata.type,
+                    players = game.metadata.players,
+                    createdAt = game.metadata.createdAt,
+                    status = "created",
+                ),
+            )
         }
 
         route("/api/games/{gameId}") {

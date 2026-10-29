@@ -23,6 +23,7 @@ interface ServerBindings {
         contactsAi: ContactsAiStart,
     ): GamesManager = GamesManager(
         gameDao = database.gameDao(),
+        userDao = database.userDao(),
         notificationService = notificationService,
         contactsAi = contactsAi,
     )

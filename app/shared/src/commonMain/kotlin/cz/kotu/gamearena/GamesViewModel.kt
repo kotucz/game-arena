@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.AvailablePlayer
+import cz.kotu.gamearena.model.GamePlayer
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,10 +132,7 @@ class GamesViewModel(
         viewModelScope.launch {
             _creatingGame.value = true
             _error.value = null
-            val username = authManager.currentUsername.value
-            val players = _selectedPlayers.value
-                .map { it.username }
-                .ifEmpty { listOfNotNull(username) }
+            val players = _selectedPlayers.value.map { GamePlayer(it.uid) }
             gamesClient.createGame(type = "contacts", players = players, config = _configText.value).fold(
                 onSuccess = { game ->
                     _creatingGame.value = false

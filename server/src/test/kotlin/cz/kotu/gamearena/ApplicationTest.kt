@@ -89,10 +89,14 @@ class ApplicationTest {
         application { module(component) }
 
         val authClient = createAuthenticatedClient(component, "test-user")
+        ensureTestUser(component.database, "alice")
+        ensureTestUser(component.database, "bob")
 
         val response = authClient.post("/api/games") {
             contentType(ContentType.Application.Json)
-            setBody("{\"type\":\"contacts\",\"players\":[\"alice\",\"bob\"], \"config\":\"{}\"}")
+            setBody(
+                """{"type":"contacts","players":[{"uid":"uid-alice"},{"uid":"uid-bob"}],"config":"{}"}"""
+            )
         }
 
         assertEquals(HttpStatusCode.Created, response.status)

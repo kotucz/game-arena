@@ -5,9 +5,12 @@ import kotlin.time.Instant
 
 /** JSON DTOs shared by clients and the game server. */
 @Serializable
+data class GamePlayer(val uid: String)
+
+@Serializable
 data class CreateGameRequest(
     val type: String,
-    val players: List<String>,
+    val players: List<GamePlayer>,
     val config: String,
 )
 

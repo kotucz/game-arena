@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import cz.kotu.game.contacts.ai.NoopContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.RunningGame
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -25,10 +26,11 @@ class GamesManagerTest {
         val manager = GamesManager(
             idGenerator = { "game-1" },
             clock = { createdAt },
+            userDao = mockk(),
             contactsAi = NoopContactsAiStart,
         )
 
-        val game = manager.createContactsGame(
+        val game = manager.createContactsGameInternal(
             players = players,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
@@ -49,10 +51,11 @@ class GamesManagerTest {
         val ids = ArrayDeque(listOf("game-1", "game-2"))
         val manager = GamesManager(
             idGenerator = { ids.removeFirst() },
+            userDao = mockk(),
             contactsAi = NoopContactsAiStart,
         )
 
-        val first = manager.createContactsGame(
+        val first = manager.createContactsGameInternal(
             players = players,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
@@ -60,7 +63,7 @@ class GamesManagerTest {
                 redCount = 2,
             )
         )
-        val second = manager.createContactsGame(
+        val second = manager.createContactsGameInternal(
             players = players,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
@@ -81,6 +84,7 @@ class GamesManagerTest {
     fun contactsLookupDoesNotReturnOtherGameTypes() = runBlocking {
         val manager = GamesManager(
             idGenerator = { "gotfive-1" },
+            userDao = mockk(),
             contactsAi = NoopContactsAiStart,
         )
         val otherGame = object : ManagedGame {
@@ -104,6 +108,7 @@ class GamesManagerTest {
     fun runningGamesFlowEmitsUpdatesOnGameCreation() = runBlocking {
         val manager = GamesManager(
             idGenerator = { "game-1" },
+            userDao = mockk(),
             contactsAi = NoopContactsAiStart,
         )
         val emissions = mutableListOf<List<RunningGame>>()
@@ -114,7 +119,7 @@ class GamesManagerTest {
         assertEquals(1, emissions.size) // Initial emission
         assertEquals(0, emissions[0].size)
 
-        manager.createContactsGame(
+        manager.createContactsGameInternal(
             players = players,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,

@@ -2,6 +2,7 @@ package cz.kotu.gamearena
 
 import cz.kotu.gamearena.model.CreateGameRequest
 import cz.kotu.gamearena.model.AvailablePlayer
+import cz.kotu.gamearena.model.GamePlayer
 import cz.kotu.gamearena.model.RunningGame
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -71,7 +72,7 @@ class GamesClient(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun createGame(type: String, players: List<String>, config: String): Result<RunningGame> = runCatching {
+    suspend fun createGame(type: String, players: List<GamePlayer>, config: String): Result<RunningGame> = runCatching {
         val response = httpClient.post("/api/games") {
             contentType(ContentType.Application.Json)
             setBody(CreateGameRequest(type, players, config))

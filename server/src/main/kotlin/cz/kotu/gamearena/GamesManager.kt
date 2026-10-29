@@ -9,6 +9,7 @@ import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
+import cz.kotu.gamearena.model.GamePlayer
 import cz.kotu.gamearena.model.RunningGame
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +35,7 @@ class GamesManager(
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Instant = Clock.System::now,
     private val gameDao: GameDao? = null,
+    private val userDao: UserDao,
     private val notificationService: PushNotificationService = NoopPushNotificationService(),
     private val contactsAi: ContactsAiStart,
 ) {
@@ -58,6 +60,17 @@ class GamesManager(
     }
 
     suspend fun createContactsGame(
+        players: List<GamePlayer>,
+        config: ContactsBoardState.ContactsGameConfig,
+    ): ContactsGame {
+        val usernames = players.map { gamePlayer ->
+            userDao.findByFirebaseUid(gamePlayer.uid)?.username
+                ?: throw UnknownPlayerException(gamePlayer.uid)
+        }
+        return createContactsGameInternal(usernames, config)
+    }
+
+    suspend fun createContactsGameInternal(
         players: List<String>,
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame = gamesMutex.withLock {
@@ -299,3 +312,5 @@ data class ContactsGame(
         )
     }
 }
+
+class UnknownPlayerException(uid: String) : Exception("Unknown player uid: $uid")
