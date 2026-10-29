@@ -94,7 +94,7 @@ private fun CreateContactsGameForm(
                     InputChip(
                         selected = false,
                         onClick = { viewModel.removePlayer(player) },
-                        label = { Text(player) },
+                        label = { Text(player.username) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Person,
@@ -105,7 +105,7 @@ private fun CreateContactsGameForm(
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Remove $player",
+                                contentDescription = "Remove ${player.username}",
                                 modifier = Modifier.size(InputChipDefaults.AvatarSize),
                             )
                         },
@@ -154,7 +154,7 @@ private fun CreateContactsGameForm(
             viewModel = viewModel.playerPickerViewModel,
             selectedPlayers = selectedPlayers,
             onPlayerSelected = { player ->
-                viewModel.addPlayer(player.username)
+                viewModel.addPlayer(player)
                 playerPickerVisible = false
             },
             onClose = { playerPickerVisible = false },

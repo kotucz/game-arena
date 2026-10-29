@@ -26,7 +26,7 @@ import cz.kotu.gamearena.model.AvailablePlayer
 @Composable
 fun PlayerPickerDialog(
     viewModel: PlayerPickerViewModel,
-    selectedPlayers: List<String>,
+    selectedPlayers: List<AvailablePlayer>,
     onPlayerSelected: (AvailablePlayer) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -68,9 +68,7 @@ fun PlayerPickerDialog(
                             .heightIn(max = 360.dp),
                     ) {
                         items(filteredPlayers, key = AvailablePlayer::username) { player ->
-                            val alreadySelected = selectedPlayers.any {
-                                it.equals(player.username, ignoreCase = true)
-                            }
+                            val alreadySelected = player in selectedPlayers
                             TextButton(
                                 onClick = { onPlayerSelected(player) },
                                 enabled = !alreadySelected,

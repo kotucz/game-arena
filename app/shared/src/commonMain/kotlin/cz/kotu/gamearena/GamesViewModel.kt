@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.gamearena.model.AvailablePlayer
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,8 +37,8 @@ class GamesViewModel(
     private val _creatingGame = MutableStateFlow(false)
     val creatingGame: StateFlow<Boolean> = _creatingGame.asStateFlow()
 
-    private val _selectedPlayers = MutableStateFlow<List<String>>(emptyList())
-    val selectedPlayers: StateFlow<List<String>> = _selectedPlayers.asStateFlow()
+    private val _selectedPlayers = MutableStateFlow<List<AvailablePlayer>>(emptyList())
+    val selectedPlayers: StateFlow<List<AvailablePlayer>> = _selectedPlayers.asStateFlow()
 
     private val _configText = MutableStateFlow(
         Json.encodeToString(
@@ -62,7 +63,7 @@ class GamesViewModel(
         authManager.currentUsername
             .onEach { username ->
                 if (!username.isNullOrBlank() && _selectedPlayers.value.isEmpty()) {
-                    _selectedPlayers.value = listOf(username)
+                    _selectedPlayers.value = listOf(AvailablePlayer(username))
                 }
             }
             .launchIn(viewModelScope)
@@ -97,16 +98,13 @@ class GamesViewModel(
             }
     }
 
-    fun addPlayer(username: String) {
-        val trimmed = username.trim()
-        if (trimmed.isEmpty()) return
-        if (_selectedPlayers.value.any { it.equals(trimmed, ignoreCase = true) }) return
-        _selectedPlayers.value += trimmed
+    fun addPlayer(player: AvailablePlayer) {
+        if (player in _selectedPlayers.value) return
+        _selectedPlayers.value += player
     }
 
-    fun removePlayer(username: String) {
-        val trimmed = username.trim()
-        _selectedPlayers.value = _selectedPlayers.value.filterNot { it.equals(trimmed, ignoreCase = true) }
+    fun removePlayer(player: AvailablePlayer) {
+        _selectedPlayers.value -= player
     }
 
     fun updateConfigText(text: String) {
@@ -130,8 +128,7 @@ class GamesViewModel(
             _error.value = null
             val username = authManager.currentUsername.value
             val players = _selectedPlayers.value
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
+                .map { it.username }
                 .ifEmpty { listOfNotNull(username) }
             gamesClient.createGame(type = "contacts", players = players, config = _configText.value).fold(
                 onSuccess = { game ->
