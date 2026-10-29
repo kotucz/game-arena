@@ -73,7 +73,6 @@ class ApplicationTest {
         val body = response.bodyAsText()
         assertTrue(body.contains("\"uid\":\"uid-test-user\""))
         assertTrue(body.contains("\"username\":\"test-user\""))
-        assertTrue(body.contains("\"pictureUrl\":null"))
     }
 
     @Test

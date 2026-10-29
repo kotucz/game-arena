@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.gamearena.model.LoggedUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,8 +34,8 @@ class AuthViewModelTest {
     }
 
     private class FakeAuthManager(
-        var firebaseResult: Result<String> = Result.success("OK"),
-        var checkUserResult: Result<String> = Result.failure(Exception("Not found")),
+        var firebaseResult: Result<LoggedUser> = Result.success(LoggedUser("uid-charlie", "charlie")),
+        var checkUserResult: Result<LoggedUser> = Result.failure(Exception("Not found")),
     ) : AuthManager(
         authClient = AuthClient(createAuthHttpClient("http://localhost", tokenProvider = null) {}),
         unauthorizedEvents = MutableSharedFlow(extraBufferCapacity = 1),
@@ -44,7 +45,7 @@ class AuthViewModelTest {
         var lastUsername: String? = null
         var lastEmail: String? = null
 
-        override suspend fun checkExistingUser(): Result<String> {
+        override suspend fun checkExistingUser(): Result<LoggedUser> {
             return checkUserResult
         }
 
@@ -52,7 +53,7 @@ class AuthViewModelTest {
             idToken: String,
             username: String,
             email: String?,
-        ): Result<String> {
+        ): Result<LoggedUser> {
             lastIdToken = idToken
             lastUsername = username
             lastEmail = email
@@ -85,7 +86,7 @@ class AuthViewModelTest {
 
     @Test
     fun completeOnboardingSuccessCallsOnAuthenticated() = runTest {
-        val authManager = FakeAuthManager(firebaseResult = Result.success("charlie"))
+        val authManager = FakeAuthManager(firebaseResult = Result.success(LoggedUser("uid-charlie", "charlie")))
         val viewModel = AuthViewModel(authManager)
 
         viewModel.setOnboardingUserForTesting(OnboardingUser(idToken = "token-123", email = "charlie@example.com"))
@@ -104,7 +105,7 @@ class AuthViewModelTest {
 
     @Test
     fun completeOnboardingBlankUsernameShowsMessage() = runTest {
-        val authManager = FakeAuthManager(firebaseResult = Result.success("charlie"))
+        val authManager = FakeAuthManager(firebaseResult = Result.success(LoggedUser("uid-charlie", "charlie")))
         val viewModel = AuthViewModel(authManager)
 
         viewModel.setOnboardingUserForTesting(OnboardingUser(idToken = "token-123", email = "charlie@example.com"))

@@ -1,5 +1,6 @@
 package cz.kotu.gamearena
 
+import cz.kotu.gamearena.model.LoggedUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,12 +21,12 @@ import me.tatarka.inject.annotations.Inject
  *
  * - [Pending] — the one-time `/me` check is in flight.
  * - [Unauthorized] — no active session; user must log in.
- * - [Authorized] — session is valid; [Authorized.username] identifies the user.
+ * - [Authorized] — session is valid and contains the current user's profile.
  */
 sealed interface AuthState {
     data object Pending : AuthState
     data object Unauthorized : AuthState
-    data class Authorized(val username: String) : AuthState
+    data class Authorized(val user: LoggedUser) : AuthState
 }
 
 /**
@@ -59,12 +60,15 @@ open class AuthManager(
     open val authState: StateFlow<AuthState> = _authState
 
     /**
-     * Convenience view of [authState] as a nullable username string.
-     * `null` when [AuthState.Pending] or [AuthState.Unauthorized].
-     * Backward-compatible replacement for the previous `StateFlow<String?>`.
+     * Current profile from `/api/me`, or `null` when pending or unauthorized.
      */
-    open val currentUsername: StateFlow<String?> = authState
-        .map { (it as? AuthState.Authorized)?.username }
+    open val currentUser: StateFlow<LoggedUser?> = authState
+        .map { (it as? AuthState.Authorized)?.user }
+        .stateIn(appScope, SharingStarted.Eagerly, null)
+
+    /** Convenience view for game and notification flows that only need a username. */
+    open val currentUsername: StateFlow<String?> = currentUser
+        .map { it?.username }
         .stateIn(appScope, SharingStarted.Eagerly, null)
 
     /** Emitted (via the shared flow) by the Ktor interceptor on HTTP 401. */
@@ -96,7 +100,7 @@ open class AuthManager(
             _authState.value = AuthState.Pending
             val user = authClient.currentUser().getOrNull()
             _authState.value = if (user != null) {
-                AuthState.Authorized(user.username)
+                AuthState.Authorized(user)
             } else {
                 AuthState.Unauthorized
             }
@@ -117,18 +121,16 @@ open class AuthManager(
 
     // ── Auth actions ────────────────────────────────────────────────────────
 
-    open suspend fun checkExistingUser(): Result<String> = authClient.currentUser().map { user ->
-        user.username
-    }.onSuccess { serverUsername ->
-        _authState.value = AuthState.Authorized(serverUsername)
+    open suspend fun checkExistingUser(): Result<LoggedUser> = authClient.currentUser().onSuccess { user ->
+        _authState.value = AuthState.Authorized(user)
     }
 
     open suspend fun registerUser(
         idToken: String,
         username: String,
         email: String? = null,
-    ): Result<String> = authClient.registerUser(idToken, username, email).onSuccess {
-        _authState.value = AuthState.Authorized(username)
+    ): Result<LoggedUser> = authClient.registerUser(idToken, username, email).onSuccess { user ->
+        _authState.value = AuthState.Authorized(user)
     }
 
     open suspend fun logout() {

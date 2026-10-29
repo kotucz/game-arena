@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -42,7 +43,8 @@ fun GamesScreen(
 ) {
     val games by viewModel.games.collectAsState()
     val error by viewModel.error.collectAsState()
-    val username by viewModel.username.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+    val username = currentUser?.username
 
     LaunchedEffect(Unit) {
         viewModel.observeLobby()
@@ -69,6 +71,13 @@ fun GamesScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.End),
             verticalAlignment = CenterVertically,
         ) {
+            currentUser?.let { user ->
+                PlayerAvatar(
+                    pictureUrl = user.pictureUrl,
+                    username = user.username,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
             Text(username ?: "Not logged in")
             Button(onClick = viewModel::logout) {
                 Text("Logout")

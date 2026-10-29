@@ -44,6 +44,10 @@ class AuthIntegrationTest {
         }
 
         assertEquals(HttpStatusCode.Created, response.status)
+        val responseBody = response.bodyAsText()
+        assertTrue(responseBody.contains("\"uid\":\"uid-avatar\""))
+        assertTrue(responseBody.contains("\"username\":\"avatar\""))
+        assertTrue(responseBody.contains("\"pictureUrl\":\"$pictureUrl\""))
         assertEquals(pictureUrl, component.database.userDao().findByFirebaseUid("uid-avatar")?.pictureUrl)
     }
 

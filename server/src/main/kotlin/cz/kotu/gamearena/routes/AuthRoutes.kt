@@ -84,7 +84,14 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
             pictureUrl = claims.picture,
         )
         database.userDao().insert(created)
-        call.respond(HttpStatusCode.Created, "User registered successfully")
+        call.respond(
+            HttpStatusCode.Created,
+            LoggedUser(
+                uid = created.firebaseUid,
+                username = created.username,
+                pictureUrl = created.pictureUrl,
+            ),
+        )
     }
 
     post("/api/auth/register") {

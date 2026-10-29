@@ -23,15 +23,16 @@ class AuthClient(private val httpClient: HttpClient) {
         idToken: String,
         username: String,
         email: String? = null,
-    ): Result<String> = runCatching {
+    ): Result<LoggedUser> = runCatching {
         val response = httpClient.post("/api/auth/register") {
             header(HttpHeaders.Authorization, "Bearer $idToken")
             contentType(ContentType.Application.Json)
             setBody(RegisterUserRequest(username = username, email = email))
         }
-        val message = response.bodyAsText()
-        if (!response.status.isSuccess()) error(message.ifBlank { "Registration failed" })
-        message
+        if (!response.status.isSuccess()) {
+            error(response.bodyAsText().ifBlank { "Registration failed" })
+        }
+        response.body<LoggedUser>()
     }.onFailure { error ->
         Napier.e("User registration failed", error)
     }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.gamearena.model.AvailablePlayer
 import cz.kotu.gamearena.model.GamePlayer
+import cz.kotu.gamearena.model.LoggedUser
 import cz.kotu.gamearena.model.RunningGame
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,7 @@ class GamesViewModel(
     private val gamesClient: GamesClient,
     private val authManager: AuthManager,
 ) : ViewModel() {
-    val username: StateFlow<String?> = authManager.currentUsername
+    val currentUser: StateFlow<LoggedUser?> = authManager.currentUser
 
     val playerPickerViewModel = PlayerPickerViewModel(gamesClient, viewModelScope)
 
@@ -59,13 +60,13 @@ class GamesViewModel(
     val gameFilterMyAll = mutableStateOf(GameFilterTab.My)
 
     init {
-        // Trigger the lazy /me check so the username appears as soon as the screen loads.
+        // Trigger the lazy /me check so the current profile appears as soon as the screen loads.
         viewModelScope.launch { authManager.ensureLoaded() }
         playerPickerViewModel.loadPlayers()
 
-        combine(authManager.currentUsername, playerPickerViewModel.availablePlayers) { currentUsername, players ->
-            if (currentUsername.isNullOrBlank() || players == null) null
-            else players.find { it.username == currentUsername }
+        combine(currentUser, playerPickerViewModel.availablePlayers) { user, players ->
+            if (user == null || players == null) null
+            else players.find { it.uid == user.uid }
         }
             .onEach { me ->
                 if (me != null && _selectedPlayers.value.isEmpty()) {
