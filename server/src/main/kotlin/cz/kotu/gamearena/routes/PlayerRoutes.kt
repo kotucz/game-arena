@@ -11,7 +11,10 @@ fun Route.playerRoutes(database: AppDatabase) {
     authenticate("auth-firebase") {
         get("/api/players") {
             val players = database.userDao().listUsers().map {
-                AvailablePlayer(it.username)
+                AvailablePlayer(
+                    uid = it.firebaseUid,
+                    username = it.username,
+                )
             }
             call.respond(players)
         }

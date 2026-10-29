@@ -36,5 +36,6 @@ data class RegisterUserRequest(
 
 @Serializable
 data class AvailablePlayer(
+    val uid: String,
     val username: String,
 )

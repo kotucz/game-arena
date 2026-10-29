@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
@@ -59,11 +60,15 @@ class GamesViewModel(
     init {
         // Trigger the lazy /me check so the username appears as soon as the screen loads.
         viewModelScope.launch { authManager.ensureLoaded() }
+        playerPickerViewModel.loadPlayers()
 
-        authManager.currentUsername
-            .onEach { username ->
-                if (!username.isNullOrBlank() && _selectedPlayers.value.isEmpty()) {
-                    _selectedPlayers.value = listOf(AvailablePlayer(username))
+        combine(authManager.currentUsername, playerPickerViewModel.availablePlayers) { currentUsername, players ->
+            if (currentUsername.isNullOrBlank() || players == null) null
+            else players.find { it.username == currentUsername }
+        }
+            .onEach { me ->
+                if (me != null && _selectedPlayers.value.isEmpty()) {
+                    _selectedPlayers.value = listOf(me)
                 }
             }
             .launchIn(viewModelScope)
