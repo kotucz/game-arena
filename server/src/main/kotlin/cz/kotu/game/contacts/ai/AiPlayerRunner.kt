@@ -33,9 +33,9 @@ class AiPlayerRunner(
     private val agent: AIAgent<String, String> by lazy {
         val tools = ContactsKoogTools(
             playerFacade = playerFacade,
-            onThoughtLogged = { reasoning ->
-                Napier.i("[AI DEDUCTION]: $reasoning")
-                messageSender?.invoke(reasoning)
+            messageSender = { message ->
+                Napier.i("[AI MESSAGE]: $message")
+                messageSender?.invoke(message)
             },
         )
         AIAgent(
@@ -134,7 +134,8 @@ class AiPlayerRunner(
 
     private fun StringBuilder.playTurnInstructions() {
         appendLine("Analyze the board state, known bounds, and past logs. ")
-        appendLine("Call 'submitAction' with your full rationale and chosen contacts.")
+        appendLine("Send your rationale and deduction process using 'sendMessage'.")
+        appendLine("Call 'submitAction' with your chosen contacts.")
         appendLine("If the action is rejected, use the returned reason to correct it and retry. A successful action ends your turn.")
     }
 }

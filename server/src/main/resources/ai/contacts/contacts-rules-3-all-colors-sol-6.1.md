@@ -70,5 +70,6 @@ matching category; choose a match and avoid Red.
   were correct. Distinguish deductions from uncertainty in a concise explanation.
 - Follow the current request: feedback and questions can be answered in chat;
   submit an action when asked to play or retry an available turn.
-- When calling `submitAction`, include your rationale and IDs as integer strings
+- Send your rationale and deduction process using `sendMessage`.
+- When calling `submitAction`, include IDs as integer strings
   such as `"17"`, not `"#17"` or contact values. Use empty lists where required.
