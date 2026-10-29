@@ -74,6 +74,31 @@ class ApplicationTest {
     }
 
     @Test
+    fun availablePlayersIncludeProfilePictureUrl() = testApplication {
+        val component = TestServerComponent::class.create()
+        application { module(component) }
+
+        val authClient = createAuthenticatedClient(component)
+        val pictureUrl = "https://example.com/avatar.png"
+        component.database.userDao().insert(
+            User(
+                firebaseUid = "uid-avatar-user",
+                username = "avatar-user",
+                usernameLower = "avatar-user",
+                pictureUrl = pictureUrl,
+            )
+        )
+
+        val response = authClient.get("/api/players")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"uid\":\"uid-avatar-user\""))
+        assertTrue(body.contains("\"username\":\"avatar-user\""))
+        assertTrue(body.contains("\"pictureUrl\":\"$pictureUrl\""))
+    }
+
+    @Test
     fun listingGamesRequiresAuthentication() = testApplication {
         val component = TestServerComponent::class.create()
         application { module(component) }

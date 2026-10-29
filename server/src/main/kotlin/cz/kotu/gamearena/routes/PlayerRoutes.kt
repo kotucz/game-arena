@@ -14,6 +14,7 @@ fun Route.playerRoutes(database: AppDatabase) {
                 AvailablePlayer(
                     uid = it.firebaseUid,
                     username = it.username,
+                    pictureUrl = it.pictureUrl,
                 )
             }
             call.respond(players)

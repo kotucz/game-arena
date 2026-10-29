@@ -41,4 +41,5 @@ data class RegisterUserRequest(
 data class AvailablePlayer(
     val uid: String,
     val username: String,
+    val pictureUrl: String? = null,
 )
