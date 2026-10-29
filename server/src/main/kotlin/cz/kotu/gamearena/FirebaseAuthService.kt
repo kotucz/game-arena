@@ -12,6 +12,7 @@ data class FirebaseUserClaims(
     val uid: String,
     val email: String?,
     val name: String?,
+    val picture: String? = null,
 )
 
 interface TokenVerifier {
@@ -36,6 +37,7 @@ class FirebaseTokenVerifier(
                 uid = token.uid,
                 email = token.email,
                 name = token.name,
+                picture = token.picture,
             )
         }.onFailure {
             Napier.w("Firebase ID token verification failed", it)

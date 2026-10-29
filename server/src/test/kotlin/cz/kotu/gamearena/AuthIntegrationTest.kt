@@ -20,6 +20,33 @@ import kotlin.test.assertEquals
 class AuthIntegrationTest {
 
     @Test
+    fun registrationStoresFirebaseProfilePicture() = testApplication {
+        val pictureUrl = "https://example.com/avatar.png"
+        val tokenVerifier = FakeTokenVerifier().apply {
+            setClaims(
+                "test-token-avatar",
+                FirebaseUserClaims(
+                    uid = "uid-avatar",
+                    email = "avatar@example.com",
+                    name = "Avatar User",
+                    picture = pictureUrl,
+                ),
+            )
+        }
+        val component = TestServerComponent::class.create(TestFakes(tokenVerifier = tokenVerifier))
+        application { module(component) }
+
+        val response = createClient {}.post("/api/auth/register") {
+            header(HttpHeaders.Authorization, "Bearer test-token-avatar")
+            contentType(ContentType.Application.Json)
+            setBody(Json.encodeToString(RegisterUserRequest.serializer(), RegisterUserRequest(username = "avatar")))
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(pictureUrl, component.database.userDao().findByFirebaseUid("uid-avatar")?.pictureUrl)
+    }
+
+    @Test
     fun legacyAuthEndpointsReturnNotFound() = testApplication {
         application { module(TestServerComponent::class.create()) }
         val client = createClient {}

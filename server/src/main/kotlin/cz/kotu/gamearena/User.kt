@@ -17,6 +17,7 @@ data class User(
     val username: String,
     val usernameLower: String,
     val email: String? = null,
+    val pictureUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
 )
 

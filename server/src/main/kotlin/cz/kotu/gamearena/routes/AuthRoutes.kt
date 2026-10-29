@@ -80,6 +80,7 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
             username = username,
             usernameLower = usernameLower,
             email = resolvedEmail,
+            pictureUrl = claims.picture,
         )
         database.userDao().insert(created)
         call.respond(HttpStatusCode.Created, "User registered successfully")
