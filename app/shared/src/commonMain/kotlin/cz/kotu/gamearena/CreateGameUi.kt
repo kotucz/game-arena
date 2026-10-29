@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -96,9 +95,9 @@ private fun CreateContactsGameForm(
                         onClick = { viewModel.removePlayer(player) },
                         label = { Text(player.username) },
                         leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
+                            PlayerAvatar(
+                                pictureUrl = player.pictureUrl,
+                                username = player.username,
                                 modifier = Modifier.size(InputChipDefaults.AvatarSize),
                             )
                         },
@@ -161,4 +160,3 @@ private fun CreateContactsGameForm(
         )
     }
 }
-
