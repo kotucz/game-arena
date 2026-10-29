@@ -75,6 +75,8 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.material3.icons.extended)
             implementation(libs.compose.ui)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
