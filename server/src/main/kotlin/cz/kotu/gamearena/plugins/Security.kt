@@ -22,10 +22,14 @@ fun Application.configureSecurity(
             authenticate { credential ->
                 val claims = tokenVerifier.verify(credential.token) ?: return@authenticate null
                 val user = database.userDao().findByFirebaseUid(claims.uid) ?: return@authenticate null
+                val pictureUrl = claims.picture
+                if (pictureUrl != null && pictureUrl != user.pictureUrl) {
+                    database.userDao().updatePictureUrl(claims.uid, pictureUrl)
+                }
                 UserPrincipal(
                     userId = claims.uid,
                     username = user.username,
-                    pictureUrl = user.pictureUrl,
+                    pictureUrl = pictureUrl ?: user.pictureUrl,
                 )
             }
         }

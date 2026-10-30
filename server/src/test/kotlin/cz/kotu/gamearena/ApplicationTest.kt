@@ -101,6 +101,43 @@ class ApplicationTest {
     }
 
     @Test
+    fun authenticatedRequestsRefreshProfilePictureForBothEndpoints() = testApplication {
+        val firebaseUid = "uid-test-user"
+        val pictureUrl = "https://example.com/new-avatar.png"
+        val tokenVerifier = FakeTokenVerifier().apply {
+            setClaims(
+                "test-token-$firebaseUid",
+                FirebaseUserClaims(
+                    uid = firebaseUid,
+                    email = "test-user@example.com",
+                    name = "test-user",
+                    picture = pictureUrl,
+                ),
+            )
+        }
+        val component = TestServerComponent::class.create(TestFakes(tokenVerifier = tokenVerifier))
+        application { module(component) }
+        component.database.userDao().insert(
+            User(
+                firebaseUid = firebaseUid,
+                username = "test-user",
+                usernameLower = "test-user",
+                pictureUrl = "https://example.com/old-avatar.png",
+            )
+        )
+        val authClient = createAuthenticatedClient(component)
+
+        val profileResponse = authClient.get("/api/me")
+        assertEquals(HttpStatusCode.OK, profileResponse.status)
+        assertTrue(profileResponse.bodyAsText().contains("\"pictureUrl\":\"$pictureUrl\""))
+
+        val playersResponse = authClient.get("/api/players")
+        assertEquals(HttpStatusCode.OK, playersResponse.status)
+        assertTrue(playersResponse.bodyAsText().contains("\"pictureUrl\":\"$pictureUrl\""))
+        assertEquals(pictureUrl, component.database.userDao().findByFirebaseUid(firebaseUid)?.pictureUrl)
+    }
+
+    @Test
     fun listingGamesRequiresAuthentication() = testApplication {
         val component = TestServerComponent::class.create()
         application { module(component) }
