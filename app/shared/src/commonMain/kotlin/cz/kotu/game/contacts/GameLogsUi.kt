@@ -15,12 +15,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +40,7 @@ fun GameLogsCollapsedView(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable(onClick = onExpand)
-            .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
             .padding(8.dp)
             .sizeIn(minHeight = 56.dp)
             .height(96.dp),
@@ -57,7 +57,7 @@ fun GameLogsCollapsedView(
             )
             Text(
                 text = "Tap to expand",
-                color = Color.DarkGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
             )
         }
@@ -82,7 +82,7 @@ fun GameLogsDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding(),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
         ) {
             GameLogsFullView(
                 logs = logs,
@@ -105,7 +105,7 @@ fun GameLogsSidePane(
 ) {
     Surface(
         modifier = modifier,
-        color = Color(0xFFFAFAFA),
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         GameLogsFullView(
             logs = logs,
@@ -177,14 +177,13 @@ private fun DefaultItemRenderer(log: GameLogEntry) {
         Text(
             text = log.text,
             modifier = Modifier.weight(1f),
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
         )
         Text(
             text = log.timestamp.formatLocalUi(),
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
         )
     }
 }
-

@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -50,8 +51,6 @@ import cz.kotu.game.contacts.model.findContact
 import cz.kotu.gamearena.PlayerAvatar
 
 private const val phi = 1.618f
-
-val hintBackgroundColor = Color(0xFFCCDDCC)
 
 val selectedContactColor = Color(0xFF1976D2)
 val highlightedContactColor = Color(0xFFFFB300)
@@ -120,7 +119,7 @@ fun ContactsPlayerScreen(
 
                     gameDetailsState.error?.let { error ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = error, color = Color.Red)
+                            Text(text = error, color = MaterialTheme.colorScheme.error)
                             TextButton(onClick = onRetryLoadGameDetails) {
                                 Text("Retry")
                             }
@@ -131,7 +130,7 @@ fun ContactsPlayerScreen(
 
                     Text(
                         text = "Faults: " + if (gameState.faults == 0) "0" else "X".repeat(gameState.faults),
-                        color = Color(0xFFCC0000),
+                        color = MaterialTheme.colorScheme.error,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -182,7 +181,7 @@ fun ContactsPlayerScreen(
                         modifier = Modifier
                             .fillMaxHeight()
                             .weight(1f)
-                            .border(1.dp, Color(0xFFDDDDDD)),
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         aiPanel = aiPanel,
                     )
                 }
@@ -191,7 +190,7 @@ fun ContactsPlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFE8E8E8))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -245,7 +244,7 @@ fun ContactsPlayerScreen(
                 validationError?.let { error ->
                     Text(
                         text = error,
-                        color = Color(0xFFCC0000),
+                        color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -281,8 +280,8 @@ private fun ActionSelectionButton(
         onClick = onClick,
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) selectedContactColor else Color(0xFFBDBDBD),
-            contentColor = if (selected) Color.White else Color.Black,
+            containerColor = if (selected) selectedContactColor else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         Text(text)
@@ -333,7 +332,7 @@ private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
                                     Text(
                                         text = hint,
                                         modifier = Modifier.align(Alignment.BottomCenter),
-                                        color = Color.DarkGray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = (poolTileHeight / 5.dp).sp,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center,
@@ -472,12 +471,12 @@ private fun RackView(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(hintBackgroundColor, cornerShape)
-                                        .border(1.dp, color = Color.Black, cornerShape),
+                                        .background(MaterialTheme.colorScheme.secondaryContainer, cornerShape)
+                                        .border(1.dp, color = MaterialTheme.colorScheme.outline, cornerShape),
                                 )
                                 Text(
                                     text = hint,
-                                    color = Color.DarkGray,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     fontSize = (tileHeight / 4.dp).sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,

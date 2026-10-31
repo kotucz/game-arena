@@ -1,6 +1,5 @@
 package cz.kotu.gamearena
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -52,8 +51,12 @@ fun App(
         { onResult -> KMPNotifier.permissionUtil.askNotificationPermission(onResult) },
     requestPushToken: suspend () -> String? = { KMPNotifier.firebasePushNotifier.getToken() },
 ) {
+    val settings = appComponent.settings
+    var themeMode by remember(settings) {
+        mutableStateOf(AppThemeMode.fromPreference(settings.getStringOrNull(THEME_MODE_KEY)))
+    }
 
-    MaterialTheme {
+    GameArenaTheme(themeMode) {
         val navController = rememberNavController()
         val authManager = appComponent.authManager
         val notifications = appComponent.notifications
@@ -80,72 +83,79 @@ fun App(
             }
         }
 
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.primaryContainer,
         ) {
-            if (showNotificationPermissionPrompt) {
-                TextButton(
-                    onClick = {
-                        askNotificationPermission { isGranted ->
-                            notifications.onNotificationPermission(isGranted, requestPushToken)
-                            showNotificationPermissionPrompt = false
-                        }
-                    },
-                ) {
-                    Text("Enable notifications")
-                }
-            }
-
-            NavHost(navController, startDestination = GAMES_ROUTE) {
-                composable(GAMES_ROUTE) {
-                    val gamesViewModel: GamesViewModel = viewModel { appComponent.gamesViewModelFactory() }
-                    GamesScreen(
-                        viewModel = gamesViewModel,
-                        onStartGotFive = { navController.navigate(GOT_FIVE_ROUTE) },
-                        onDebugClick = { navController.navigate(DEBUG_ROUTE) },
-                        onGameClick = { game -> navController.navigate("game/${game.id}") },
-                    )
-                }
-
-                composable(GOT_FIVE_ROUTE) {
-                    GotFiveScreen(
-                        appComponent = appComponent,
-                        onBack = { navController.popBackStack() },
-                    )
-                }
-
-                composable(DEBUG_ROUTE) {
-                    DebugScreen(
-                        notifications = notifications,
-                        onBack = { navController.popBackStack() },
-                    )
-                }
-
-                composable(
-                    route = CONTACTS_GAME_ROUTE,
-                    arguments = listOf(
-                        navArgument(CONTACTS_GAME_ID_ARGUMENT) {
-                            type = NavType.StringType
+            Column(
+                modifier = Modifier.safeContentPadding().fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (showNotificationPermissionPrompt) {
+                    TextButton(
+                        onClick = {
+                            askNotificationPermission { isGranted ->
+                                notifications.onNotificationPermission(isGranted, requestPushToken)
+                                showNotificationPermissionPrompt = false
+                            }
                         },
-                    ),
-                ) { entry ->
-                    val gameId = entry.arguments?.read {
-                        getString(CONTACTS_GAME_ID_ARGUMENT)
+                    ) {
+                        Text("Enable notifications")
                     }
-                    if (gameId != null) {
-                        ContactsGameScreen(
+                }
+
+                NavHost(navController, startDestination = GAMES_ROUTE) {
+                    composable(GAMES_ROUTE) {
+                        val gamesViewModel: GamesViewModel = viewModel { appComponent.gamesViewModelFactory() }
+                        GamesScreen(
+                            viewModel = gamesViewModel,
+                            themeMode = themeMode,
+                            onThemeModeChange = { mode ->
+                                themeMode = mode
+                                settings.putString(THEME_MODE_KEY, mode.name)
+                            },
+                            onStartGotFive = { navController.navigate(GOT_FIVE_ROUTE) },
+                            onDebugClick = { navController.navigate(DEBUG_ROUTE) },
+                            onGameClick = { game -> navController.navigate("game/${game.id}") },
+                        )
+                    }
+
+                    composable(GOT_FIVE_ROUTE) {
+                        GotFiveScreen(
                             appComponent = appComponent,
-                            gameId = gameId,
                             onBack = { navController.popBackStack() },
                         )
                     }
+
+                    composable(DEBUG_ROUTE) {
+                        DebugScreen(
+                            notifications = notifications,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+
+                    composable(
+                        route = CONTACTS_GAME_ROUTE,
+                        arguments = listOf(
+                            navArgument(CONTACTS_GAME_ID_ARGUMENT) {
+                                type = NavType.StringType
+                            },
+                        ),
+                    ) { entry ->
+                        val gameId = entry.arguments?.read {
+                            getString(CONTACTS_GAME_ID_ARGUMENT)
+                        }
+                        if (gameId != null) {
+                            ContactsGameScreen(
+                                appComponent = appComponent,
+                                gameId = gameId,
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                    }
                 }
+                BrowserNavigationEffect(navController)
             }
-            BrowserNavigationEffect(navController)
         }
 
         if (showAuthModal) {
@@ -166,6 +176,8 @@ fun App(
         }
     }
 }
+
+private const val THEME_MODE_KEY = "theme_mode"
 
 @Composable
 private fun ContactsGameScreen(

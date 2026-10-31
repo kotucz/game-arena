@@ -31,7 +31,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import cz.kotu.gamearena.model.RunningGame
@@ -49,7 +48,6 @@ fun CreateGameDialog(
                 .wrapContentSize()
                 .navigationBarsPadding(),
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
         ) {
             CreateContactsGameForm(
                 viewModel = viewModel,
@@ -81,7 +79,7 @@ private fun CreateContactsGameForm(
             Text(
                 text = "No players selected. Click \"Add player\" below to add players.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             FlowRow(

@@ -21,7 +21,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import cz.kotu.gamearena.model.AvailablePlayer
@@ -42,7 +41,6 @@ fun PlayerPickerDialog(
     Dialog(onDismissRequest = onClose) {
         Surface(
             modifier = Modifier.widthIn(max = 420.dp),
-            color = Color.White,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),

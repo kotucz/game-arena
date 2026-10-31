@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,19 +78,23 @@ fun RichGameLogItem(
                                     when (value?.type) {
                                         ContactsBoardState.ContactType.Yellow -> Color.Yellow
                                         ContactsBoardState.ContactType.Red -> Color.Red
-                                        else -> Color.LightGray
+                                        else -> MaterialTheme.colorScheme.secondaryContainer
                                     },
                                 ).padding(horizontal = 4.dp),
-                                color = Color.Black,
+                                color = if (value?.type == null) {
+                                   MaterialTheme.colorScheme.onSecondaryContainer
+                                } else {
+                                   Color.Black
+                                },
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                             )
                             contact?.hint?.let { hint ->
                                 Text(
                                     text = hint,
-                                    modifier = Modifier.background(hintBackgroundColor)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
                                         .padding(horizontal = 4.dp),
-                                    color = Color.Black,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                 )
@@ -107,7 +112,7 @@ fun RichGameLogItem(
                             )
                             Text(
                                 text = token.username,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -115,7 +120,7 @@ fun RichGameLogItem(
 
                         is LogToken.Text -> Text(
                             text = token.text,
-                            color = Color.DarkGray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                         )
                     }
@@ -124,7 +129,7 @@ fun RichGameLogItem(
                 Text(
                     text = log.timestamp.formatLocalUi(),
                     modifier = Modifier.weight(1f),
-                    color = Color.DarkGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     textAlign = TextAlign.End,
                 )
@@ -133,7 +138,7 @@ fun RichGameLogItem(
             Text(
                 text = log.text,
                 modifier = Modifier.weight(1f),
-                color = Color.DarkGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
             )
         }

@@ -66,12 +66,12 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
     val resultIsWin = gameViewModel.result.startsWith("Correct")
     val resultContainer = when {
         !gameViewModel.secretVisible -> MaterialTheme.colorScheme.surfaceVariant
-        resultIsWin -> Color(0xFFDFF3E3)
+        resultIsWin -> MaterialTheme.colorScheme.tertiaryContainer
         else -> MaterialTheme.colorScheme.errorContainer
     }
     val resultContent = when {
         !gameViewModel.secretVisible -> MaterialTheme.colorScheme.onSurfaceVariant
-        resultIsWin -> Color(0xFF14532D)
+        resultIsWin -> MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.onErrorContainer
     }
     // Notes change on every drag event and must not restart the tile transition.
@@ -184,7 +184,9 @@ private fun TileSections(
             val infiniteTransition = rememberInfiniteTransition(label = "pulse")
 
             val animatedColor by infiniteTransition.animateColor(
-                initialValue = Color.LightGray, targetValue = Color.White, animationSpec = infiniteRepeatable(
+                initialValue = MaterialTheme.colorScheme.surfaceVariant,
+                targetValue = MaterialTheme.colorScheme.surface,
+                animationSpec = infiniteRepeatable(
                     animation = tween(durationMillis = 1000, easing = LinearEasing), repeatMode = RepeatMode.Reverse,
                 ), label = "colorPulse"
             )
@@ -413,7 +415,7 @@ fun PlayerSecretFive(
                                         if (match) Res.drawable.ic_check else Res.drawable.ic_close
                                     ),
                                     contentDescription = null,
-                                    tint = if (match) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                                    tint = if (match) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                                 )
                             }
                         }

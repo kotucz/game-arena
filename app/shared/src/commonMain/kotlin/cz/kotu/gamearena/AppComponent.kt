@@ -27,6 +27,7 @@ abstract class AppComponent {
     abstract val gamesClient: GamesClient
     abstract val notificationClient: NotificationClient
     abstract val notifications: Notifications
+    abstract val settings: Settings
     abstract val gameViewModelFactory: () -> GameViewModel
     abstract val multiPlayerViewModelFactory: (String, (String) -> HttpClient) -> MultiPlayerViewModel
 
