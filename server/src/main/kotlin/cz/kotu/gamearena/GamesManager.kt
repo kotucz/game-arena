@@ -10,7 +10,6 @@ import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.GamePlayer
-import cz.kotu.gamearena.model.RunningGame
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,10 +45,10 @@ class GamesManager(
     private val gamesMutex = Mutex()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val runningGames: Flow<List<RunningGame>> = gamesUpdated.flatMapLatest {
+    val runningGames: Flow<List<RunningGameInfo>> = gamesUpdated.flatMapLatest {
         val gameFlows = games.values.map { game ->
             game.statusText.map { status ->
-                game.metadata.toRunningGame(status = status)
+                game.metadata.toRunningGameInfo(status = status)
             }
         }
         if (gameFlows.isEmpty()) {
@@ -113,8 +112,8 @@ class GamesManager(
 
     fun contactsGame(id: String): ContactsGame? = games[id] as? ContactsGame
 
-    fun runningGames(): List<RunningGame> = games.values.map { game ->
-        game.metadata.toRunningGame()
+    fun runningGames(): List<RunningGameInfo> = games.values.map { game ->
+        game.metadata.toRunningGameInfo()
     }
 
     private suspend fun persist(metadata: GameMetadata, facade: ContactsGameFacade) {
@@ -245,10 +244,10 @@ class GamesManager(
         is ContactsGameState.GamePhase.StandardTurn -> "Your turn" to "It is your turn in ${metadata.type} game"
     }
 
-    private fun GameMetadata.toRunningGame(status: String = "") = RunningGame(
+    private fun GameMetadata.toRunningGameInfo(status: String = "") = RunningGameInfo(
         id = id,
         type = type,
-        players = players,
+        playerUsernames = players,
         createdAt = createdAt,
         status = status,
     )

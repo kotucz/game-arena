@@ -2,7 +2,6 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.ai.NoopContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.gamearena.model.RunningGame
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -111,7 +110,7 @@ class GamesManagerTest {
             userDao = mockk(),
             contactsAi = NoopContactsAiStart,
         )
-        val emissions = mutableListOf<List<RunningGame>>()
+        val emissions = mutableListOf<List<RunningGameInfo>>()
         val job = launch(Dispatchers.Unconfined) {
             manager.runningGames.collect { emissions.add(it) }
         }

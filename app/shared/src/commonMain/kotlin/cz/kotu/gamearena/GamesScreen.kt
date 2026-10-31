@@ -3,6 +3,7 @@ package cz.kotu.gamearena
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -124,9 +125,17 @@ fun GamesScreen(
 
             games!!.isEmpty() -> Text("There are no running multiplayer games.")
             else -> games!!
-                .filter { viewModel.gameFilterMyAll.value == GameFilterTab.All || it.players.contains(username) }
+                .filter {
+                    viewModel.gameFilterMyAll.value == GameFilterTab.All ||
+                        currentUser?.uid?.let { uid -> it.players.any { player -> player.uid == uid } } == true
+                }
                 .sortedByDescending { it.createdAt }
-                .forEach { game -> RunningGameCard(game, onClick = { onGameClick(game) }) }
+                .forEach { game ->
+                    RunningGameCard(
+                        game = game,
+                        onClick = { onGameClick(game) },
+                    )
+                }
         }
     }
 }
@@ -174,7 +183,10 @@ fun GameFilterSegmentedButton(
 }
 
 @Composable
-private fun RunningGameCard(game: RunningGame, onClick: () -> Unit) {
+private fun RunningGameCard(
+    game: RunningGame,
+    onClick: () -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -184,7 +196,24 @@ private fun RunningGameCard(game: RunningGame, onClick: () -> Unit) {
                 Text(game.type.replaceFirstChar { it.uppercase() })
                 Text("  ${game.id}")
             }
-            Text("Players: ${game.players.joinToString()}")
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                game.players.forEach { player ->
+                    Row(verticalAlignment = CenterVertically) {
+                        PlayerAvatar(
+                            pictureUrl = player.pictureUrl,
+                            username = player.username,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Text(
+                            text = player.username,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
+            }
             Text("Created: ${game.createdAt.formatLocalUi()}")
             Text("Status: ${game.status}")
         }

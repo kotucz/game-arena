@@ -116,7 +116,7 @@ fun Application.module(serverComponent: ServerBindings) {
 
         authRoutes(database, tokenVerifier)
         notificationRoutes(database)
-        gameRoutes(gamesManager)
+        gameRoutes(gamesManager, RunningGamesResponseMapper(database.userDao()))
         playerRoutes(database)
 
         adminRoutes(pushNotificationService)

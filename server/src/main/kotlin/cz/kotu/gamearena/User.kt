@@ -32,6 +32,9 @@ interface UserDao {
     @Query("SELECT * FROM users ORDER BY usernameLower")
     suspend fun listUsers(): List<User>
 
+    @Query("SELECT * FROM users WHERE usernameLower IN (:usernamesLower)")
+    suspend fun findByUsernamesLower(usernamesLower: List<String>): List<User>
+
     @Query("UPDATE users SET pictureUrl = :pictureUrl WHERE firebaseUid = :firebaseUid")
     suspend fun updatePictureUrl(firebaseUid: String, pictureUrl: String)
 

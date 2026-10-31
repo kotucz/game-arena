@@ -5,6 +5,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsNetworkAction
 import cz.kotu.gamearena.ContactsGame
 import cz.kotu.gamearena.GamesManager
+import cz.kotu.gamearena.RunningGamesResponseMapper
 import cz.kotu.gamearena.UnknownPlayerException
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.model.CreateGameRequest
@@ -34,7 +35,10 @@ private val ContactsGameAttributeKey = AttributeKey<ContactsGame>("ContactsGame"
 val ApplicationCall.contactsGame: ContactsGame
     get() = attributes[ContactsGameAttributeKey]
 
-fun Route.gameRoutes(gamesManager: GamesManager) {
+fun Route.gameRoutes(
+    gamesManager: GamesManager,
+    runningGamesResponseMapper: RunningGamesResponseMapper,
+) {
     val contactsGamePlugin = createRouteScopedPlugin("ContactsGamePlugin") {
         onCall { call ->
             val gameId = call.parameters["gameId"].orEmpty()
@@ -49,8 +53,7 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
 
     authenticate("auth-firebase") {
         get("/api/games") {
-            val principal = call.principal<UserPrincipal>()!!
-            call.respond(gamesManager.runningGames())
+            call.respond(runningGamesResponseMapper.toResponses(gamesManager.runningGames()))
         }
 
         sse("/api/games/events") {
@@ -59,18 +62,19 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
                 event = ServerSentEvent(comments = "heartbeat")
             }
 
-            val principal = call.principal<UserPrincipal>()!!
             gamesManager.runningGames.collect { games ->
                 send(
                     ServerSentEvent(
-                        Json.encodeToString(ListSerializer(RunningGame.serializer()), games),
+                        Json.encodeToString(
+                            ListSerializer(RunningGame.serializer()),
+                            runningGamesResponseMapper.toResponses(games),
+                        ),
                     ),
                 )
             }
         }
 
         post("/api/games") {
-            val principal = call.principal<UserPrincipal>()!!
             val request = call.receive<CreateGameRequest>()
             if (request.type != "contacts") {
                 call.respond(HttpStatusCode.BadRequest, "Unsupported game type")
@@ -94,13 +98,7 @@ fun Route.gameRoutes(gamesManager: GamesManager) {
             }
             call.respond(
                 HttpStatusCode.Created,
-                RunningGame(
-                    id = game.metadata.id,
-                    type = game.metadata.type,
-                    players = game.metadata.players,
-                    createdAt = game.metadata.createdAt,
-                    status = "created",
-                ),
+                runningGamesResponseMapper.toResponse(game.metadata, status = "created"),
             )
         }
 

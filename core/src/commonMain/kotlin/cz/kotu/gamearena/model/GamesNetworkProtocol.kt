@@ -18,9 +18,16 @@ data class CreateGameRequest(
 data class RunningGame(
     val id: String,
     val type: String,
-    val players: List<String>,
+    val players: List<RunningGamePlayer>,
     val createdAt: Instant,
     val status: String,
+)
+
+@Serializable
+data class RunningGamePlayer(
+    val uid: String? = null,
+    val username: String,
+    val pictureUrl: String? = null,
 )
 
 @Serializable

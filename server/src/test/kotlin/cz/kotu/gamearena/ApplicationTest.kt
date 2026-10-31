@@ -155,6 +155,8 @@ class ApplicationTest {
         val authClient = createAuthenticatedClient(component, "test-user")
         ensureTestUser(component.database, "alice")
         ensureTestUser(component.database, "bob")
+        val alicePictureUrl = "https://example.com/alice.png"
+        component.database.userDao().updatePictureUrl("uid-alice", alicePictureUrl)
 
         val response = authClient.post("/api/games") {
             contentType(ContentType.Application.Json)
@@ -166,9 +168,11 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.Created, response.status)
         assertEquals(ContentType.Application.Json, response.contentType())
         assertTrue(response.bodyAsText().contains("\"type\":\"contacts\""))
-        assertTrue(response.bodyAsText().contains("\"players\":[\"alice\",\"bob\"]"))
-
-        // listsRunningGamesForAuthenticatedUser
+        assertTrue(
+            response.bodyAsText().contains(
+                "\"uid\":\"uid-alice\",\"username\":\"alice\",\"pictureUrl\":\"$alicePictureUrl\""
+            )
+        )
 
         val response2 = authClient.get("/api/games")
 
@@ -177,7 +181,10 @@ class ApplicationTest {
         assertTrue(body.startsWith("["))
         assertTrue(body.contains("\"id\":"))
         assertTrue(body.contains("\"type\":\"contacts\""))
-        assertTrue(body.contains("\"players\":[\"alice\",\"bob\"]"))
+        assertTrue(
+            body.contains("\"uid\":\"uid-alice\",\"username\":\"alice\",\"pictureUrl\":\"$alicePictureUrl\"")
+        )
+        assertTrue(body.contains("\"uid\":\"uid-bob\",\"username\":\"bob\""))
         assertTrue(body.contains("\"createdAt\":"))
     }
 
