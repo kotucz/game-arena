@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -41,10 +42,12 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameDetails
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
 import cz.kotu.game.contacts.model.findContact
+import cz.kotu.gamearena.PlayerAvatar
 
 private const val phi = 1.618f
 
@@ -57,6 +60,8 @@ val highlightedLogContactColor = Color(0xFFAA00FF)
 @Composable
 fun ContactsPlayerScreen(
     viewModel: ContactsPlayerViewModel,
+    gameDetailsState: ContactsGameDetailsUiState = ContactsGameDetailsUiState(isLoading = false),
+    onRetryLoadGameDetails: () -> Unit = {},
 ) {
     val currentGameState by viewModel.gameState.collectAsState()
 
@@ -107,7 +112,20 @@ fun ContactsPlayerScreen(
                         .weight(2f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    Text(text = "Player: " + player.username)
+                    ContactsPlayerIdentity(
+                        label = "Player: ",
+                        username = player.username,
+                        pictureUrl = gameDetailsState.details?.pictureUrl(player),
+                    )
+
+                    gameDetailsState.error?.let { error ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = error, color = Color.Red)
+                            TextButton(onClick = onRetryLoadGameDetails) {
+                                Text("Retry")
+                            }
+                        }
+                    }
 
                     SolvedContactsPool(gameState.pool)
 
@@ -127,6 +145,7 @@ fun ContactsPlayerScreen(
                     gameState.racks.filter { it.owner != player }.forEach { rack ->
                         RackView(
                             gameState = gameState,
+                            gameDetails = gameDetailsState.details,
                             rack = rack,
                             isOwner = false,
                             lastActionResult = gameState.lastActionResult,
@@ -142,6 +161,7 @@ fun ContactsPlayerScreen(
                     gameState.racks.filter { it.owner == player }.forEach { rack ->
                         RackView(
                             gameState = gameState,
+                            gameDetails = gameDetailsState.details,
                             rack = rack,
                             isOwner = true,
                             lastActionResult = gameState.lastActionResult,
@@ -332,6 +352,7 @@ private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
 @Composable
 private fun RackView(
     gameState: PlayerViewState,
+    gameDetails: ContactsGameDetails?,
     rack: PlayerViewState.Rack,
     isOwner: Boolean,
     lastActionResult: ContactsBoardState.ActionResult,
@@ -341,7 +362,11 @@ private fun RackView(
     onContactClick: (ContactsBoardState.ContactId) -> Unit,
 ) {
     Column {
-        Text(text = "Owner: " + rack.owner.username)
+        ContactsPlayerIdentity(
+            label = "Owner: ",
+            username = rack.owner.username,
+            pictureUrl = gameDetails?.pictureUrl(rack.owner),
+        )
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val maxContacts = gameState.racks.maxOf { it.contacts.size }
@@ -507,6 +532,25 @@ private fun FlippableContactTile(
         },
     )
 }
+
+@Composable
+private fun ContactsPlayerIdentity(
+    label: String,
+    username: String,
+    pictureUrl: String?,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PlayerAvatar(
+            pictureUrl = pictureUrl,
+            username = username,
+            modifier = Modifier.size(32.dp),
+        )
+        Text(text = "$label$username")
+    }
+}
+
+private fun ContactsGameDetails.pictureUrl(player: ContactsBoardState.Player): String? =
+    players.firstOrNull { it.username.equals(player.username, ignoreCase = true) }?.pictureUrl
 
 @Composable
 private fun ContactTileView(

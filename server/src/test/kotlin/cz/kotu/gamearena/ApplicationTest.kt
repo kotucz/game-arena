@@ -186,6 +186,18 @@ class ApplicationTest {
         )
         assertTrue(body.contains("\"uid\":\"uid-bob\",\"username\":\"bob\""))
         assertTrue(body.contains("\"createdAt\":"))
+
+        val gameId = body.substringAfter("\"id\":\"").substringBefore('"')
+        val detailsResponse = authClient.get("/api/games/$gameId/contacts")
+        assertEquals(HttpStatusCode.OK, detailsResponse.status)
+        val detailsBody = detailsResponse.bodyAsText()
+        assertTrue(detailsBody.contains("\"gameId\":\"$gameId\""))
+        assertTrue(
+            detailsBody.contains(
+                "\"uid\":\"uid-alice\",\"username\":\"alice\",\"pictureUrl\":\"$alicePictureUrl\""
+            )
+        )
+        assertTrue(detailsBody.contains("\"uid\":\"uid-bob\",\"username\":\"bob\""))
     }
 
     @Test
@@ -225,6 +237,10 @@ class ApplicationTest {
         application { module(component) }
 
         val authClient = createAuthenticatedClient(component, "test-user")
+
+        val detailsResponse = authClient.get("/api/games/missing/contacts")
+        assertEquals(HttpStatusCode.NotFound, detailsResponse.status)
+        assertEquals("Game not found", detailsResponse.bodyAsText())
 
         val eventsResponse = authClient.get("/api/games/missing/contacts/events")
         assertEquals(HttpStatusCode.NotFound, eventsResponse.status)

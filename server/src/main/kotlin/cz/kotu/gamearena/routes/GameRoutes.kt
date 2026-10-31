@@ -105,6 +105,12 @@ fun Route.gameRoutes(
         route("/api/games/{gameId}") {
             install(contactsGamePlugin)
 
+            get("/contacts") {
+                call.respond(
+                    runningGamesResponseMapper.toContactsGameDetails(call.contactsGame.metadata),
+                )
+            }
+
             sse("/contacts/events") {
                 heartbeat {
                     period = 15.seconds

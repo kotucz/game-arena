@@ -202,7 +202,11 @@ private fun ContactsGameScreen(
                     ),
                 )
             }
-            ContactsPlayerScreen(viewModel = playerViewModel)
+            ContactsPlayerScreen(
+                viewModel = playerViewModel,
+                gameDetailsState = gameViewModel.gameDetails.collectAsState().value,
+                onRetryLoadGameDetails = gameViewModel::loadGameDetails,
+            )
         }
     }
 }
