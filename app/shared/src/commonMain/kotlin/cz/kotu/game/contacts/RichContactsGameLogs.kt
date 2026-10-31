@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,16 +16,19 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameDetails
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
 import cz.kotu.game.contacts.model.findContact
+import cz.kotu.gamearena.PlayerAvatar
 import kotlinx.serialization.json.Json
 
 @Composable
@@ -33,6 +37,7 @@ fun RichGameLogItem(
     gameState: PlayerViewState,
     player: ContactsBoardState.Player,
     hoveredLogs: MutableState<List<LogToken>>,
+    gameDetails: ContactsGameDetails? = null,
 ) {
     Row {
         // TODO move parsing from UI
@@ -91,12 +96,22 @@ fun RichGameLogItem(
                             }
                         }
 
-                        is LogToken.Player -> Text(
-                            text = token.username,
-                            color = Color.Black,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        is LogToken.Player -> Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            PlayerAvatar(
+                                pictureUrl = gameDetails?.pictureUrl(ContactsBoardState.Player(token.username)),
+                                username = token.username,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                text = token.username,
+                                color = Color.Black,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
 
                         is LogToken.Text -> Text(
                             text = token.text,

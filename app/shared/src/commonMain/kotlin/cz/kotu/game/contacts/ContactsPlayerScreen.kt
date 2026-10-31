@@ -82,7 +82,7 @@ fun ContactsPlayerScreen(
     val isLogsExpanded = viewModel.isLogsExpanded
 
     val logItemContent: @Composable (GameLogEntry) -> Unit =
-        { RichGameLogItem(it, gameState, player, viewModel.hoveredLogs) }
+        { RichGameLogItem(it, gameState, player, viewModel.hoveredLogs, gameDetailsState.details) }
     val aiPanel: (@Composable () -> Unit)? = if (viewModel.hasAiPlayer) {
         { AiPanel(viewModel.aiPanelViewModel) }
     } else {
@@ -549,7 +549,7 @@ private fun ContactsPlayerIdentity(
     }
 }
 
-private fun ContactsGameDetails.pictureUrl(player: ContactsBoardState.Player): String? =
+internal fun ContactsGameDetails.pictureUrl(player: ContactsBoardState.Player): String? =
     players.firstOrNull { it.username.equals(player.username, ignoreCase = true) }?.pictureUrl
 
 @Composable
