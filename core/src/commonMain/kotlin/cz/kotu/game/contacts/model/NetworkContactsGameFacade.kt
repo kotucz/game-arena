@@ -11,6 +11,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -79,7 +80,10 @@ class NetworkContactsGameFacade(
                 val detail = response.bodyAsText().ifBlank { "Action failed: ${response.status}" }
                 error(detail)
             }
-        }.onFailure(::onError)
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            onError(error)
+        }
     }
 
     private suspend fun handleSseError(error: Throwable): Boolean {
@@ -131,6 +135,9 @@ class NetworkContactsGameFacade(
                     }
                 }
                 logLocal("Incoming logs finished unexpectedly")
+                delay(1.seconds)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Throwable) {
                 val shouldRetry = handleSseError(error)
                 if (!shouldRetry) return@flow
@@ -151,6 +158,9 @@ class NetworkContactsGameFacade(
                     }
                 }
                 logLocal("Incoming game events finished unexpectedly")
+                delay(1.seconds)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Throwable) {
                 val shouldRetry = handleSseError(error)
                 if (!shouldRetry) return@flow
