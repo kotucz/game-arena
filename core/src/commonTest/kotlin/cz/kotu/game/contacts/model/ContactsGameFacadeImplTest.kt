@@ -24,7 +24,7 @@ class ContactsGameFacadeImplTest {
             ),
             solved = emptySet(),
         ),
-        players = listOf(alice, bob),
+        players = listOf(ContactsPlayer("alice", "uid-alice"), ContactsPlayer("bob", "uid-bob")),
         gamePhase = StandardTurn(activePlayer = alice),
     )
 

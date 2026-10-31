@@ -83,11 +83,14 @@ private fun ContactsGameState.nextPhase(
     newBoard: ContactsBoardState,
     afterPlayer: ContactsBoardState.Player,
 ): ContactsGameState.GamePhase {
-    val afterIndex = players.indexOf(afterPlayer)
+    val playerIds = players.map(ContactsPlayer::playerId)
+    val afterIndex = playerIds.indexOf(afterPlayer)
+    check(afterIndex >= 0) { "Player ${afterPlayer.username} is missing from the Contacts roster" }
     for (i in players.indices) {
         val player = players[(afterIndex + 1 + i) % players.size]
-        if (newBoard.hasUnsolvedContacts(player)) {
-            return StandardTurn(player)
+        val playerId = player.playerId
+        if (newBoard.hasUnsolvedContacts(playerId)) {
+            return StandardTurn(playerId)
         }
     }
     return GameOver("Win: all solved!")

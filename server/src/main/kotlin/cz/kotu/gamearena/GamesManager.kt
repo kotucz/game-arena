@@ -5,12 +5,14 @@ import cz.kotu.game.contacts.ai.ContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
+import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.GamePlayer
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,23 +69,29 @@ class GamesManager(
                 ?: throw UnknownPlayerException(gamePlayer.uid)
         }
         return createContactsGameInternal(
-            playerUids = players.map(GamePlayer::uid),
-            playerUsernames = users.map(User::username),
+            players = users.map { user -> ContactsPlayer(username = user.username, uid = user.firebaseUid) },
             config = config,
         )
     }
 
     suspend fun createContactsGameInternal(
-        playerUids: List<String>,
-        playerUsernames: List<String>,
+        players: List<ContactsPlayer>,
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame = gamesMutex.withLock {
-        require(playerUids.size == playerUsernames.size) {
-            "Each Contacts player must have a UID and username"
+        require(players.map(ContactsPlayer::uid).distinct().size == players.size) {
+            "Contacts player UIDs must be unique"
         }
+        require(players.all { it.username.isNotBlank() }) {
+            "Contacts player usernames must not be blank"
+        }
+        require(players.map { it.username.lowercase() }.distinct().size == players.size) {
+            "Contacts player usernames must be unique"
+        }
+        require(players.isNotEmpty()) { "At least one Contacts player is required" }
+        val playerUids = players.map(ContactsPlayer::uid)
         val metadata = newMetadata(playerUids)
         val impl = ContactsGameFacadeImpl(
-            playerUsernames.map(ContactsBoardState::Player),
+            players,
             config,
         )
         val game = ContactsGame(
@@ -190,7 +198,14 @@ class GamesManager(
                 }
                 if (phase == lastState) return@collect
 
-                val recipientUids = notificationRecipientUids(game, phase)
+                val recipientUids = try {
+                    notificationRecipientUids(game, phase)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Napier.e(error) { "Failed to resolve game notification recipients for ${game.metadata.id}" }
+                    return@collect
+                }
                 if (recipientUids.isEmpty()) {
                     lastState = phase
                     return@collect
@@ -224,9 +239,9 @@ class GamesManager(
                 Napier.i("startAiPlayers $username")
                 val runner = contactsAi.start(
                     coroutineScope = notificationScope,
-                    playerFacade = game.aiPlayer(username),
+                    playerFacade = game.aiPlayer(player),
                     sessionId = game.metadata.id,
-                    messageSender = { message -> game.messageSender?.invoke(ContactsBoardState.Player(username), message) },
+                    messageSender = { message -> game.messageSender?.invoke(player.playerId, message) },
                 )
                 if (runner != null) {
                     game.aiRunners[username] = runner
@@ -235,19 +250,23 @@ class GamesManager(
         }
     }
 
-    private suspend fun notificationRecipientUids(
+    internal fun notificationRecipientUids(
         game: ContactsGame,
         phase: ContactsGameState.GamePhase,
     ): List<String> {
-        val activeUsername = when (phase) {
-            is ContactsGameState.GamePhase.GameOver -> return game.metadata.playerUids
+        val state = game.contactsGameFacade.gameState.value
+        val recipientPlayers = when (phase) {
+            is ContactsGameState.GamePhase.GameOver ->
+                return state.players.map(ContactsPlayer::uid)
             is ContactsGameState.GamePhase.ResolveMultiConnect ->
-                phase.resolveMultiConnect.targetPlayer.username
-            is ContactsGameState.GamePhase.StandardTurn -> phase.activePlayer.username
+                listOf(phase.resolveMultiConnect.targetPlayer)
+            is ContactsGameState.GamePhase.StandardTurn -> listOf(phase.activePlayer)
         }
-        val playerIndex = game.contactsGameFacade.gameState.value.players
-            .indexOfFirst { it.username == activeUsername }
-        return game.metadata.playerUids.getOrNull(playerIndex)?.let(::listOf).orEmpty()
+        return recipientPlayers.map { player ->
+            requireNotNull(state.players.firstOrNull { it.playerId == player }) {
+                "Player ${player.username} is missing from the Contacts roster"
+            }.uid
+        }
     }
 
     private fun notificationText(
@@ -310,21 +329,25 @@ data class ContactsGame(
         return true
     }
 
-    fun forUser(username: String): ServerContactsGameFacade {
+    fun forUser(firebaseUid: String): ServerContactsGameFacade {
+        val player = contactsGameFacade.gameState.value.players
+            .firstOrNull { it.uid == firebaseUid }
+            ?: throw UnknownGamePlayerException(firebaseUid)
         return ServerContactsGameFacade(
             ContactsPlayerGameAdapter(
-                player = ContactsBoardState.Player(username),
+                player = player,
                 gameFacade = contactsGameFacade,
             ),
         )
     }
 
-    fun aiPlayer(username: String): ContactsPlayerFacade {
+    fun aiPlayer(player: ContactsPlayer): ContactsPlayerFacade {
         return ContactsPlayerGameAdapter(
-            player = ContactsBoardState.Player(username),
+            player = player,
             gameFacade = contactsGameFacade,
         )
     }
 }
 
 class UnknownPlayerException(uid: String) : Exception("Unknown player uid: $uid")
+class UnknownGamePlayerException(uid: String) : Exception("User is not a player in this game: $uid")

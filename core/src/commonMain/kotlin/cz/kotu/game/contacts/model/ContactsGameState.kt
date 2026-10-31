@@ -11,7 +11,8 @@ import kotlinx.serialization.Serializable
 data class ContactsGameState(
     val board: ContactsBoardState,
 
-    val players: List<ContactsBoardState.Player>,
+    /** Ordered roster with account identity; board Player values remain game-internal IDs. */
+    val players: List<ContactsPlayer>,
 
     val gamePhase: GamePhase,
 

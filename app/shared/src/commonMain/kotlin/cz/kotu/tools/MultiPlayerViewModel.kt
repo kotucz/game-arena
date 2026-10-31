@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
+import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.NetworkContactsGameFacade
 import io.ktor.client.HttpClient
@@ -30,7 +31,9 @@ class MultiPlayerViewModel(
         MultiPlayerUser("bob"),
     )
 
-    val players = configuredPlayers.map { ContactsBoardState.Player(it.username) }
+    val players = configuredPlayers.map {
+        ContactsPlayer(username = it.username, uid = "local:${it.username}")
+    }
 
     private val playerClients = mutableMapOf<String, HttpClient>()
 

@@ -81,7 +81,7 @@ fun ContactsPlayerScreen(
     val isLogsExpanded = viewModel.isLogsExpanded
 
     val logItemContent: @Composable (GameLogEntry) -> Unit =
-        { RichGameLogItem(it, gameState, player, viewModel.hoveredLogs, gameDetailsState.details) }
+        { RichGameLogItem(it, gameState, viewModel.hoveredLogs, gameDetailsState.details) }
     val aiPanel: (@Composable () -> Unit)? = if (viewModel.hasAiPlayer) {
         { AiPanel(viewModel.aiPanelViewModel) }
     } else {
@@ -113,8 +113,8 @@ fun ContactsPlayerScreen(
                 ) {
                     ContactsPlayerIdentity(
                         label = "Player: ",
-                        username = player.username,
-                        pictureUrl = gameDetailsState.details?.pictureUrl(player),
+                        username = gameDetailsState.details?.player(player.uid)?.username ?: player.username,
+                        pictureUrl = gameDetailsState.details?.player(player.uid)?.pictureUrl,
                     )
 
                     gameDetailsState.error?.let { error ->
@@ -363,8 +363,8 @@ private fun RackView(
     Column {
         ContactsPlayerIdentity(
             label = "Owner: ",
-            username = rack.owner.username,
-            pictureUrl = gameDetails?.pictureUrl(rack.owner),
+            username = gameDetails?.player(rack.owner.uid)?.username ?: rack.owner.username,
+            pictureUrl = gameDetails?.player(rack.owner.uid)?.pictureUrl,
         )
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -547,9 +547,6 @@ private fun ContactsPlayerIdentity(
         Text(text = "$label$username")
     }
 }
-
-internal fun ContactsGameDetails.pictureUrl(player: ContactsBoardState.Player): String? =
-    players.firstOrNull { it.username.equals(player.username, ignoreCase = true) }?.pictureUrl
 
 @Composable
 private fun ContactTileView(

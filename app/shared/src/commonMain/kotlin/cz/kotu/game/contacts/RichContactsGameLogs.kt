@@ -36,7 +36,6 @@ import kotlinx.serialization.json.Json
 fun RichGameLogItem(
     log: GameLogEntry,
     gameState: PlayerViewState,
-    player: ContactsBoardState.Player,
     hoveredLogs: MutableState<List<LogToken>>,
     gameDetails: ContactsGameDetails? = null,
 ) {
@@ -101,21 +100,26 @@ fun RichGameLogItem(
                             }
                         }
 
-                        is LogToken.Player -> Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            PlayerAvatar(
-                                pictureUrl = gameDetails?.pictureUrl(ContactsBoardState.Player(token.username)),
-                                username = token.username,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = token.username,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
+                        is LogToken.Player -> {
+                            val uid = gameState.players.firstOrNull { it.username == token.username }?.uid
+                            val profile = uid?.let { gameDetails?.player(it) }
+                            val username = profile?.username ?: token.username
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                PlayerAvatar(
+                                    pictureUrl = profile?.pictureUrl,
+                                    username = username,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = username,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
 
                         is LogToken.Text -> Text(

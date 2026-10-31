@@ -5,14 +5,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 
 class ContactsPlayerGameAdapter(
-    val player: ContactsBoardState.Player,
+    val player: ContactsPlayer,
     val gameFacade: ContactsGameFacade,
 ) : ContactsPlayerFacade {
+    private val playerId = player.playerId
+
     override val gameState: Flow<PlayerViewState>
         get() = gameFacade.gameState.map { gameState ->
             gameState.sanitizedPlayerView(
-                player = player,
-                actions = gameState.getAvailablePlayerActions(player),
+                player = playerId,
+                actions = gameState.getAvailablePlayerActions(playerId),
             )
         }
     override val logs: StateFlow<List<GameLogEntry>>
@@ -24,7 +26,7 @@ class ContactsPlayerGameAdapter(
         otherContacts: Set<ContactsBoardState.ContactId>,
     ): Result<Unit> {
         return gameFacade.action(
-            player = player,
+            player = playerId,
             actionType = actionType,
             playerContacts = playerContacts,
             otherContacts = otherContacts,

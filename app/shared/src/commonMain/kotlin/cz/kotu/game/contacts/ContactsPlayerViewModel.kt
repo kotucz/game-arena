@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
+import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
@@ -61,7 +62,7 @@ class ContactsPlayerViewModel(
 
     val hoveredLogs: MutableState<List<LogToken>> = mutableStateOf(emptyList())
 
-    val player: ContactsBoardState.Player?
+    val player: ContactsPlayer?
         get() = gameState.value?.you
 
     private fun onGameStateChanged(newState: PlayerViewState) {

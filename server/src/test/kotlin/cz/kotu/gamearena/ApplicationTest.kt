@@ -1,5 +1,9 @@
 package cz.kotu.gamearena
 
+import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsGameDetails
+import cz.kotu.game.contacts.model.ContactsGamePlayer
+import cz.kotu.game.contacts.model.ContactsPlayer
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.defaultRequest
@@ -216,6 +220,12 @@ class ApplicationTest {
         )
         val storedGame = component.database.gameDao().list().single()
         assertEquals(listOf("uid-alice", "uid-bob"), Json.decodeFromString<List<String>>(storedGame.playersJson))
+        val storedState = Json.decodeFromString<ContactsGameState>(storedGame.stateJson)
+        assertEquals(listOf("alice", "bob"), storedState.players.map { it.username })
+        assertEquals(
+            listOf("uid-alice", "uid-bob"),
+            storedState.players.map(ContactsPlayer::uid),
+        )
 
         val response2 = authClient.get("/api/games")
 
@@ -235,12 +245,15 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, detailsResponse.status)
         val detailsBody = detailsResponse.bodyAsText()
         assertTrue(detailsBody.contains("\"gameId\":\"$gameId\""))
-        assertTrue(
-            detailsBody.contains(
-                "\"uid\":\"uid-alice\",\"username\":\"alice\",\"pictureUrl\":\"$alicePictureUrl\""
-            )
+        val details = Json.decodeFromString<ContactsGameDetails>(detailsBody)
+        assertEquals(gameId, details.gameId)
+        assertEquals(
+            listOf(
+                ContactsGamePlayer("uid-alice", "alice", alicePictureUrl),
+                ContactsGamePlayer("uid-bob", "bob"),
+            ),
+            details.players,
         )
-        assertTrue(detailsBody.contains("\"uid\":\"uid-bob\",\"username\":\"bob\""))
     }
 
     @Test

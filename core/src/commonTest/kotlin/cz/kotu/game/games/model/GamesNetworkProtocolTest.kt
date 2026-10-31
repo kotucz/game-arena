@@ -8,6 +8,7 @@ import cz.kotu.gamearena.model.RunningGamePlayer
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.time.Instant
 
 class GamesNetworkProtocolTest {
@@ -50,7 +51,7 @@ class GamesNetworkProtocolTest {
             gameId = "game-1",
             players = listOf(
                 ContactsGamePlayer("uid-alice", "alice", "https://example.com/alice.png"),
-                ContactsGamePlayer(null, "guest", null),
+                ContactsGamePlayer("uid-guest", "guest", null),
             ),
         )
 
@@ -58,5 +59,7 @@ class GamesNetworkProtocolTest {
         val decoded = Json.decodeFromString(ContactsGameDetails.serializer(), encoded)
 
         assertEquals(details, decoded)
+        assertEquals("alice", decoded.player("uid-alice")?.username)
+        assertNull(decoded.player("alice"))
     }
 }

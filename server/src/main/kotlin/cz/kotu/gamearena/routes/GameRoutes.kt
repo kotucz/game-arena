@@ -7,6 +7,7 @@ import cz.kotu.gamearena.ContactsGame
 import cz.kotu.gamearena.GamesManager
 import cz.kotu.gamearena.RunningGamesResponseMapper
 import cz.kotu.gamearena.UnknownPlayerException
+import cz.kotu.gamearena.UnknownGamePlayerException
 import cz.kotu.gamearena.UserPrincipal
 import cz.kotu.gamearena.model.CreateGameRequest
 import cz.kotu.gamearena.model.RunningGame
@@ -107,7 +108,7 @@ fun Route.gameRoutes(
 
             get("/contacts") {
                 call.respond(
-                    runningGamesResponseMapper.toContactsGameDetails(call.contactsGame.metadata),
+                    runningGamesResponseMapper.toContactsGameDetails(call.contactsGame),
                 )
             }
 
@@ -117,14 +118,26 @@ fun Route.gameRoutes(
                     event = ServerSentEvent(comments = "heartbeat")
                 }
                 val principal = call.principal<UserPrincipal>()!!
-                call.contactsGame.forUser(principal.username).handleEvents(this)
+                val facade = try {
+                    call.contactsGame.forUser(principal.firebaseUid)
+                } catch (_: UnknownGamePlayerException) {
+                    call.respond(HttpStatusCode.Forbidden, "User is not a player in this game")
+                    return@sse
+                }
+                facade.handleEvents(this)
             }
 
             post("/contacts/actions") {
                 val principal = call.principal<UserPrincipal>()!!
                 val game = call.contactsGame
                 val action = call.receive<ContactsNetworkAction>()
-                val result = game.forUser(principal.username).handleAction(action)
+                val facade = try {
+                    game.forUser(principal.firebaseUid)
+                } catch (_: UnknownGamePlayerException) {
+                    call.respond(HttpStatusCode.Forbidden, "User is not a player in this game")
+                    return@post
+                }
+                val result = facade.handleAction(action)
                 if (result.isSuccess) {
                     call.respond(HttpStatusCode.Accepted)
                 } else {
@@ -139,7 +152,13 @@ fun Route.gameRoutes(
                 }
                 val principal = call.principal<UserPrincipal>()!!
                 val lastSentLogIndex = call.request.queryParameters["lastSentLogIndex"]?.toIntOrNull() ?: -1
-                call.contactsGame.forUser(principal.username).handleLogs(this, lastSentLogIndex)
+                val facade = try {
+                    call.contactsGame.forUser(principal.firebaseUid)
+                } catch (_: UnknownGamePlayerException) {
+                    call.respond(HttpStatusCode.Forbidden, "User is not a player in this game")
+                    return@sse
+                }
+                facade.handleLogs(this, lastSentLogIndex)
             }
 
             post("/ai/{id}/command") {

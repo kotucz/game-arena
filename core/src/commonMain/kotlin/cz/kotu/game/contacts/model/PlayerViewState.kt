@@ -1,13 +1,13 @@
 package cz.kotu.game.contacts.model
 
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
-import cz.kotu.game.contacts.model.ContactsBoardState.Player
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class PlayerViewState(
-    val players: List<Player> = emptyList(),
-    val you: Player,
+    /** The game roster as visible to this player; account profile data is resolved separately. */
+    val players: List<ContactsPlayer> = emptyList(),
+    val you: ContactsPlayer,
     val pool: List<PoolContact>,
     val racks: List<Rack>,
     val faults: Int,
@@ -32,7 +32,7 @@ data class PlayerViewState(
 
     @Serializable
     data class Rack(
-        val owner: Player,
+        val owner: ContactsPlayer,
         val contacts: List<RackContact>,
     )
 
@@ -40,7 +40,7 @@ data class PlayerViewState(
     companion object {
         fun empty() = PlayerViewState(
             players = emptyList(),
-            you = Player(""),
+            you = ContactsPlayer("", ""),
             pool = listOf(),
             racks = listOf(),
             faults = 0,
@@ -63,7 +63,10 @@ fun PlayerViewState.findContact(contactId: ContactId): PlayerViewState.RackConta
 /**
  * Sanitize game state from player's PoV
  */
-fun ContactsGameState.sanitizedPlayerView(player: Player, actions: ContactsGameState.PlayerActions): PlayerViewState {
+fun ContactsGameState.sanitizedPlayerView(
+    player: ContactsBoardState.Player,
+    actions: ContactsGameState.PlayerActions,
+): PlayerViewState {
 
     val pool = board.pool.map { c ->
         PlayerViewState.PoolContact(
@@ -89,14 +92,18 @@ fun ContactsGameState.sanitizedPlayerView(player: Player, actions: ContactsGameS
         }
 
         PlayerViewState.Rack(
-            owner = rack.owner,
+            owner = requireNotNull(players.firstOrNull { it.playerId == rack.owner }) {
+                "Player ${rack.owner.username} is missing from the Contacts roster"
+            },
             contacts = contacts,
         )
     }
 
     return PlayerViewState(
         players = players,
-        you = player,
+        you = requireNotNull(players.firstOrNull { it.playerId == player }) {
+            "Player ${player.username} is missing from the Contacts roster"
+        },
         pool = pool,
         racks = racks,
         faults = board.faults,

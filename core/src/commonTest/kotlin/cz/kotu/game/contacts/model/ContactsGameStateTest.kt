@@ -39,7 +39,9 @@ class ContactsGameStateTest {
     ): ContactsGameState {
         return ContactsGameState(
             board = board,
-            players = players,
+            players = players.map {
+                ContactsPlayer(username = it.username, uid = "test:${it.username}")
+            },
             gamePhase = StandardTurn(activePlayer = activePlayer),
         )
     }

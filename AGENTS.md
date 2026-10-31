@@ -78,6 +78,13 @@ Contacts is the first client/server game.
 
 ## Contacts
 
+- `ContactsGameState.players` is the ordered `ContactsPlayer` roster containing
+  the game-local username ID and Firebase UID. Use Firebase UIDs for
+  authenticated membership and push delivery; use `ContactsPlayer.playerId` to
+  translate into `ContactsBoardState.Player`, which stays internal to game
+  rules and adapters.
+- `PlayerViewState` carries the roster identity shared by UI and AI. Resolve
+  account profile usernames and avatars separately into `ContactsGameDetails`.
 - Keep validation and state changes in `core` behind `ContactsGameFacade` and
   board-state helpers, not in Compose screens. UI may keep temporary selection
   state and submits it only after confirmation.

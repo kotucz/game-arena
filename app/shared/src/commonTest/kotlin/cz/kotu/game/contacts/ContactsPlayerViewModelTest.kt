@@ -4,8 +4,8 @@ import cz.kotu.game.contacts.model.ActionSelectionState
 import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
-import cz.kotu.game.contacts.model.ContactsBoardState.Player
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.PlayerViewState
@@ -30,8 +30,8 @@ import kotlin.test.assertNull
 @OptIn(ExperimentalCoroutinesApi::class)
 class ContactsPlayerViewModelTest {
 
-    private val alice = Player("alice")
-    private val bob = Player("bob")
+    private val alice = ContactsPlayer("alice", "test:alice")
+    private val bob = ContactsPlayer("bob", "test:bob")
 
     @BeforeTest
     fun setUp() {
@@ -48,7 +48,7 @@ class ContactsPlayerViewModelTest {
     }
 
     private fun createPlayerViewState(
-        you: Player = alice,
+        you: ContactsPlayer = alice,
         allowedActionTypes: Set<ActionType> = setOf(ActionType.StandardConnect),
         resolveMultiConnectContacts: Set<ContactId>? = null,
         racks: List<PlayerViewState.Rack> = emptyList(),
