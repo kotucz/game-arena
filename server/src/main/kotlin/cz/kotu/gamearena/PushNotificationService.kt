@@ -14,14 +14,14 @@ import java.io.FileInputStream
 
 interface PushNotificationService {
     suspend fun sendToUser(
-        username: String,
+        firebaseUid: String,
         title: String,
         body: String,
         data: Map<String, String> = emptyMap(),
     ): Int
 
     suspend fun sendToUsers(
-        usernames: Collection<String>,
+        firebaseUids: Collection<String>,
         title: String,
         body: String,
         data: Map<String, String> = emptyMap(),
@@ -30,14 +30,14 @@ interface PushNotificationService {
 
 class NoopPushNotificationService : PushNotificationService {
     override suspend fun sendToUser(
-        username: String,
+        firebaseUid: String,
         title: String,
         body: String,
         data: Map<String, String>,
     ): Int = 0
 
     override suspend fun sendToUsers(
-        usernames: Collection<String>,
+        firebaseUids: Collection<String>,
         title: String,
         body: String,
         data: Map<String, String>,
@@ -62,22 +62,22 @@ class FirebaseAdminPushNotificationService(
     }.getOrNull()
 
     override suspend fun sendToUser(
-        username: String,
+        firebaseUid: String,
         title: String,
         body: String,
         data: Map<String, String>,
-    ): Int = sendToUsers(listOf(username), title, body, data)
+    ): Int = sendToUsers(listOf(firebaseUid), title, body, data)
 
     override suspend fun sendToUsers(
-        usernames: Collection<String>,
+        firebaseUids: Collection<String>,
         title: String,
         body: String,
         data: Map<String, String>,
     ): Int {
-        val uniqueUsernames = usernames.filter { it.isNotBlank() }.distinct()
-        if (uniqueUsernames.isEmpty() || messaging == null) return 0
+        val uniqueFirebaseUids = firebaseUids.filter { it.isNotBlank() }.distinct()
+        if (uniqueFirebaseUids.isEmpty() || messaging == null) return 0
 
-        val tokens = database.pushTokenDao().findByUsernames(uniqueUsernames)
+        val tokens = database.pushTokenDao().findByFirebaseUids(uniqueFirebaseUids)
             .filter { it.service == "fcm" }
 
         var sent = 0
@@ -100,7 +100,7 @@ class FirebaseAdminPushNotificationService(
                 val staleRegistrationToken = isStaleRegistrationToken(exception)
                 Napier.w(exception) { "staleRegistrationToken: $staleRegistrationToken ${token.tokenId}" }
                 if (staleRegistrationToken) {
-                    database.pushTokenDao().delete(token.tokenId, token.username)
+                    database.pushTokenDao().delete(token.tokenId, token.firebaseUid)
                     continue
                 }
                 throw exception

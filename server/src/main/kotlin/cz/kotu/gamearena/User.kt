@@ -29,6 +29,9 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE firebaseUid = :firebaseUid LIMIT 1")
     suspend fun findByFirebaseUid(firebaseUid: String): User?
 
+    @Query("SELECT * FROM users WHERE firebaseUid IN (:firebaseUids)")
+    suspend fun findByFirebaseUids(firebaseUids: List<String>): List<User>
+
     @Query("SELECT * FROM users ORDER BY usernameLower")
     suspend fun listUsers(): List<User>
 

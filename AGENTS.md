@@ -20,7 +20,8 @@ Contacts is the first client/server game.
 - `GamesManager` owns the in-memory registry of `ManagedGame` instances keyed by
   string IDs. Persistence is not part of the current implementation.
 - Shared game metadata is represented by `GameMetadata`: ID, stable string game
-  type, player usernames, and creation time.
+  type, player UIDs, and creation time. Usernames and avatars are resolved from
+  UIDs for client-facing game summaries; they are not game identity.
 - New game kinds should provide their own typed runtime entry while exposing
   the common metadata needed by the manager and game-list endpoint.
 - Use typed lookups such as `contactsGame(id)` for game-specific routes. Do not
@@ -66,8 +67,8 @@ Contacts is the first client/server game.
   stable UUID stored in client preferences). This allows upsert-on-refresh
   without duplicates and targeted deletion on logout.
 - `tokenId` is the sole primary key — two users cannot share a `tokenId` row.
-  Use `(username, service)` only as an index for efficient lookup, not as a key.
-- Delete is scoped by `AND username = :username` in the DAO, so a user cannot
+  Use `(firebaseUid, service)` only as an index for efficient lookup, not as a key.
+- Delete is scoped by `AND firebaseUid = :firebaseUid` in the DAO, so a user cannot
   remove another user's token even if they know its `tokenId`.
 - Stale tokens (device uninstalled, etc.) are cleaned up **lazily**: the push-
   sending logic must delete the token row when the delivery API returns 404/410.

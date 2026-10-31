@@ -17,7 +17,8 @@ import kotlin.time.Instant
 
 class GamesManagerTest {
 
-    private val players = listOf("alice", "bob")
+    private val playerUids = listOf("uid-alice", "uid-bob")
+    private val playerUsernames = listOf("alice", "bob")
 
     @Test
     fun createsAndFindsContactsGameByStringId() = runBlocking {
@@ -30,7 +31,8 @@ class GamesManagerTest {
         )
 
         val game = manager.createContactsGameInternal(
-            players = players,
+            playerUids = playerUids,
+            playerUsernames = playerUsernames,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
                 yellowCount = 4,
@@ -39,7 +41,11 @@ class GamesManagerTest {
         )
 
         assertEquals("game-1", game.metadata.id)
-        assertEquals(listOf("alice", "bob"), game.metadata.players)
+        assertEquals(playerUids, game.metadata.playerUids)
+        assertEquals(
+            playerUsernames,
+            game.contactsGameFacade.gameState.value.players.map { it.username },
+        )
         assertEquals(createdAt, game.metadata.createdAt)
         assertSame(game, manager.game("game-1"))
         assertEquals("contacts", manager.runningGames().single().type)
@@ -55,7 +61,8 @@ class GamesManagerTest {
         )
 
         val first = manager.createContactsGameInternal(
-            players = players,
+            playerUids = playerUids,
+            playerUsernames = playerUsernames,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
                 yellowCount = 4,
@@ -63,7 +70,8 @@ class GamesManagerTest {
             )
         )
         val second = manager.createContactsGameInternal(
-            players = players,
+            playerUids = playerUids,
+            playerUsernames = playerUsernames,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
                 yellowCount = 4,
@@ -90,7 +98,7 @@ class GamesManagerTest {
             override val metadata = GameMetadata(
                 id = "gotfive-1",
                 type = "gotfive",
-                players = listOf("alice", "bob"),
+                playerUids = playerUids,
                 createdAt = Instant.parse("2026-08-14T18:30:00Z"),
             )
             override val statusText: Flow<String>
@@ -119,7 +127,8 @@ class GamesManagerTest {
         assertEquals(0, emissions[0].size)
 
         manager.createContactsGameInternal(
-            players = players,
+            playerUids = playerUids,
+            playerUsernames = playerUsernames,
             config = ContactsBoardState.ContactsGameConfig(
                 blueCount = 12,
                 yellowCount = 4,

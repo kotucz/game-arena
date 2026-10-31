@@ -14,6 +14,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -213,6 +214,8 @@ class ApplicationTest {
                 "\"uid\":\"uid-alice\",\"username\":\"alice\",\"pictureUrl\":\"$alicePictureUrl\""
             )
         )
+        val storedGame = component.database.gameDao().list().single()
+        assertEquals(listOf("uid-alice", "uid-bob"), Json.decodeFromString<List<String>>(storedGame.playersJson))
 
         val response2 = authClient.get("/api/games")
 

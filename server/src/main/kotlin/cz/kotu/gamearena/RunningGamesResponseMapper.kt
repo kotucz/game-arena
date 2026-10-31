@@ -17,20 +17,20 @@ class RunningGamesResponseMapper(
     suspend fun toContactsGameDetails(metadata: GameMetadata): ContactsGameDetails =
         ContactsGameDetails(
             gameId = metadata.id,
-            players = resolvePlayers(metadata.players),
+            players = resolvePlayers(metadata.playerUids),
         )
 
     suspend fun toResponses(games: List<RunningGameInfo>): List<RunningGame> {
-        val usersByUsername = usersByUsername(games.flatMap(RunningGameInfo::playerUsernames))
+        val usersByUid = usersByUid(games.flatMap(RunningGameInfo::playerUids))
         return games.map { game ->
             RunningGame(
                 id = game.id,
                 type = game.type,
-                players = game.playerUsernames.map { username ->
-                    val user = usersByUsername[username.lowercase()]
+                players = game.playerUids.map { uid ->
+                    val user = usersByUid[uid]
                     RunningGamePlayer(
-                        uid = user?.firebaseUid,
-                        username = username,
+                        uid = uid,
+                        username = user?.username ?: uid,
                         pictureUrl = user?.pictureUrl,
                     )
                 },
@@ -40,30 +40,28 @@ class RunningGamesResponseMapper(
         }
     }
 
-    private suspend fun resolvePlayers(usernames: List<String>): List<ContactsGamePlayer> {
-        val usersByUsername = usersByUsername(usernames)
-        return usernames.map { username ->
-            val user = usersByUsername[username.lowercase()]
+    private suspend fun resolvePlayers(playerUids: List<String>): List<ContactsGamePlayer> {
+        val usersByUid = usersByUid(playerUids)
+        return playerUids.map { uid ->
+            val user = usersByUid[uid]
             ContactsGamePlayer(
-                uid = user?.firebaseUid,
-                username = username,
+                uid = uid,
+                username = user?.username ?: uid,
                 pictureUrl = user?.pictureUrl,
             )
         }
     }
 
-    private suspend fun usersByUsername(usernames: List<String>): Map<String, User> {
-        val usernamesLower = usernames
-            .distinct()
-            .map { it.lowercase() }
-        if (usernamesLower.isEmpty()) return emptyMap()
-        return userDao.findByUsernamesLower(usernamesLower).associateBy { it.usernameLower }
+    private suspend fun usersByUid(playerUids: List<String>): Map<String, User> {
+        val distinctUids = playerUids.distinct()
+        if (distinctUids.isEmpty()) return emptyMap()
+        return userDao.findByFirebaseUids(distinctUids).associateBy { it.firebaseUid }
     }
 
     private fun GameMetadata.toRunningGameInfo(status: String) = RunningGameInfo(
         id = id,
         type = type,
-        playerUsernames = players,
+        playerUids = playerUids,
         createdAt = createdAt,
         status = status,
     )

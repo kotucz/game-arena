@@ -62,20 +62,28 @@ class GamesManager(
         players: List<GamePlayer>,
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame {
-        val usernames = players.map { gamePlayer ->
-            userDao.findByFirebaseUid(gamePlayer.uid)?.username
+        val users = players.map { gamePlayer ->
+            userDao.findByFirebaseUid(gamePlayer.uid)
                 ?: throw UnknownPlayerException(gamePlayer.uid)
         }
-        return createContactsGameInternal(usernames, config)
+        return createContactsGameInternal(
+            playerUids = players.map(GamePlayer::uid),
+            playerUsernames = users.map(User::username),
+            config = config,
+        )
     }
 
     suspend fun createContactsGameInternal(
-        players: List<String>,
+        playerUids: List<String>,
+        playerUsernames: List<String>,
         config: ContactsBoardState.ContactsGameConfig,
     ): ContactsGame = gamesMutex.withLock {
-        val metadata = newMetadata(players)
+        require(playerUids.size == playerUsernames.size) {
+            "Each Contacts player must have a UID and username"
+        }
+        val metadata = newMetadata(playerUids)
         val impl = ContactsGameFacadeImpl(
-            players.map(ContactsBoardState::Player),
+            playerUsernames.map(ContactsBoardState::Player),
             config,
         )
         val game = ContactsGame(
@@ -121,7 +129,7 @@ class GamesManager(
         val record = StoredGame(
             id = metadata.id,
             type = metadata.type,
-            playersJson = json.encodeToString(metadata.players),
+            playersJson = json.encodeToString(metadata.playerUids),
             createdAtMillis = metadata.createdAt.toEpochMilliseconds(),
             stateJson = json.encodeToString(facade.gameState.value),
             logsJson = json.encodeToString(facade.logs.value),
@@ -147,7 +155,7 @@ class GamesManager(
                             val metadata = GameMetadata(
                                 id = record.id,
                                 type = record.type,
-                                players = json.decodeFromString<List<String>>(record.playersJson),
+                                playerUids = json.decodeFromString<List<String>>(record.playersJson),
                                 createdAt = Instant.fromEpochMilliseconds(record.createdAtMillis),
                             )
                             val impl = ContactsGameFacadeImpl(
@@ -182,19 +190,16 @@ class GamesManager(
                 }
                 if (phase == lastState) return@collect
 
-                val recipients = notificationRecipients(game.metadata, phase)
-                if (recipients.isEmpty()) {
+                val recipientUids = notificationRecipientUids(game, phase)
+                if (recipientUids.isEmpty()) {
                     lastState = phase
                     return@collect
                 }
 
                 val (title, body) = notificationText(game.metadata, phase)
                 runCatching {
-                    val firebaseUids = userDao.findByUsernamesLower(
-                        recipients.map { it.lowercase() }.distinct(),
-                    ).map { it.firebaseUid }
                     notificationService.sendToUsers(
-                        firebaseUids = firebaseUids,
+                        firebaseUids = recipientUids,
                         title = title,
                         body = body,
                         data = mapOf(
@@ -213,7 +218,8 @@ class GamesManager(
 
     private fun startAiPlayers(game: ContactsGame) {
         Napier.i("startAiPlayers game $game")
-        game.metadata.players.forEach { username ->
+        game.contactsGameFacade.gameState.value.players.forEach { player ->
+            val username = player.username
             if (username == "ai:gemini") {
                 Napier.i("startAiPlayers $username")
                 val runner = contactsAi.start(
@@ -229,13 +235,19 @@ class GamesManager(
         }
     }
 
-    private fun notificationRecipients(
-        metadata: GameMetadata,
+    private suspend fun notificationRecipientUids(
+        game: ContactsGame,
         phase: ContactsGameState.GamePhase,
-    ): List<String> = when (phase) {
-        is ContactsGameState.GamePhase.GameOver -> metadata.players
-        is ContactsGameState.GamePhase.ResolveMultiConnect -> listOf(phase.resolveMultiConnect.targetPlayer.username)
-        is ContactsGameState.GamePhase.StandardTurn -> listOf(phase.activePlayer.username)
+    ): List<String> {
+        val activeUsername = when (phase) {
+            is ContactsGameState.GamePhase.GameOver -> return game.metadata.playerUids
+            is ContactsGameState.GamePhase.ResolveMultiConnect ->
+                phase.resolveMultiConnect.targetPlayer.username
+            is ContactsGameState.GamePhase.StandardTurn -> phase.activePlayer.username
+        }
+        val playerIndex = game.contactsGameFacade.gameState.value.players
+            .indexOfFirst { it.username == activeUsername }
+        return game.metadata.playerUids.getOrNull(playerIndex)?.let(::listOf).orEmpty()
     }
 
     private fun notificationText(
@@ -250,25 +262,25 @@ class GamesManager(
     private fun GameMetadata.toRunningGameInfo(status: String = "") = RunningGameInfo(
         id = id,
         type = type,
-        playerUsernames = players,
+        playerUids = playerUids,
         createdAt = createdAt,
         status = status,
     )
 
-    private fun newMetadata(players: List<String>): GameMetadata {
+    private fun newMetadata(playerUids: List<String>): GameMetadata {
         var id: String
         do {
             id = idGenerator()
             require(id.isNotBlank()) { "Game ID must not be blank" }
         } while (games.containsKey(id))
-        return GameMetadata(id = id, type = "contacts", players = players, createdAt = clock())
+        return GameMetadata(id = id, type = "contacts", playerUids = playerUids, createdAt = clock())
     }
 }
 
 data class GameMetadata(
     val id: String,
     val type: String,
-    val players: List<String>,
+    val playerUids: List<String>,
     val createdAt: Instant,
 )
 
