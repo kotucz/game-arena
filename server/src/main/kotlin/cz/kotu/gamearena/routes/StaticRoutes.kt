@@ -10,8 +10,9 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import java.io.File
 
-fun Route.staticRoutes(webRoot: File) {
+fun Route.staticRoutes(webRoot: File, mediaRoot: File) {
     Napier.i("staticRoutes webRoot: $webRoot")
+    Napier.i("staticRoutes mediaRoot: $mediaRoot")
 
     suspend fun respondAppShell(call: ApplicationCall) {
         val file = File(webRoot, "index.html")
@@ -24,6 +25,12 @@ fun Route.staticRoutes(webRoot: File) {
 
     get("/") {
         respondAppShell(call)
+    }
+
+    staticFiles("/media", mediaRoot) {
+        cacheControl { _ ->
+            listOf(CacheControl.MaxAge(60 * 60, visibility = CacheControl.Visibility.Public))
+        }
     }
 
     // Static assets are versioned and change infrequently, so cache them aggressively.

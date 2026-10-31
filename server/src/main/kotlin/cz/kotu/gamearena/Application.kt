@@ -120,7 +120,7 @@ fun Application.module(serverComponent: ServerBindings) {
         playerRoutes(database)
 
         adminRoutes(pushNotificationService)
-        staticRoutes(webRoot)
+        staticRoutes(webRoot, serverConfig.mediaRoot)
     }
 
     monitor.subscribe(ApplicationStopped) {

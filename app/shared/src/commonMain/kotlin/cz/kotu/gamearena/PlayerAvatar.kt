@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +24,9 @@ fun PlayerAvatar(
     username: String,
     modifier: Modifier = Modifier,
 ) {
+    val resolvedPictureUrl = remember(pictureUrl) {
+        resolvePictureUrl(pictureUrl, defaultApiBaseUrl())
+    }
     Box(
         modifier = modifier
             .clip(CircleShape)
@@ -37,7 +41,7 @@ fun PlayerAvatar(
             modifier = Modifier.fillMaxSize(0.65f),
         )
         AsyncImage(
-            model = pictureUrl?.takeIf(String::isNotBlank),
+            model = resolvedPictureUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -45,4 +49,14 @@ fun PlayerAvatar(
                 .clip(CircleShape),
         )
     }
+}
+
+@Suppress("HttpUrlsUsage")
+internal fun resolvePictureUrl(pictureUrl: String?, baseUrl: String): String? {
+    val url = pictureUrl?.takeIf(String::isNotBlank) ?: return null
+    if (url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)) {
+        return url
+    }
+    if (baseUrl.isBlank()) return url
+    return "${baseUrl.trimEnd('/')}/${url.trimStart('/')}"
 }

@@ -1,6 +1,7 @@
 package cz.kotu.gamearena
 
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -13,6 +14,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.io.File
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -59,6 +62,43 @@ class ApplicationTest {
         val response = client.get("/health")
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("OK", response.bodyAsText())
+    }
+
+    @Test
+    @Suppress("BlockingMethodInNonBlockingContext")
+    fun servesPlayerAvatarFromConfiguredDirectory() = testApplication {
+        val mediaDirectory = Files.createTempDirectory("gamearena-media-").toFile()
+        val playersDirectory = File(mediaDirectory, "players").apply { mkdirs() }
+        val avatarFile = File(playersDirectory, "alice.png")
+        val avatarBytes = byteArrayOf(0x01, 0x02, 0x03)
+        avatarFile.writeBytes(avatarBytes)
+        try {
+            val component = TestServerComponent::class.create(
+                TestFakes(
+                    serverConfig = ServerConfig(
+                        port = 8080,
+                        webRoot = File("."),
+                        databaseFile = File("data/test-gamearena.db"),
+                        adminUsername = "admin",
+                        adminPassword = "test-secret",
+                        firebaseConfigFile = File("."),
+                        mediaRoot = mediaDirectory,
+                    )
+                )
+            )
+            application { module(component) }
+
+            val response = client.get("/media/players/alice.png")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(ContentType.Image.PNG, response.contentType())
+            assertEquals(true, response.headers[HttpHeaders.CacheControl]?.contains("max-age=3600"))
+            assertTrue(response.body<ByteArray>().contentEquals(avatarBytes))
+        } finally {
+            Files.deleteIfExists(avatarFile.toPath())
+            Files.deleteIfExists(playersDirectory.toPath())
+            Files.deleteIfExists(mediaDirectory.toPath())
+        }
     }
 
     @Test
