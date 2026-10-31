@@ -40,7 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import cz.kotu.game.contacts.formatLocalUi
+import cz.kotu.game.contacts.model.ContactsGameOverReason
 import cz.kotu.gamearena.model.RunningGame
+import cz.kotu.gamearena.model.RunningGameStatus
 import gamearena.app.shared.generated.resources.Res
 import gamearena.app.shared.generated.resources.arena_create_contacts_game
 import gamearena.app.shared.generated.resources.arena_created
@@ -53,10 +55,16 @@ import gamearena.app.shared.generated.resources.arena_logout
 import gamearena.app.shared.generated.resources.arena_running_games
 import gamearena.app.shared.generated.resources.arena_start_got_five
 import gamearena.app.shared.generated.resources.arena_status
+import gamearena.app.shared.generated.resources.arena_status_unknown
 import gamearena.app.shared.generated.resources.arena_theme
 import gamearena.app.shared.generated.resources.arena_theme_dark
 import gamearena.app.shared.generated.resources.arena_theme_light
 import gamearena.app.shared.generated.resources.arena_theme_system
+import gamearena.app.shared.generated.resources.contacts_status_empty_game
+import gamearena.app.shared.generated.resources.contacts_status_game_over_all_contacts_solved
+import gamearena.app.shared.generated.resources.contacts_status_game_over_red_connected
+import gamearena.app.shared.generated.resources.contacts_status_player_turn
+import gamearena.app.shared.generated.resources.contacts_status_waiting_for_multi_connect
 import gamearena.app.shared.generated.resources.arena_try_again
 import gamearena.app.shared.generated.resources.contacts_game_name
 import org.jetbrains.compose.resources.stringResource
@@ -292,10 +300,28 @@ private fun RunningGameCard(
                 }
             }
             Text(stringResource(Res.string.arena_created, game.createdAt.formatLocalUi()))
-            Text(stringResource(Res.string.arena_status, game.status))
+            Text(stringResource(Res.string.arena_status, runningGameStatusText(game.status)))
         }
     }
 }
+
+@Composable
+private fun runningGameStatusText(status: RunningGameStatus): String =
+    when (status) {
+        is RunningGameStatus.ContactsPlayerTurn ->
+            stringResource(Res.string.contacts_status_player_turn, status.player.username)
+        is RunningGameStatus.ContactsMultiConnectResolution ->
+            stringResource(Res.string.contacts_status_waiting_for_multi_connect, status.player.username)
+        is RunningGameStatus.ContactsGameOver -> when (status.reason) {
+            ContactsGameOverReason.AllContactsSolved ->
+                stringResource(Res.string.contacts_status_game_over_all_contacts_solved)
+            ContactsGameOverReason.RedConnected ->
+                stringResource(Res.string.contacts_status_game_over_red_connected)
+            ContactsGameOverReason.EmptyGame ->
+                stringResource(Res.string.contacts_status_empty_game)
+        }
+        RunningGameStatus.Unknown -> stringResource(Res.string.arena_status_unknown)
+    }
 
 private val AppThemeMode.stringResource
     get() = when (this) {

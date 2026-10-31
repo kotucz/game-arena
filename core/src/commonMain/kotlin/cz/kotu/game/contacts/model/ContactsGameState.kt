@@ -8,6 +8,13 @@ import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class ContactsGameOverReason {
+    AllContactsSolved,
+    RedConnected,
+    EmptyGame,
+}
+
+@Serializable
 data class ContactsGameState(
     val board: ContactsBoardState,
 
@@ -33,13 +40,28 @@ data class ContactsGameState(
         /** Game is over. */
         @Serializable
         data class GameOver(
-            val message: String,
+            val reason: ContactsGameOverReason,
         ) : GamePhase()
     }
 
     @Serializable
+    sealed class PlayerActionStatus {
+        @Serializable
+        data class PlayerTurn(val player: ContactsBoardState.Player) : PlayerActionStatus()
+
+        @Serializable
+        data class OriginalContact(val matchKey: String) : PlayerActionStatus()
+
+        @Serializable
+        data class WaitingForMultiConnectResolution(val player: ContactsBoardState.Player) : PlayerActionStatus()
+
+        @Serializable
+        data class GameOver(val reason: ContactsGameOverReason) : PlayerActionStatus()
+    }
+
+    @Serializable
     data class PlayerActions(
-        val actionStatusText: String? = null,
+        val status: PlayerActionStatus? = null,
         val allowedActionTypes: Set<ActionType> = setOf(),
         val resolveMultiConnectContacts: Set<ContactsBoardState.ContactId>? = null,
         /** Each group is a complete legal SoloConnectRest selection for this turn. */
@@ -72,25 +94,29 @@ data class ContactsGameState(
                     )
                 } else {
                     PlayerActions(
-                        actionStatusText = "It is ${gamePhase.activePlayer.username}'s turn",
+                        status = PlayerActionStatus.PlayerTurn(gamePhase.activePlayer),
                     )
                 }
             }
             is ResolveMultiConnect -> {
                 if (player == gamePhase.resolveMultiConnect.targetPlayer) {
                     PlayerActions(
-                        actionStatusText = "Original contact: ${board.requireContact(gamePhase.resolveMultiConnect.originalContact).matchKey}",
+                        status = PlayerActionStatus.OriginalContact(
+                            board.requireContact(gamePhase.resolveMultiConnect.originalContact).matchKey,
+                        ),
                         allowedActionTypes = setOf(ActionType.ResolveMultiConnect),
                         resolveMultiConnectContacts = gamePhase.resolveMultiConnect.targetContacts,
                     )
                 } else {
                     PlayerActions(
-                        actionStatusText = "Waiting for ${gamePhase.resolveMultiConnect.targetPlayer.username} to resolve the multi-connect",
+                        status = PlayerActionStatus.WaitingForMultiConnectResolution(
+                            gamePhase.resolveMultiConnect.targetPlayer,
+                        ),
                     )
                 }
             }
             is GameOver -> {
-                PlayerActions(actionStatusText = gamePhase.message)
+                PlayerActions(status = PlayerActionStatus.GameOver(gamePhase.reason))
             }
         }
     }
@@ -99,7 +125,7 @@ data class ContactsGameState(
         fun empty(): ContactsGameState = ContactsGameState(
             board = ContactsBoardState.empty(),
             players = listOf(),
-            gamePhase = GameOver("Empty game"),
+            gamePhase = GameOver(reason = ContactsGameOverReason.EmptyGame),
         )
     }
 }

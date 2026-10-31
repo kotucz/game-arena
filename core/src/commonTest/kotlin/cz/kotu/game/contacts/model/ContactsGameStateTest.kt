@@ -7,6 +7,7 @@ import cz.kotu.game.contacts.model.ContactsBoardState.ContactType
 import cz.kotu.game.contacts.model.ContactsBoardState.Player
 import cz.kotu.game.contacts.model.ContactsBoardState.Rack
 import cz.kotu.game.contacts.model.ContactsBoardState.ResolveMultiConnect
+import cz.kotu.game.contacts.model.ContactsGameState.PlayerActionStatus
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase
 import cz.kotu.game.contacts.model.ContactsGameState.GamePhase.StandardTurn
 import kotlinx.serialization.json.Json
@@ -60,7 +61,7 @@ class ContactsGameStateTest {
             ActionType.AddHint,
         )
         assertEquals(expectedActions, actions.allowedActionTypes)
-        assertNull(actions.actionStatusText)
+        assertNull(actions.status)
         assertNull(actions.resolveMultiConnectContacts)
     }
 
@@ -87,7 +88,9 @@ class ContactsGameStateTest {
         assertFalse(ActionType.FinishReds in actions.allowedActionTypes)
         assertFalse(ActionType.StandardConnect in state.getAvailablePlayerActions(bob).allowedActionTypes)
         assertFalse(
-            ActionType.StandardConnect in state.copy(gamePhase = GamePhase.GameOver("Done"))
+            ActionType.StandardConnect in state.copy(
+                gamePhase = GamePhase.GameOver(ContactsGameOverReason.EmptyGame),
+            )
                 .getAvailablePlayerActions(alice).allowedActionTypes,
         )
 
@@ -292,7 +295,7 @@ class ContactsGameStateTest {
 
         val unavailableStates = listOf(
             state.copy(gamePhase = StandardTurn(bob)),
-            state.copy(gamePhase = GamePhase.GameOver("Done")),
+            state.copy(gamePhase = GamePhase.GameOver(ContactsGameOverReason.EmptyGame)),
             state.copy(
                 gamePhase = GamePhase.ResolveMultiConnect(
                     ResolveMultiConnect(alice, bob, blue.id, setOf(teammateBlue.id)),
@@ -323,6 +326,7 @@ class ContactsGameStateTest {
                 ActionType.SoloConnectRest in createBaseState(candidate).getAvailablePlayerActions(alice).allowedActionTypes,
             )
         }
+
     }
 
     @Test
@@ -346,7 +350,7 @@ class ContactsGameStateTest {
         val actions = state.getAvailablePlayerActions(alice)
 
         assertEquals(setOf(ActionType.FinishReds), actions.allowedActionTypes)
-        assertNull(actions.actionStatusText)
+        assertNull(actions.status)
         assertNull(actions.resolveMultiConnectContacts)
         assertEquals(emptySet(), state.getAvailablePlayerActions(bob).allowedActionTypes)
         assertEquals(
@@ -355,7 +359,9 @@ class ContactsGameStateTest {
         )
         assertEquals(
             emptySet(),
-            state.copy(gamePhase = GamePhase.GameOver("Done")).getAvailablePlayerActions(alice).allowedActionTypes,
+            state.copy(
+                gamePhase = GamePhase.GameOver(ContactsGameOverReason.EmptyGame),
+            ).getAvailablePlayerActions(alice).allowedActionTypes,
         )
     }
 
@@ -407,7 +413,7 @@ class ContactsGameStateTest {
         val actions = state.getAvailablePlayerActions(bob)
 
         assertEquals(emptySet(), actions.allowedActionTypes)
-        assertEquals("It is alice's turn", actions.actionStatusText)
+        assertEquals(PlayerActionStatus.PlayerTurn(alice), actions.status)
         assertNull(actions.resolveMultiConnectContacts)
     }
 
@@ -435,7 +441,7 @@ class ContactsGameStateTest {
         val actions = state.getAvailablePlayerActions(bob)
 
         assertEquals(setOf(ActionType.ResolveMultiConnect), actions.allowedActionTypes)
-        assertEquals("Original contact: 7", actions.actionStatusText)
+        assertEquals(PlayerActionStatus.OriginalContact("7"), actions.status)
         assertEquals(setOf(target1, target2), actions.resolveMultiConnectContacts)
     }
 
@@ -461,7 +467,20 @@ class ContactsGameStateTest {
         val actions = state.getAvailablePlayerActions(alice)
 
         assertEquals(emptySet(), actions.allowedActionTypes)
-        assertEquals("Waiting for bob to resolve the multi-connect", actions.actionStatusText)
+        assertEquals(PlayerActionStatus.WaitingForMultiConnectResolution(bob), actions.status)
         assertNull(actions.resolveMultiConnectContacts)
     }
+
+    @Test
+    fun gameOverStatusCarriesItsReason() {
+        val state = createBaseState().copy(
+            gamePhase = GamePhase.GameOver(reason = ContactsGameOverReason.RedConnected),
+        )
+
+        assertEquals(
+            PlayerActionStatus.GameOver(ContactsGameOverReason.RedConnected),
+            state.getAvailablePlayerActions(alice).status,
+        )
+    }
+
 }

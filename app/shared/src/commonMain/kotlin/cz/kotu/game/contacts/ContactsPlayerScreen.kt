@@ -43,7 +43,10 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameOverReason
 import cz.kotu.game.contacts.model.ContactsGameDetails
+import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
@@ -68,6 +71,12 @@ import gamearena.app.shared.generated.resources.contacts_pool
 import gamearena.app.shared.generated.resources.contacts_retry
 import gamearena.app.shared.generated.resources.contacts_solo_action
 import gamearena.app.shared.generated.resources.contacts_solo_category_number
+import gamearena.app.shared.generated.resources.contacts_status_empty_game
+import gamearena.app.shared.generated.resources.contacts_status_game_over_all_contacts_solved
+import gamearena.app.shared.generated.resources.contacts_status_game_over_red_connected
+import gamearena.app.shared.generated.resources.contacts_status_original_contact
+import gamearena.app.shared.generated.resources.contacts_status_player_turn
+import gamearena.app.shared.generated.resources.contacts_status_waiting_for_multi_connect
 import gamearena.app.shared.generated.resources.contacts_yellow
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -282,9 +291,30 @@ fun ContactsPlayerScreen(
                     }
                 }
 
-                gameState.actions.actionStatusText?.let { text ->
+                gameState.actions.status?.let { status ->
                     Text(
-                        text = text,
+                        text = when (status) {
+                            is ContactsGameState.PlayerActionStatus.PlayerTurn ->
+                                stringResource(
+                                    Res.string.contacts_status_player_turn,
+                                    status.player.displayUsername(gameState.players, gameDetailsState.details),
+                                )
+                            is ContactsGameState.PlayerActionStatus.OriginalContact ->
+                                stringResource(Res.string.contacts_status_original_contact, status.matchKey)
+                            is ContactsGameState.PlayerActionStatus.WaitingForMultiConnectResolution ->
+                                stringResource(
+                                    Res.string.contacts_status_waiting_for_multi_connect,
+                                    status.player.displayUsername(gameState.players, gameDetailsState.details),
+                                )
+                            is ContactsGameState.PlayerActionStatus.GameOver -> when (status.reason) {
+                                ContactsGameOverReason.AllContactsSolved ->
+                                    stringResource(Res.string.contacts_status_game_over_all_contacts_solved)
+                                ContactsGameOverReason.RedConnected ->
+                                    stringResource(Res.string.contacts_status_game_over_red_connected)
+                                ContactsGameOverReason.EmptyGame ->
+                                    stringResource(Res.string.contacts_status_empty_game)
+                            }
+                        },
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -636,4 +666,12 @@ private fun ContactTileView(
             textAlign = TextAlign.Center,
         )
     }
+}
+
+private fun ContactsBoardState.Player.displayUsername(
+    players: List<ContactsPlayer>,
+    gameDetails: ContactsGameDetails?,
+): String {
+    val player = players.firstOrNull { it.playerId == this } ?: return username
+    return gameDetails?.player(player.uid)?.username ?: player.username
 }

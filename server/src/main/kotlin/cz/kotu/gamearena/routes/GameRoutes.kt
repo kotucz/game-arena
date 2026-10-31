@@ -27,6 +27,7 @@ import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
 import io.ktor.util.AttributeKey
 import kotlinx.serialization.SerializationException
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.seconds
@@ -99,7 +100,7 @@ fun Route.gameRoutes(
             }
             call.respond(
                 HttpStatusCode.Created,
-                runningGamesResponseMapper.toResponse(game.metadata, status = "created"),
+                runningGamesResponseMapper.toResponse(game.metadata, status = game.status.first()),
             )
         }
 

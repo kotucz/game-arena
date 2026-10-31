@@ -1,10 +1,12 @@
 package cz.kotu.game.games.model
 
 import cz.kotu.game.contacts.model.GameLogEntry
+import cz.kotu.game.contacts.model.ContactsBoardState
 import cz.kotu.game.contacts.model.ContactsGameDetails
 import cz.kotu.game.contacts.model.ContactsGamePlayer
 import cz.kotu.gamearena.model.RunningGame
 import cz.kotu.gamearena.model.RunningGamePlayer
+import cz.kotu.gamearena.model.RunningGameStatus
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,7 +25,7 @@ class GamesNetworkProtocolTest {
                 RunningGamePlayer(username = "bob"),
             ),
             createdAt = Instant.parse("2026-08-14T18:30:00Z"),
-            status = "status: test",
+            status = RunningGameStatus.ContactsPlayerTurn(ContactsBoardState.Player("alice")),
         )
 
         val encoded = Json.encodeToString(RunningGame.serializer(), game)

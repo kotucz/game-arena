@@ -1,5 +1,7 @@
 package cz.kotu.gamearena.model
 
+import cz.kotu.game.contacts.model.ContactsGameOverReason
+import cz.kotu.game.contacts.model.ContactsBoardState
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
@@ -20,8 +22,23 @@ data class RunningGame(
     val type: String,
     val players: List<RunningGamePlayer>,
     val createdAt: Instant,
-    val status: String,
+    val status: RunningGameStatus,
 )
+
+@Serializable
+sealed class RunningGameStatus {
+    @Serializable
+    data class ContactsPlayerTurn(val player: ContactsBoardState.Player) : RunningGameStatus()
+
+    @Serializable
+    data class ContactsMultiConnectResolution(val player: ContactsBoardState.Player) : RunningGameStatus()
+
+    @Serializable
+    data class ContactsGameOver(val reason: ContactsGameOverReason) : RunningGameStatus()
+
+    @Serializable
+    data object Unknown : RunningGameStatus()
+}
 
 @Serializable
 data class RunningGamePlayer(

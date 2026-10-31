@@ -5,6 +5,7 @@ import cz.kotu.game.contacts.model.ContactsGamePlayer
 import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.gamearena.model.RunningGame
 import cz.kotu.gamearena.model.RunningGamePlayer
+import cz.kotu.gamearena.model.RunningGameStatus
 
 class RunningGamesResponseMapper(
     private val userDao: UserDao,
@@ -12,7 +13,7 @@ class RunningGamesResponseMapper(
     suspend fun toResponse(game: RunningGameInfo): RunningGame =
         toResponses(listOf(game)).single()
 
-    suspend fun toResponse(metadata: GameMetadata, status: String): RunningGame =
+    suspend fun toResponse(metadata: GameMetadata, status: RunningGameStatus): RunningGame =
         toResponse(metadata.toRunningGameInfo(status))
 
     suspend fun toContactsGameDetails(game: ContactsGame): ContactsGameDetails {
@@ -58,7 +59,7 @@ class RunningGamesResponseMapper(
         return userDao.findByFirebaseUids(distinctUids).associateBy { it.firebaseUid }
     }
 
-    private fun GameMetadata.toRunningGameInfo(status: String) = RunningGameInfo(
+    private fun GameMetadata.toRunningGameInfo(status: RunningGameStatus) = RunningGameInfo(
         id = id,
         type = type,
         playerUids = playerUids,

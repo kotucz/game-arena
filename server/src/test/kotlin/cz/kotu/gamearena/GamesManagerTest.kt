@@ -2,8 +2,10 @@ package cz.kotu.gamearena
 
 import cz.kotu.game.contacts.ai.NoopContactsAiStart
 import cz.kotu.game.contacts.model.ContactsBoardState
+import cz.kotu.game.contacts.model.ContactsGameOverReason
 import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.gamearena.model.RunningGameStatus
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -134,8 +136,8 @@ class GamesManagerTest {
                 playerUids = playerUids,
                 createdAt = Instant.parse("2026-08-14T18:30:00Z"),
             )
-            override val statusText: Flow<String>
-                get() = flowOf("status: test")
+            override val status: Flow<RunningGameStatus>
+                get() = flowOf(RunningGameStatus.Unknown)
         }
 
         manager.register(otherGame)

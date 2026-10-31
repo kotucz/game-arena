@@ -20,6 +20,6 @@ sealed class Next {
     ) : Next()
 
     data class GameOver(
-        val message: String,
+        val reason: ContactsGameOverReason,
     ) : Next()
 }

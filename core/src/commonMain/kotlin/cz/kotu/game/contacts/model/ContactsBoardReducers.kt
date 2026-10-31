@@ -50,7 +50,11 @@ fun ContactsBoardState.handleStandardConnect(
         // TODO game over: too many faults
         return ActionExecutionResult.Success(
             newState,
-            next = if (boom) Next.GameOver("Game over: Red connected!") else Next.EndOfTurn(player),
+            next = if (boom) {
+                Next.GameOver(ContactsGameOverReason.RedConnected)
+            } else {
+                Next.EndOfTurn(player)
+            },
         ) {
             player(player)
             text("mismatched")

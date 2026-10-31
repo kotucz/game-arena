@@ -7,10 +7,12 @@ import cz.kotu.game.contacts.model.ContactsGameFacade
 import cz.kotu.game.contacts.model.ContactsGameFacadeImpl
 import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.ContactsGameState
+import cz.kotu.game.contacts.model.ContactsGameOverReason
 import cz.kotu.game.contacts.model.ContactsPlayerFacade
 import cz.kotu.game.contacts.model.ContactsPlayerGameAdapter
 import cz.kotu.game.contacts.model.GameLogEntry
 import cz.kotu.gamearena.model.GamePlayer
+import cz.kotu.gamearena.model.RunningGameStatus
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -49,7 +51,7 @@ class GamesManager(
     @OptIn(ExperimentalCoroutinesApi::class)
     val runningGames: Flow<List<RunningGameInfo>> = gamesUpdated.flatMapLatest {
         val gameFlows = games.values.map { game ->
-            game.statusText.map { status ->
+            game.status.map { status ->
                 game.metadata.toRunningGameInfo(status = status)
             }
         }
@@ -273,12 +275,14 @@ class GamesManager(
         metadata: GameMetadata,
         phase: ContactsGameState.GamePhase,
     ): Pair<String, String> = when (phase) {
-        is ContactsGameState.GamePhase.GameOver -> "Game over" to phase.message
+        is ContactsGameState.GamePhase.GameOver -> "Game over" to "The game has ended"
         is ContactsGameState.GamePhase.ResolveMultiConnect -> "Resolve multi-connect" to "${phase.resolveMultiConnect.targetPlayer.username}, resolve the multi-connect in ${metadata.type}"
         is ContactsGameState.GamePhase.StandardTurn -> "Your turn" to "It is your turn in ${metadata.type} game"
     }
 
-    private fun GameMetadata.toRunningGameInfo(status: String = "") = RunningGameInfo(
+    private fun GameMetadata.toRunningGameInfo(
+        status: RunningGameStatus = RunningGameStatus.Unknown,
+    ) = RunningGameInfo(
         id = id,
         type = type,
         playerUids = playerUids,
@@ -305,7 +309,7 @@ data class GameMetadata(
 
 interface ManagedGame {
     val metadata: GameMetadata
-    val statusText: Flow<String>
+    val status: Flow<RunningGameStatus>
 }
 
 data class ContactsGame(
@@ -315,11 +319,13 @@ data class ContactsGame(
     val aiRunners: MutableMap<String, AiPlayerRunner> = mutableMapOf(),
 ) : ManagedGame {
 
-    override val statusText: Flow<String> = contactsGameFacade.gameState.map { state ->
+    override val status: Flow<RunningGameStatus> = contactsGameFacade.gameState.map { state ->
         when (val gamePhase = state.gamePhase) {
-            is ContactsGameState.GamePhase.GameOver -> gamePhase.message
-            is ContactsGameState.GamePhase.ResolveMultiConnect -> gamePhase.resolveMultiConnect.targetPlayer.username
-            is ContactsGameState.GamePhase.StandardTurn -> gamePhase.activePlayer.username
+            is ContactsGameState.GamePhase.GameOver -> RunningGameStatus.ContactsGameOver(gamePhase.reason)
+            is ContactsGameState.GamePhase.ResolveMultiConnect ->
+                RunningGameStatus.ContactsMultiConnectResolution(gamePhase.resolveMultiConnect.targetPlayer)
+            is ContactsGameState.GamePhase.StandardTurn ->
+                RunningGameStatus.ContactsPlayerTurn(gamePhase.activePlayer)
         }
     }
 

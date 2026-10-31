@@ -74,7 +74,7 @@ private fun ContactsGameState.nextGamePhase(
         }
 
         is Next.GameOver -> {
-            GameOver(next.message)
+            GameOver(reason = next.reason)
         }
     }
 }
@@ -93,5 +93,5 @@ private fun ContactsGameState.nextPhase(
             return StandardTurn(playerId)
         }
     }
-    return GameOver("Win: all solved!")
+    return GameOver(reason = ContactsGameOverReason.AllContactsSolved)
 }
