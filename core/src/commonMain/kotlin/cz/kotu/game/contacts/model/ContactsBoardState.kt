@@ -19,7 +19,8 @@ data class ContactsBoardState internal constructor(
     val lastActionResult: ActionResult = ActionResult(),
 ) {
     @Serializable
-    data class Player(
+    @JvmInline
+    value class Player(
         val username: String,
     )
 
