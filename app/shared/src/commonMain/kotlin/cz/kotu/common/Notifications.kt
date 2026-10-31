@@ -51,7 +51,7 @@ class Notifications @Inject constructor(
             listener = object : PushListener {
                 override fun onNewToken(token: String) {
                     super.onNewToken(token)
-                    Napier.i("New push token: $token")
+                    Napier.i("New push token received")
                     onPushToken(token)
                 }
 
@@ -84,18 +84,19 @@ class Notifications @Inject constructor(
 
     private fun observeAndSyncTokens() {
         Napier.d { "observeAndSyncTokens" }
-        val authFlow = authManager.currentUsername
+        val authFlow = authManager.currentUser
         val tokenFlow = tokenState
         val permissionFlow = permissionGrantedState
 
         combine(authFlow, tokenFlow, permissionFlow) { user, token, isGranted ->
-            Napier.d { "push token check1: $user $isGranted $token" }
-            Triple(user, token, isGranted)
+            val uid = user?.uid
+            Napier.d { "push token check1: $uid $isGranted ${token != null}" }
+            Triple(uid, token, isGranted)
         }
             .distinctUntilChanged()
-            .onEach { (username, token, isGranted) ->
-                Napier.d { "push token check: $username $isGranted $token" }
-                if (!username.isNullOrBlank() && !token.isNullOrBlank() && isGranted) {
+            .onEach { (uid, token, isGranted) ->
+                Napier.d { "push token check: $uid $isGranted ${token != null}" }
+                if (!uid.isNullOrBlank() && !token.isNullOrBlank() && isGranted) {
                     // All conditions met: sync token to server
                     try {
                         val clientTokenId = pushTokenIdStore.getOrCreate()
