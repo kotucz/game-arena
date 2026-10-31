@@ -26,6 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import cz.kotu.game.contacts.model.GameLogEntry
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.contacts_close
+import gamearena.app.shared.generated.resources.contacts_logs
+import gamearena.app.shared.generated.resources.contacts_tap_to_expand
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun GameLogsCollapsedView(
@@ -52,11 +57,11 @@ fun GameLogsCollapsedView(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "Logs",
+                text = stringResource(Res.string.contacts_logs),
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "Tap to expand",
+                text = stringResource(Res.string.contacts_tap_to_expand),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
             )
@@ -135,12 +140,12 @@ fun GameLogsFullView(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "Logs",
+                text = stringResource(Res.string.contacts_logs),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
             )
             Button(onClick = onClose) {
-                Text("Close")
+                Text(stringResource(Res.string.contacts_close))
             }
         }
 

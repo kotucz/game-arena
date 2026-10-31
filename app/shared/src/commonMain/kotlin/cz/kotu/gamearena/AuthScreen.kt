@@ -27,6 +27,25 @@ import androidx.compose.ui.unit.dp
 import com.mmk.kmpauth.core.auth.EmailAuthMode
 import com.mmk.kmpauth.core.auth.rememberEmailAuthState
 import com.mmk.kmpauth.google.rememberGoogleAuthState
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.arena_already_registered
+import gamearena.app.shared.generated.resources.arena_cancel
+import gamearena.app.shared.generated.resources.arena_choose_username
+import gamearena.app.shared.generated.resources.arena_complete_profile
+import gamearena.app.shared.generated.resources.arena_continue_google
+import gamearena.app.shared.generated.resources.arena_create_account
+import gamearena.app.shared.generated.resources.arena_email
+import gamearena.app.shared.generated.resources.arena_finish_setup
+import gamearena.app.shared.generated.resources.arena_log_in
+import gamearena.app.shared.generated.resources.arena_need_account
+import gamearena.app.shared.generated.resources.arena_or_email_password
+import gamearena.app.shared.generated.resources.arena_password
+import gamearena.app.shared.generated.resources.arena_register
+import gamearena.app.shared.generated.resources.arena_setting_up
+import gamearena.app.shared.generated.resources.arena_signing_in_google
+import gamearena.app.shared.generated.resources.arena_username
+import gamearena.app.shared.generated.resources.arena_welcome
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AuthScreen(
@@ -61,12 +80,12 @@ fun AuthScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (onboardingUser != null) {
-            Text("Choose your username")
-            Text("Complete your profile by choosing a username for Game Arena.")
+            Text(stringResource(Res.string.arena_choose_username))
+            Text(stringResource(Res.string.arena_complete_profile))
             OutlinedTextField(
                 value = chosenUsername,
                 onValueChange = viewModel::updateChosenUsername,
-                label = { Text("Username") },
+                label = { Text(stringResource(Res.string.arena_username)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
@@ -83,28 +102,37 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { viewModel.completeOnboarding(onAuthenticated) },
             ) {
-                Text(if (submitting) "Setting up..." else "Finish Setup")
+                Text(
+                    stringResource(
+                        if (submitting) Res.string.arena_setting_up else Res.string.arena_finish_setup,
+                    ),
+                )
             }
             message?.let { Text(it) }
             TextButton(
                 onClick = { viewModel.cancelOnboarding() },
             ) {
-                Text("Cancel")
+                Text(stringResource(Res.string.arena_cancel))
             }
         } else {
-            Text(if (mode == AuthMode.Login) "Welcome to Game Arena" else "Create your account")
+            Text(stringResource(if (mode == AuthMode.Login) Res.string.arena_welcome else Res.string.arena_create_account))
             Button(
                 enabled = submitEnabled,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { googleAuth.launch() },
             ) {
-                Text(if (googleAuth.isInProgress) "Signing in with Google..." else "Continue with Google")
+                Text(
+                    stringResource(
+                        if (googleAuth.isInProgress) Res.string.arena_signing_in_google
+                        else Res.string.arena_continue_google,
+                    ),
+                )
             }
-            Text("or with email and password")
+            Text(stringResource(Res.string.arena_or_email_password))
             OutlinedTextField(
                 value = email,
                 onValueChange = viewModel::updateEmail,
-                label = { Text("Email") },
+                label = { Text(stringResource(Res.string.arena_email)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
@@ -115,7 +143,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = viewModel::updatePassword,
-                label = { Text("Password") },
+                label = { Text(stringResource(Res.string.arena_password)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
@@ -133,13 +161,18 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = emailAuth::launch,
             ) {
-                Text(if (mode == AuthMode.Login) "Log in" else "Register")
+                Text(stringResource(if (mode == AuthMode.Login) Res.string.arena_log_in else Res.string.arena_register))
             }
             message?.let { Text(it) }
             TextButton(
                 onClick = { viewModel.toggleMode() },
             ) {
-                Text(if (mode == AuthMode.Login) "Need an account? Register" else "Already registered? Log in")
+                Text(
+                    stringResource(
+                        if (mode == AuthMode.Login) Res.string.arena_need_account
+                        else Res.string.arena_already_registered,
+                    ),
+                )
             }
         }
     }

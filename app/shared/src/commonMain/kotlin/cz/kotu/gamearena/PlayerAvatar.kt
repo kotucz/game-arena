@@ -17,6 +17,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import coil3.compose.AsyncImage
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.arena_avatar_description
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PlayerAvatar(
@@ -27,11 +30,12 @@ fun PlayerAvatar(
     val resolvedPictureUrl = remember(pictureUrl) {
         resolvePictureUrl(pictureUrl, defaultApiBaseUrl())
     }
+    val avatarDescription = stringResource(Res.string.arena_avatar_description, username)
     Box(
         modifier = modifier
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clearAndSetSemantics { contentDescription = "Avatar of $username" },
+            .clearAndSetSemantics { contentDescription = avatarDescription },
         contentAlignment = Alignment.Center,
     ) {
         Icon(

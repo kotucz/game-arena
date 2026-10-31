@@ -57,13 +57,41 @@ import org.jetbrains.compose.resources.painterResource
 import cz.kotu.game.gotfive.model.GameState
 import cz.kotu.game.gotfive.model.Tile
 import cz.kotu.game.gotfive.model.Tiles
+import gamearena.app.shared.generated.resources.got_five_check_solution
+import gamearena.app.shared.generated.resources.got_five_compare_dots
+import gamearena.app.shared.generated.resources.got_five_next_move
+import gamearena.app.shared.generated.resources.got_five_notes
+import gamearena.app.shared.generated.resources.got_five_notes_instructions
+import gamearena.app.shared.generated.resources.got_five_offer
+import gamearena.app.shared.generated.resources.got_five_or
+import gamearena.app.shared.generated.resources.got_five_pick_offer
+import gamearena.app.shared.generated.resources.got_five_pick_pool
+import gamearena.app.shared.generated.resources.got_five_pool
+import gamearena.app.shared.generated.resources.got_five_result_correct
+import gamearena.app.shared.generated.resources.got_five_result_each_color
+import gamearena.app.shared.generated.resources.got_five_result_five_tiles
+import gamearena.app.shared.generated.resources.got_five_result_incorrect
+import gamearena.app.shared.generated.resources.got_five_result_not_checked
+import gamearena.app.shared.generated.resources.got_five_secret_instructions
+import gamearena.app.shared.generated.resources.got_five_secret_tiles
+import gamearena.app.shared.generated.resources.got_five_use_sorting
+import org.jetbrains.compose.resources.stringResource
 
 private val showSecretTileValues = false
 
 @Composable
 fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
     val game = gameViewModel.gameState
-    val resultIsWin = gameViewModel.result.startsWith("Correct")
+    val resultIsWin = gameViewModel.result == GameResult.Correct
+    val resultText = stringResource(
+        when (gameViewModel.result) {
+            GameResult.NotChecked -> Res.string.got_five_result_not_checked
+            GameResult.FiveTilesRequired -> Res.string.got_five_result_five_tiles
+            GameResult.OneOfEachColorRequired -> Res.string.got_five_result_each_color
+            GameResult.Correct -> Res.string.got_five_result_correct
+            GameResult.Incorrect -> Res.string.got_five_result_incorrect
+        },
+    )
     val resultContainer = when {
         !gameViewModel.secretVisible -> MaterialTheme.colorScheme.surfaceVariant
         resultIsWin -> MaterialTheme.colorScheme.tertiaryContainer
@@ -107,7 +135,7 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxWidth(),
                     onClick = gameViewModel::checkSolution,
                 ) {
-                    Text("Check solution")
+                    Text(stringResource(Res.string.got_five_check_solution))
                 }
 
                 Box(
@@ -130,7 +158,7 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
                             )
                         }
                         Text(
-                            text = gameViewModel.result,
+                            text = resultText,
                             modifier = Modifier.padding(horizontal = 12.dp),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = if (gameViewModel.secretVisible) FontWeight.Bold else FontWeight.Normal,
@@ -142,12 +170,12 @@ fun Table(gameViewModel: GameViewModel, modifier: Modifier = Modifier) {
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Notes",
+                    text = stringResource(Res.string.got_five_notes),
                     modifier = Modifier.padding(horizontal = 12.dp),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "Tap or drag across tiles to mark your solution.",
+                    text = stringResource(Res.string.got_five_notes_instructions),
                     modifier = Modifier.padding(horizontal = 12.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -192,7 +220,7 @@ private fun TileSections(
             )
 
             Text(
-                text = "Pool",
+                text = stringResource(Res.string.got_five_pool),
                 modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -203,7 +231,7 @@ private fun TileSections(
             ) { tile -> gameViewModel.pickOfferTile(tile) }
 
             Text(
-                text = "Offer",
+                text = stringResource(Res.string.got_five_offer),
                 modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -215,7 +243,7 @@ private fun TileSections(
             ) { tile -> gameViewModel.pickHintTile(tile) }
 
             Text(
-                "Next move",
+                stringResource(Res.string.got_five_next_move),
                 modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -236,31 +264,32 @@ private fun TileSections(
                 when (phase) {
                     is GameState.Phase.PickFromPool -> {
                         Text(
-                            "Pick new tile color from the pool",
+                            stringResource(Res.string.got_five_pick_pool),
                             modifier = Modifier.padding(horizontal = 12.dp),
                         )
                     }
 
                     is GameState.Phase.PickFromOffer -> {
                         Text(
-                            "Pick new tile from offer for number sort or dots compare",
+                            stringResource(Res.string.got_five_pick_offer),
                             modifier = Modifier.padding(horizontal = 12.dp),
                         )
                     }
 
                     is GameState.Phase.ChooseHint -> {
                         Button(onClick = { gameViewModel.pickSortHint(phase.tile) }) {
-                            Text(text = "Use ${phase.tile.number} for sorting")
+                            Text(stringResource(Res.string.got_five_use_sorting, phase.tile.number))
                         }
                         Text(
-                            text = "or",
+                            text = stringResource(Res.string.got_five_or),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            "Pick a secret tile to compare dots: ${
-                                (1..phase.tile.dots).joinToString(separator = "") { "•" }
-                            }",
+                            stringResource(
+                                Res.string.got_five_compare_dots,
+                                (1..phase.tile.dots).joinToString(separator = "") { "•" },
+                            ),
                             modifier = Modifier
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             style = MaterialTheme.typography.titleSmall,
@@ -273,12 +302,12 @@ private fun TileSections(
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = "Secret tiles",
+                    text = stringResource(Res.string.got_five_secret_tiles),
                     modifier = Modifier.padding(horizontal = 12.dp),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "Find the values in ascending order from left to right.",
+                    text = stringResource(Res.string.got_five_secret_instructions),
                     modifier = Modifier.padding(horizontal = 12.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

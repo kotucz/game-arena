@@ -35,6 +35,12 @@ import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.arena_back_to_games
+import gamearena.app.shared.generated.resources.arena_enable_notifications
+import gamearena.app.shared.generated.resources.arena_game_not_found
+import gamearena.app.shared.generated.resources.arena_not_logged_in
+import org.jetbrains.compose.resources.stringResource
 import kotlin.String
 
 internal const val GAMES_ROUTE = "games"
@@ -100,7 +106,7 @@ fun App(
                             }
                         },
                     ) {
-                        Text("Enable notifications")
+                        Text(stringResource(Res.string.arena_enable_notifications))
                     }
                 }
 
@@ -190,19 +196,19 @@ private fun ContactsGameScreen(
     }
 
     Column {
-        TextButton(onClick = onBack) { Text("Back to games") }
+        TextButton(onClick = onBack) { Text(stringResource(Res.string.arena_back_to_games)) }
 
         val gameNotFound = gameViewModel.gameNotFound.collectAsState().value
         val username = gameViewModel.username.collectAsState().value
 
         if (gameNotFound) {
             Text(
-                text = "Game '$gameId' was not found or has ended.",
+                text = stringResource(Res.string.arena_game_not_found, gameId),
                 modifier = Modifier.padding(16.dp),
                 color = MaterialTheme.colorScheme.error,
             )
         } else if (username == null) {
-            Text("Not logged in")
+            Text(stringResource(Res.string.arena_not_logged_in))
         } else {
             val playerViewModel: ContactsPlayerViewModel = viewModel {
                 ContactsPlayerViewModel(
@@ -229,6 +235,6 @@ private fun GotFiveScreen(
     onBack: () -> Unit,
 ) {
     val gameViewModel: GameViewModel = viewModel { appComponent.gameViewModelFactory() }
-    TextButton(onClick = onBack) { Text("Back to games") }
+    TextButton(onClick = onBack) { Text(stringResource(Res.string.arena_back_to_games)) }
     Table(gameViewModel, Modifier.width(960.dp))
 }

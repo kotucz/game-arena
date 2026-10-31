@@ -24,6 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import cz.kotu.gamearena.model.AvailablePlayer
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.arena_added
+import gamearena.app.shared.generated.resources.arena_add_player_title
+import gamearena.app.shared.generated.resources.arena_close
+import gamearena.app.shared.generated.resources.arena_filter_username
+import gamearena.app.shared.generated.resources.arena_no_users_available
+import gamearena.app.shared.generated.resources.arena_no_users_match
+import gamearena.app.shared.generated.resources.arena_try_again
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PlayerPickerDialog(
@@ -46,11 +55,11 @@ fun PlayerPickerDialog(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Add player")
+                Text(stringResource(Res.string.arena_add_player_title))
                 OutlinedTextField(
                     value = filter,
                     onValueChange = viewModel::updateFilter,
-                    label = { Text("Filter by username") },
+                    label = { Text(stringResource(Res.string.arena_filter_username)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -59,11 +68,13 @@ fun PlayerPickerDialog(
                     loading -> CircularProgressIndicator()
                     error != null -> {
                         Text(error!!)
-                        TextButton(onClick = viewModel::loadPlayers) { Text("Try again") }
+                        TextButton(onClick = viewModel::loadPlayers) {
+                            Text(stringResource(Res.string.arena_try_again))
+                        }
                     }
 
-                    availablePlayers.isNullOrEmpty() -> Text("No users available.")
-                    filteredPlayers.isEmpty() -> Text("No users match this filter.")
+                    availablePlayers.isNullOrEmpty() -> Text(stringResource(Res.string.arena_no_users_available))
+                    filteredPlayers.isEmpty() -> Text(stringResource(Res.string.arena_no_users_match))
                     else -> LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -87,7 +98,9 @@ fun PlayerPickerDialog(
                                     )
                                     Spacer(Modifier.size(12.dp))
                                     Text(player.username)
-                                    if (alreadySelected) Text("  (added)")
+                                    if (alreadySelected) {
+                                        Text("  ${stringResource(Res.string.arena_added)}")
+                                    }
                                 }
                             }
                         }
@@ -95,7 +108,7 @@ fun PlayerPickerDialog(
                 }
 
                 TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
-                    Text("Close")
+                    Text(stringResource(Res.string.arena_close))
                 }
             }
         }

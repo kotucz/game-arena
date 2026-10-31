@@ -34,6 +34,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import cz.kotu.gamearena.model.RunningGame
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.arena_add_player
+import gamearena.app.shared.generated.resources.arena_contacts_config
+import gamearena.app.shared.generated.resources.arena_contacts_config_placeholder
+import gamearena.app.shared.generated.resources.arena_create_contacts_game
+import gamearena.app.shared.generated.resources.arena_creating_game
+import gamearena.app.shared.generated.resources.arena_no_players_selected
+import gamearena.app.shared.generated.resources.arena_players
+import gamearena.app.shared.generated.resources.arena_remove_player
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CreateGameDialog(
@@ -71,13 +81,13 @@ private fun CreateContactsGameForm(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Players",
+            text = stringResource(Res.string.arena_players),
             style = MaterialTheme.typography.labelLarge,
         )
 
         if (selectedPlayers.isEmpty()) {
             Text(
-                text = "No players selected. Click \"Add player\" below to add players.",
+                text = stringResource(Res.string.arena_no_players_selected),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -102,7 +112,7 @@ private fun CreateContactsGameForm(
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Remove ${player.username}",
+                                contentDescription = stringResource(Res.string.arena_remove_player, player.username),
                                 modifier = Modifier.size(InputChipDefaults.AvatarSize),
                             )
                         },
@@ -124,14 +134,14 @@ private fun CreateContactsGameForm(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-            Text("Add player")
+            Text(stringResource(Res.string.arena_add_player))
         }
 
         TextField(
             value = configText,
             onValueChange = viewModel::updateConfigText,
-            label = { Text("Contacts config") },
-            placeholder = { Text("ContactsGameConfig") },
+            label = { Text(stringResource(Res.string.arena_contacts_config)) },
+            placeholder = { Text(stringResource(Res.string.arena_contacts_config_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
             maxLines = 10,
@@ -142,7 +152,12 @@ private fun CreateContactsGameForm(
             enabled = !creatingGame,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (creatingGame) "Creating game…" else "Create Contacts game")
+            Text(
+                stringResource(
+                    if (creatingGame) Res.string.arena_creating_game
+                    else Res.string.arena_create_contacts_game,
+                ),
+            )
         }
     }
 

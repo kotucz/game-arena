@@ -6,10 +6,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-enum class AppThemeMode(val label: String) {
-    SYSTEM("System"),
-    LIGHT("Light"),
-    DARK("Dark");
+enum class AppThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK;
 
     companion object {
         fun fromPreference(value: String?): AppThemeMode =

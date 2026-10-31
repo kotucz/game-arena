@@ -49,6 +49,28 @@ import cz.kotu.game.contacts.model.LogToken
 import cz.kotu.game.contacts.model.PlayerViewState
 import cz.kotu.game.contacts.model.findContact
 import cz.kotu.gamearena.PlayerAvatar
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.contacts_action_add_hint
+import gamearena.app.shared.generated.resources.contacts_action_double_connect
+import gamearena.app.shared.generated.resources.contacts_action_finish_reds
+import gamearena.app.shared.generated.resources.contacts_action_my_double_connect
+import gamearena.app.shared.generated.resources.contacts_action_resolve_multi_connect
+import gamearena.app.shared.generated.resources.contacts_action_solo_connect_rest
+import gamearena.app.shared.generated.resources.contacts_action_standard_connect
+import gamearena.app.shared.generated.resources.contacts_action_triple_connect
+import gamearena.app.shared.generated.resources.contacts_confirm_selection
+import gamearena.app.shared.generated.resources.contacts_connecting
+import gamearena.app.shared.generated.resources.contacts_count
+import gamearena.app.shared.generated.resources.contacts_faults
+import gamearena.app.shared.generated.resources.contacts_owner
+import gamearena.app.shared.generated.resources.contacts_player
+import gamearena.app.shared.generated.resources.contacts_pool
+import gamearena.app.shared.generated.resources.contacts_retry
+import gamearena.app.shared.generated.resources.contacts_solo_action
+import gamearena.app.shared.generated.resources.contacts_solo_category_number
+import gamearena.app.shared.generated.resources.contacts_yellow
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 private const val phi = 1.618f
 
@@ -69,7 +91,7 @@ fun ContactsPlayerScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Text("Connecting to game...")
+            Text(stringResource(Res.string.contacts_connecting))
         }
         return
     }
@@ -112,7 +134,10 @@ fun ContactsPlayerScreen(
                         .verticalScroll(rememberScrollState()),
                 ) {
                     ContactsPlayerIdentity(
-                        label = "Player: ",
+                        label = stringResource(
+                            Res.string.contacts_player,
+                            gameDetailsState.details?.player(player.uid)?.username ?: player.username,
+                        ),
                         username = gameDetailsState.details?.player(player.uid)?.username ?: player.username,
                         pictureUrl = gameDetailsState.details?.player(player.uid)?.pictureUrl,
                     )
@@ -121,7 +146,7 @@ fun ContactsPlayerScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = error, color = MaterialTheme.colorScheme.error)
                             TextButton(onClick = onRetryLoadGameDetails) {
-                                Text("Retry")
+                                Text(stringResource(Res.string.contacts_retry))
                             }
                         }
                     }
@@ -129,7 +154,10 @@ fun ContactsPlayerScreen(
                     SolvedContactsPool(gameState.pool)
 
                     Text(
-                        text = "Faults: " + if (gameState.faults == 0) "0" else "X".repeat(gameState.faults),
+                        text = stringResource(
+                            Res.string.contacts_faults,
+                            if (gameState.faults == 0) "0" else "X".repeat(gameState.faults),
+                        ),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -207,13 +235,17 @@ fun ContactsPlayerScreen(
                                 val value = group.firstOrNull()?.let { gameState.findContact(it)?.value }
                                     ?: return@groupLoop
                                 val category = if (value.type == ContactsBoardState.ContactType.Yellow) {
-                                    "Yellow"
+                                    stringResource(Res.string.contacts_yellow)
                                 } else {
-                                    "${value.number}s"
+                                    stringResource(Res.string.contacts_solo_category_number, value.number)
                                 }
-                                val count = if (group.size == 1) "1 contact" else "${group.size} contacts"
+                                val count = pluralStringResource(
+                                    Res.plurals.contacts_count,
+                                    group.size,
+                                    group.size,
+                                )
                                 ActionSelectionButton(
-                                    text = "Solo $category · $count",
+                                    text = stringResource(Res.string.contacts_solo_action, category, count),
                                     selected = selectedActionType == actionType &&
                                         actionSelectionState.playerContacts == group &&
                                         actionSelectionState.otherContacts.isEmpty(),
@@ -223,7 +255,25 @@ fun ContactsPlayerScreen(
                             }
                         } else {
                             ActionSelectionButton(
-                                text = actionType.name,
+                                text = stringResource(
+                                    when (actionType) {
+                                        ContactsBoardState.ActionType.AddHint -> Res.string.contacts_action_add_hint
+                                        ContactsBoardState.ActionType.StandardConnect ->
+                                            Res.string.contacts_action_standard_connect
+                                        ContactsBoardState.ActionType.DoubleConnect ->
+                                            Res.string.contacts_action_double_connect
+                                        ContactsBoardState.ActionType.TripleConnect ->
+                                            Res.string.contacts_action_triple_connect
+                                        ContactsBoardState.ActionType.MyDoubleConnect ->
+                                            Res.string.contacts_action_my_double_connect
+                                        ContactsBoardState.ActionType.SoloConnectRest ->
+                                            Res.string.contacts_action_solo_connect_rest
+                                        ContactsBoardState.ActionType.FinishReds ->
+                                            Res.string.contacts_action_finish_reds
+                                        ContactsBoardState.ActionType.ResolveMultiConnect ->
+                                            Res.string.contacts_action_resolve_multi_connect
+                                    },
+                                ),
                                 selected = actionType == selectedActionType,
                                 enabled = !viewModel.actionInProgress,
                                 onClick = { viewModel.selectActionType(actionType) },
@@ -261,7 +311,7 @@ fun ContactsPlayerScreen(
                             viewModel.confirmAction()
                         },
                     ) {
-                        Text("Confirm selection")
+                        Text(stringResource(Res.string.contacts_confirm_selection))
                     }
                 }
             }
@@ -292,7 +342,7 @@ private fun ActionSelectionButton(
 @Composable
 private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(text = "Contacts Pool")
+        Text(text = stringResource(Res.string.contacts_pool))
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val groups = pool.groupBy { it.value }.entries.sortedBy { it.value.first().value }
 
@@ -362,7 +412,7 @@ private fun RackView(
 ) {
     Column {
         ContactsPlayerIdentity(
-            label = "Owner: ",
+            label = stringResource(Res.string.contacts_owner, rack.owner.username),
             username = gameDetails?.player(rack.owner.uid)?.username ?: rack.owner.username,
             pictureUrl = gameDetails?.player(rack.owner.uid)?.pictureUrl,
         )
@@ -544,7 +594,7 @@ private fun ContactsPlayerIdentity(
             username = username,
             modifier = Modifier.size(32.dp),
         )
-        Text(text = "$label$username")
+        Text(text = label)
     }
 }
 

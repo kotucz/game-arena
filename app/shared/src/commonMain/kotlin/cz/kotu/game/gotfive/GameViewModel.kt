@@ -13,7 +13,7 @@ class GameViewModel : ViewModel() {
     var gameState by mutableStateOf(GameState.create())
         private set
 
-    var result by mutableStateOf("Confirm solution in notes when ready")
+    var result by mutableStateOf(GameResult.NotChecked)
         private set
     var secretVisible by mutableStateOf(false)
         private set
@@ -45,15 +45,24 @@ class GameViewModel : ViewModel() {
     fun checkSolution() {
         val notes = gameState.notes
         if (notes.size != 5) {
-            result = "Solution must contain 5 tiles:"
+            result = GameResult.FiveTilesRequired
         } else if (notes.map { it.color }.toSet().size != 5) {
-            result = "Solution must contain one tile of each color"
+            result = GameResult.OneOfEachColorRequired
         } else if (notes == gameState.secretTiles) {
-            result = "Correct solution. Good job"
+            result = GameResult.Correct
             secretVisible = true
         } else {
-            result = "Sorry. Incorrect solution"
+            result = GameResult.Incorrect
             secretVisible = true
         }
     }
+
+}
+
+enum class GameResult {
+    NotChecked,
+    FiveTilesRequired,
+    OneOfEachColorRequired,
+    Correct,
+    Incorrect,
 }

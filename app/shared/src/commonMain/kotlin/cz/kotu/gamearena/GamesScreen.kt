@@ -41,6 +41,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import cz.kotu.game.contacts.formatLocalUi
 import cz.kotu.gamearena.model.RunningGame
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.arena_create_contacts_game
+import gamearena.app.shared.generated.resources.arena_created
+import gamearena.app.shared.generated.resources.arena_debug
+import gamearena.app.shared.generated.resources.arena_filter_all_games
+import gamearena.app.shared.generated.resources.arena_filter_my_games
+import gamearena.app.shared.generated.resources.arena_no_running_games
+import gamearena.app.shared.generated.resources.arena_not_logged_in
+import gamearena.app.shared.generated.resources.arena_logout
+import gamearena.app.shared.generated.resources.arena_running_games
+import gamearena.app.shared.generated.resources.arena_start_got_five
+import gamearena.app.shared.generated.resources.arena_status
+import gamearena.app.shared.generated.resources.arena_theme
+import gamearena.app.shared.generated.resources.arena_theme_dark
+import gamearena.app.shared.generated.resources.arena_theme_light
+import gamearena.app.shared.generated.resources.arena_theme_system
+import gamearena.app.shared.generated.resources.arena_try_again
+import gamearena.app.shared.generated.resources.contacts_game_name
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun GamesScreen(
@@ -98,30 +117,30 @@ fun GamesScreen(
                     modifier = Modifier.size(32.dp),
                 )
             }
-            Text(username ?: "Not logged in")
+            Text(username ?: stringResource(Res.string.arena_not_logged_in))
             Button(onClick = viewModel::logout) {
-                Text("Logout")
+                Text(stringResource(Res.string.arena_logout))
             }
         }
 
         Button(onClick = onStartGotFive, modifier = Modifier.fillMaxWidth()) {
-            Text("Start Got Five")
+            Text(stringResource(Res.string.arena_start_got_five))
         }
 
         Button(
             onClick = { viewModel.createGameDialogVisible.value = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Create Contacts game")
+            Text(stringResource(Res.string.arena_create_contacts_game))
         }
 
         Button(onClick = onDebugClick, modifier = Modifier.fillMaxWidth()) {
-            Text("Debug")
+            Text(stringResource(Res.string.arena_debug))
         }
 
         HorizontalDivider()
 
-        Text("Running games")
+        Text(stringResource(Res.string.arena_running_games))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -139,10 +158,10 @@ fun GamesScreen(
             games == null && error == null -> CircularProgressIndicator()
             error != null -> {
                 Text(error!!)
-                Button(onClick = viewModel::loadGames) { Text("Try again") }
+                Button(onClick = viewModel::loadGames) { Text(stringResource(Res.string.arena_try_again)) }
             }
 
-            games!!.isEmpty() -> Text("There are no running multiplayer games.")
+            games!!.isEmpty() -> Text(stringResource(Res.string.arena_no_running_games))
             else -> games!!
                 .filter {
                     viewModel.gameFilterMyAll.value == GameFilterTab.All ||
@@ -168,7 +187,7 @@ private fun ThemeModeSelector(
 
     Box {
         TextButton(onClick = { expanded = true }) {
-            Text("Theme: ${themeMode.label}")
+            Text(stringResource(Res.string.arena_theme, stringResource(themeMode.stringResource)))
         }
         DropdownMenu(
             expanded = expanded,
@@ -176,7 +195,7 @@ private fun ThemeModeSelector(
         ) {
             AppThemeMode.entries.forEach { mode ->
                 DropdownMenuItem(
-                    text = { Text(mode.label) },
+                    text = { Text(stringResource(mode.stringResource)) },
                     onClick = {
                         expanded = false
                         onThemeModeChange(mode)
@@ -188,11 +207,10 @@ private fun ThemeModeSelector(
 }
 
 enum class GameFilterTab(
-    val label: String,
     val icon: ImageVector,
 ) {
-    All("All Games", Icons.Outlined.Public),
-    My("My Games", Icons.Outlined.Person)
+    All(Icons.Outlined.Public),
+    My(Icons.Outlined.Person)
 }
 
 @Composable
@@ -223,7 +241,14 @@ fun GameFilterSegmentedButton(
                     }
                 },
             ) {
-                Text(text = tab.label)
+                Text(
+                    text = stringResource(
+                        when (tab) {
+                            GameFilterTab.All -> Res.string.arena_filter_all_games
+                            GameFilterTab.My -> Res.string.arena_filter_my_games
+                        },
+                    ),
+                )
             }
         }
     }
@@ -240,7 +265,12 @@ private fun RunningGameCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text(game.type.replaceFirstChar { it.uppercase() })
+                Text(
+                    when (game.type) {
+                        "contacts" -> stringResource(Res.string.contacts_game_name)
+                        else -> game.type.replaceFirstChar { it.uppercase() }
+                    },
+                )
                 Text("  ${game.id}")
             }
             FlowRow(
@@ -261,8 +291,15 @@ private fun RunningGameCard(
                     }
                 }
             }
-            Text("Created: ${game.createdAt.formatLocalUi()}")
-            Text("Status: ${game.status}")
+            Text(stringResource(Res.string.arena_created, game.createdAt.formatLocalUi()))
+            Text(stringResource(Res.string.arena_status, game.status))
         }
     }
 }
+
+private val AppThemeMode.stringResource
+    get() = when (this) {
+        AppThemeMode.SYSTEM -> Res.string.arena_theme_system
+        AppThemeMode.LIGHT -> Res.string.arena_theme_light
+        AppThemeMode.DARK -> Res.string.arena_theme_dark
+    }

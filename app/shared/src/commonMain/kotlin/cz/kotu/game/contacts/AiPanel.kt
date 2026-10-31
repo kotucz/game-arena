@@ -13,6 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import gamearena.app.shared.generated.resources.Res
+import gamearena.app.shared.generated.resources.contacts_ai_prompt
+import gamearena.app.shared.generated.resources.contacts_send
+import gamearena.app.shared.generated.resources.contacts_sending
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AiPanel(viewModel: AiPanelViewModel) {
@@ -31,7 +36,7 @@ fun AiPanel(viewModel: AiPanelViewModel) {
                 value = viewModel.prompt,
                 onValueChange = viewModel::updatePrompt,
                 modifier = Modifier.weight(1f),
-                label = { Text("AI prompt") },
+                label = { Text(stringResource(Res.string.contacts_ai_prompt)) },
                 enabled = !viewModel.isSending,
                 maxLines = 3,
             )
@@ -39,7 +44,11 @@ fun AiPanel(viewModel: AiPanelViewModel) {
                 onClick = viewModel::send,
                 enabled = viewModel.prompt.isNotBlank() && !viewModel.isSending,
             ) {
-                Text(if (viewModel.isSending) "Sending…" else "Send")
+                Text(
+                    stringResource(
+                        if (viewModel.isSending) Res.string.contacts_sending else Res.string.contacts_send,
+                    ),
+                )
             }
         }
         viewModel.error?.let { error ->
