@@ -27,7 +27,7 @@ fun Application.configureSecurity(
                     database.userDao().updatePictureUrl(claims.uid, pictureUrl)
                 }
                 UserPrincipal(
-                    userId = claims.uid,
+                    firebaseUid = claims.uid,
                     username = user.username,
                     pictureUrl = pictureUrl ?: user.pictureUrl,
                 )

@@ -2,6 +2,7 @@ package cz.kotu.gamearena.admin
 
 import cz.kotu.gamearena.PushNotificationService
 import cz.kotu.gamearena.ServerConfig
+import cz.kotu.gamearena.UserDao
 import io.github.aakira.napier.Napier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.AuthenticationConfig
@@ -44,7 +45,7 @@ fun AuthenticationConfig.adminBasicAuthentication(serverConfig: ServerConfig) {
     }
 }
 
-fun Route.adminRoutes(pushNotificationService: PushNotificationService) {
+fun Route.adminRoutes(pushNotificationService: PushNotificationService, userDao: UserDao) {
     authenticate("admin-auth") {
         // Full page shell
         get("/admin") {
@@ -104,15 +105,24 @@ fun Route.adminRoutes(pushNotificationService: PushNotificationService) {
         post("/admin/push/send") {
             // Parse form parameters sent by HTMX
             val formParameters = call.receiveParameters()
-            val username = formParameters["username"] ?: "Unknown"
+            val username = formParameters["username"]?.trim().orEmpty()
+            val user = userDao.findByUsernameLower(username.lowercase())
+
+            if (user == null) {
+                call.respondHtml(HttpStatusCode.NotFound) {
+                    body {
+                        div(classes = "p-3 bg-red-50 text-red-800 rounded-lg border border-red-200 text-sm") {
+                            +"User not found: $username"
+                        }
+                    }
+                }
+                return@post
+            }
 
             Napier.d { "Send test push to $username" }
-            // TODO: Trigger your actual push notification service here using the username
-
-            val recipients = listOf(username)
 
             val sent = pushNotificationService.sendToUsers(
-                usernames = recipients,
+                firebaseUids = listOf(user.firebaseUid),
                 title = "Game Arena",
                 body = "Test to $username at ${Instant.now()}",
             )

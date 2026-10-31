@@ -83,9 +83,10 @@ class NotificationRoutesTest {
         assertEquals(HttpStatusCode.NoContent, second.status)
 
         // Only one row exists and it has the latest token
-        val stored = component.database.pushTokenDao().findByUsername("notif-user")
+        val stored = component.database.pushTokenDao().findByFirebaseUid("uid-notif-user")
         assertEquals(1, stored.size)
         assertEquals("new-token", stored.single().token)
+        assertEquals("uid-notif-user", stored.single().firebaseUid)
     }
 
     @Test
@@ -103,7 +104,7 @@ class NotificationRoutesTest {
             setBody(tokenBody(service = "fcm", token = "tok-tablet"))
         }
 
-        val stored = component.database.pushTokenDao().findByUsername("notif-user")
+        val stored = component.database.pushTokenDao().findByFirebaseUid("uid-notif-user")
         assertEquals(2, stored.size)
         assertTrue(stored.any { it.tokenId == "phone" && it.token == "tok-phone" })
         assertTrue(stored.any { it.tokenId == "tablet" && it.token == "tok-tablet" })
@@ -168,7 +169,7 @@ class NotificationRoutesTest {
         val del = client.delete("/api/notifications/tokens/device-1")
         assertEquals(HttpStatusCode.NoContent, del.status)
 
-        val stored = component.database.pushTokenDao().findByUsername("notif-user")
+        val stored = component.database.pushTokenDao().findByFirebaseUid("uid-notif-user")
         assertTrue(stored.isEmpty())
     }
 
@@ -201,7 +202,7 @@ class NotificationRoutesTest {
         bob.delete("/api/notifications/tokens/alice-device")
 
         // Alice's token must still be present
-        assertEquals(1, component.database.pushTokenDao().findByUsername("alice-notif").size)
+        assertEquals(1, component.database.pushTokenDao().findByFirebaseUid("uid-alice-notif").size)
     }
 
     @Test

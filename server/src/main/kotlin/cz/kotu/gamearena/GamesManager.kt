@@ -190,8 +190,11 @@ class GamesManager(
 
                 val (title, body) = notificationText(game.metadata, phase)
                 runCatching {
+                    val firebaseUids = userDao.findByUsernamesLower(
+                        recipients.map { it.lowercase() }.distinct(),
+                    ).map { it.firebaseUid }
                     notificationService.sendToUsers(
-                        usernames = recipients,
+                        firebaseUids = firebaseUids,
                         title = title,
                         body = body,
                         data = mapOf(

@@ -34,7 +34,7 @@ fun Route.notificationRoutes(database: AppDatabase) {
                 database.pushTokenDao().upsert(
                     PushToken(
                         tokenId = tokenId,
-                        username = principal.username,
+                        firebaseUid = principal.firebaseUid,
                         service = body.service,
                         token = body.token,
                         updatedAtMillis = System.currentTimeMillis(),
@@ -51,7 +51,7 @@ fun Route.notificationRoutes(database: AppDatabase) {
                     return@delete
                 }
                 // Scoped to the authenticated user — silently no-ops if token belongs to another user.
-                database.pushTokenDao().delete(tokenId, principal.username)
+                database.pushTokenDao().delete(tokenId, principal.firebaseUid)
                 call.respond(HttpStatusCode.NoContent)
             }
         }

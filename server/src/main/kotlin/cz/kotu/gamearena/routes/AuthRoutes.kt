@@ -20,7 +20,6 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import java.util.Locale
 
 fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
     suspend fun handleUserRegistration(call: ApplicationCall) {
@@ -68,7 +67,7 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
             return
         }
 
-        val usernameLower = username.lowercase(Locale.ROOT)
+        val usernameLower = username.lowercase()
         val existingByUsername = database.userDao().findByUsernameLower(usernameLower)
         if (existingByUsername != null) {
             call.respond(HttpStatusCode.Conflict, "Username is already taken")
@@ -111,7 +110,7 @@ fun Route.authRoutes(database: AppDatabase, tokenVerifier: TokenVerifier) {
             val principal = call.principal<UserPrincipal>()!!
             call.respond(
                 LoggedUser(
-                    uid = principal.userId,
+                    uid = principal.firebaseUid,
                     username = principal.username,
                     pictureUrl = principal.pictureUrl,
                 ),

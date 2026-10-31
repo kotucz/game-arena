@@ -4,7 +4,6 @@ import cz.kotu.game.contacts.model.ContactsGameDetails
 import cz.kotu.game.contacts.model.ContactsGamePlayer
 import cz.kotu.gamearena.model.RunningGame
 import cz.kotu.gamearena.model.RunningGamePlayer
-import java.util.Locale
 
 class RunningGamesResponseMapper(
     private val userDao: UserDao,
@@ -28,7 +27,7 @@ class RunningGamesResponseMapper(
                 id = game.id,
                 type = game.type,
                 players = game.playerUsernames.map { username ->
-                    val user = usersByUsername[username.lowercase(Locale.ROOT)]
+                    val user = usersByUsername[username.lowercase()]
                     RunningGamePlayer(
                         uid = user?.firebaseUid,
                         username = username,
@@ -44,7 +43,7 @@ class RunningGamesResponseMapper(
     private suspend fun resolvePlayers(usernames: List<String>): List<ContactsGamePlayer> {
         val usersByUsername = usersByUsername(usernames)
         return usernames.map { username ->
-            val user = usersByUsername[username.lowercase(Locale.ROOT)]
+            val user = usersByUsername[username.lowercase()]
             ContactsGamePlayer(
                 uid = user?.firebaseUid,
                 username = username,
@@ -56,7 +55,7 @@ class RunningGamesResponseMapper(
     private suspend fun usersByUsername(usernames: List<String>): Map<String, User> {
         val usernamesLower = usernames
             .distinct()
-            .map { it.lowercase(Locale.ROOT) }
+            .map { it.lowercase() }
         if (usernamesLower.isEmpty()) return emptyMap()
         return userDao.findByUsernamesLower(usernamesLower).associateBy { it.usernameLower }
     }

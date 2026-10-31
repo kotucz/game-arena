@@ -119,7 +119,7 @@ fun Application.module(serverComponent: ServerBindings) {
         gameRoutes(gamesManager, RunningGamesResponseMapper(database.userDao()))
         playerRoutes(database)
 
-        adminRoutes(pushNotificationService)
+        adminRoutes(pushNotificationService, database.userDao())
         staticRoutes(webRoot, serverConfig.mediaRoot)
     }
 

@@ -40,12 +40,12 @@ interface GameDao {
 
 @Entity(
     tableName = "push_tokens",
-    indices = [Index(value = ["username", "service"])],
+    indices = [Index(value = ["firebaseUid", "service"])],
 )
 data class PushToken(
     /** Opaque client-generated ID (e.g. UUID) so clients can refresh or remove their own row. */
     @PrimaryKey val tokenId: String,
-    val username: String,
+    val firebaseUid: String,
     /** Stable service discriminator: "fcm" | "webpush" */
     val service: String,
     val token: String,
@@ -57,18 +57,18 @@ interface PushTokenDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(pushToken: PushToken)
 
-    /** Remove a specific token. Scoped to username so a user cannot remove another user's token. */
-    @Query("DELETE FROM push_tokens WHERE tokenId = :tokenId AND username = :username")
-    suspend fun delete(tokenId: String, username: String)
+    /** Remove a specific token. Scoped to Firebase UID so a user cannot remove another user's token. */
+    @Query("DELETE FROM push_tokens WHERE tokenId = :tokenId AND firebaseUid = :firebaseUid")
+    suspend fun delete(tokenId: String, firebaseUid: String)
 
-    @Query("SELECT * FROM push_tokens WHERE username = :username")
-    suspend fun findByUsername(username: String): List<PushToken>
+    @Query("SELECT * FROM push_tokens WHERE firebaseUid = :firebaseUid")
+    suspend fun findByFirebaseUid(firebaseUid: String): List<PushToken>
 
-    @Query("SELECT * FROM push_tokens WHERE username IN (:usernames)")
-    suspend fun findByUsernames(usernames: List<String>): List<PushToken>
+    @Query("SELECT * FROM push_tokens WHERE firebaseUid IN (:firebaseUids)")
+    suspend fun findByFirebaseUids(firebaseUids: List<String>): List<PushToken>
 }
 
-@Database(entities = [User::class, StoredGame::class, PushToken::class], version = 8, exportSchema = false)
+@Database(entities = [User::class, StoredGame::class, PushToken::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun gameDao(): GameDao
@@ -158,6 +158,17 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     object : Migration(7, 8) {
         override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
             connection.prepare("ALTER TABLE users ADD COLUMN pictureUrl TEXT").use { it.step() }
+        }
+    },
+    object : Migration(8, 9) {
+        override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+            connection.prepare("DROP TABLE IF EXISTS push_tokens").use { it.step() }
+            connection.prepare(
+                "CREATE TABLE push_tokens (tokenId TEXT NOT NULL PRIMARY KEY, firebaseUid TEXT NOT NULL, service TEXT NOT NULL, token TEXT NOT NULL, updatedAtMillis INTEGER NOT NULL)"
+            ).use { it.step() }
+            connection.prepare(
+                "CREATE INDEX index_push_tokens_firebaseUid_service ON push_tokens (firebaseUid, service)"
+            ).use { it.step() }
         }
     },
 )
