@@ -35,19 +35,17 @@
 
 ## Authentication & Session Management
 
-- [x] **Auth Flow**: Refine auth flow in App.
-- [ ] **Session & Token Architecture**:
-  - Pre-flight check: if session token is missing before an API call, trigger 401 locally without making network request.
-  - Dispatch unauthorized signal on 401s across the app.
-  - Manage and persist `session_token` + `username`.
+- [x] **Firebase-first auth flow**: server verifies Firebase ID tokens and binds users by `firebaseUid`.
+- [x] **Unauthenticated / 401 handling**: app surfaces auth failures and re-prompts the user without relying on stale session state.
+- [x] **Sessionless bearer auth**: client auth is tied to token verification, not a legacy persisted server session table.
 - [ ] **Login UI Enhancements**:
-  - [ ] Password manager support (proper autofill hints/attributes).
+  - [ ] Password manager support (proper autofill hints/attributes) for any remaining legacy form UIs.
   - [x] Tab navigation to next input field.
   - [x] Enter key to submit credentials.
   - [ ] "Remember me" option.
   - [ ] "Forgot password" flow.
   - [x] Proper logout handling.
-- [ ] Google OAuth login 
+- [x] Google/Firebase sign-in flow via verified ID token
 
 ---
 

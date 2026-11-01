@@ -80,21 +80,21 @@ The server can issue Firebase Cloud Messaging pushes from the JVM process using 
 Provide a service-account JSON file `application.conf` in `firebase.googleCredentialsPath` before starting the server.
 Stored FCM tokens are read from the `push_tokens` table; if delivery responds with stale-registration errors such as `404` or `410`, the server removes that token automatically.
 
-### Server authentication and sessions
+### Server authentication and identity
 
-The Ktor server uses a cookie-backed session with Ktor authentication. A successful login or registration creates a session cookie named `gamearena_session`, and the server validates the session token against the SQLite-backed `sessions` table.
+The server uses Firebase ID-token authentication. Clients send a Firebase identity token as a bearer token (or as `idToken` in the registration request), and the server verifies it through the Firebase Admin SDK before looking up or creating the user record keyed by `firebaseUid`.
 
 Relevant endpoints:
 
-- `POST /api/register` — registers a user and immediately creates a session.
-- `POST /api/login` — validates credentials and creates a session.
-- `POST /api/logout` — removes the DB session and clears the cookie.
-- `GET /api/me` — returns the current authenticated username.
-- Protected game endpoints require an authenticated session.
+- `POST /api/auth/register` — verifies the Firebase token, ensures a unique username, and creates the user record.
+- `POST /api/auth/user` — same registration path retained as a compatibility alias.
+- `GET /api/me` — returns the currently authenticated user profile (`uid`, `username`, `pictureUrl`).
+- `POST /api/logout` — clears the client-side auth state; there is no longer a server-side session cookie in the active auth model.
+- Protected game endpoints require bearer authentication via the `auth-firebase` scheme.
 
-The authentication flow is implemented with the Ktor `Sessions` and `Authentication` plugins. Session state is kept server-side in the DB; the cookie only stores the opaque token. The server also exposes the `UserPrincipal` for authenticated route access.
+The active auth flow is implemented with Ktor `Authentication` and `UserPrincipal(firebaseUid, username, pictureUrl)`. The stable identity is the Firebase UID rather than a username, which keeps the app aligned with Google/Firebase sign-in and multi-device membership.
 
-For local test/dev convenience, a debug header may be used temporarily to bypass the normal cookie flow when explicitly enabled in the test environment. This is not production behavior and should remain isolated from the normal auth path.
+This project no longer uses the legacy debug-header login flow or the old username/password session model in production.
 
 ---
 
