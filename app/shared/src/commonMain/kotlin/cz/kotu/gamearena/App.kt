@@ -91,7 +91,7 @@ fun App(
 
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = MaterialTheme.colorScheme.background,
         ) {
             Column(
                 modifier = Modifier.safeContentPadding().fillMaxSize(),
