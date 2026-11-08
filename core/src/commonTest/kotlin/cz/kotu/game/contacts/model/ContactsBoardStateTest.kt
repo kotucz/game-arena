@@ -12,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class ContactsBoardStateTest {
     @Test
@@ -70,6 +71,13 @@ class ContactsBoardStateTest {
             state.racks.flatMap { it.contactIds }.toSet(),
         )
         assertEquals(emptySet(), state.solved)
+
+        assertEquals(players.size, state.bonuses.size)
+        assertTrue(state.bonuses.all { it.state == BonusState.Locked })
+        val unlockNumbers = state.bonuses.map { it.unlockNumber }
+        assertEquals(players.size, unlockNumbers.toSet().size)
+        assertTrue(unlockNumbers.all { it != null && it in 1..12 })
+        assertEquals(players.size, state.bonuses.map { it.type }.toSet().size)
     }
 
     @Test

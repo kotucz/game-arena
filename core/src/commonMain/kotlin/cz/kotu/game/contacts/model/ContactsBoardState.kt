@@ -23,6 +23,9 @@ data class ContactsBoardState internal constructor(
     @Serializable
     enum class BonusType {
         Hint,
+        OtherDouble,
+        OtherTriple,
+        MyDouble,
     }
 
     @Serializable
@@ -36,7 +39,7 @@ data class ContactsBoardState internal constructor(
     data class Bonus(
         val type: BonusType,
         val state: BonusState = BonusState.Locked,
-        val unlockNumber: Int?,
+        val unlockNumber: Int? = null,
     )
 
     @Serializable
@@ -192,10 +195,21 @@ data class ContactsBoardState internal constructor(
                 )
             }
 
+            val bonusTypes = BonusType.entries.shuffled()
+            val unlockNumbers = (1..config.blueCount).shuffled().take(players.size)
+            val bonuses = List(players.size) { i ->
+                Bonus(
+                    type = bonusTypes[i % bonusTypes.size],
+                    state = BonusState.Locked,
+                    unlockNumber = unlockNumbers[i],
+                )
+            }
+
             return ContactsBoardState(
                 pool = pool,
                 racks = racks,
                 solved = setOf(),
+                bonuses = bonuses,
             )
         }
     }
