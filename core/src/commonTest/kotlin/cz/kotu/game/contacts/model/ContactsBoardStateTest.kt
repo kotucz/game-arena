@@ -72,12 +72,23 @@ class ContactsBoardStateTest {
         )
         assertEquals(emptySet(), state.solved)
 
-        assertEquals(players.size, state.bonuses.size)
-        assertTrue(state.bonuses.all { it.state == BonusState.Locked })
-        val unlockNumbers = state.bonuses.map { it.unlockNumber }
+        val lockedBonuses = state.bonuses.filter { it.state == BonusState.Locked }
+        assertEquals(players.size, lockedBonuses.size)
+        assertTrue(lockedBonuses.all { it.player == null })
+        val unlockNumbers = lockedBonuses.map { it.unlockNumber }
         assertEquals(players.size, unlockNumbers.toSet().size)
         assertTrue(unlockNumbers.all { it != null && it in 1..12 })
-        assertEquals(players.size, state.bonuses.map { it.type }.toSet().size)
+        assertEquals(players.size, lockedBonuses.map { it.type }.toSet().size)
+
+        players.forEach { player ->
+            val playerBonuses = state.bonuses.filter { it.player == player }
+            val hintBonuses = playerBonuses.filter { it.type == BonusType.Hint }
+            val otherDoubleBonuses = playerBonuses.filter { it.type == BonusType.OtherDouble }
+            val rackCount = state.racks.count { it.owner == player }
+            assertEquals(rackCount, hintBonuses.size)
+            assertEquals(1, otherDoubleBonuses.size)
+            assertTrue(playerBonuses.all { it.state == BonusState.Ready && it.unlockNumber == null })
+        }
     }
 
     @Test
@@ -93,6 +104,15 @@ class ContactsBoardStateTest {
             listOf(players[0], players[1], players[0], players[1]),
             state.racks.map { it.owner },
         )
+        // With 2 players and 4 racks, each player owns 2 racks -> 2 Hint bonuses each
+        players.forEach { player ->
+            val playerBonuses = state.bonuses.filter { it.player == player }
+            val hintBonuses = playerBonuses.filter { it.type == BonusType.Hint }
+            val otherDoubleBonuses = playerBonuses.filter { it.type == BonusType.OtherDouble }
+            assertEquals(2, hintBonuses.size)
+            assertEquals(1, otherDoubleBonuses.size)
+            assertTrue(playerBonuses.all { it.state == BonusState.Ready && it.unlockNumber == null })
+        }
     }
 
     @Test

@@ -36,16 +36,17 @@ data class ContactsBoardState internal constructor(
     }
 
     @Serializable
+    @JvmInline
+    value class Player(
+        val username: String,
+    )
+
+    @Serializable
     data class Bonus(
         val type: BonusType,
         val state: BonusState = BonusState.Locked,
         val unlockNumber: Int? = null,
-    )
-
-    @Serializable
-    @JvmInline
-    value class Player(
-        val username: String,
+        val player: Player? = null,
     )
 
     @Serializable
@@ -195,21 +196,32 @@ data class ContactsBoardState internal constructor(
                 )
             }
 
-            val bonusTypes = BonusType.entries.shuffled()
+            val lockedBonusTypes = BonusType.entries.shuffled()
             val unlockNumbers = (1..config.blueCount).shuffled().take(players.size)
-            val bonuses = List(players.size) { i ->
+            val lockedBonuses = List(players.size) { i ->
                 Bonus(
-                    type = bonusTypes[i % bonusTypes.size],
+                    type = lockedBonusTypes[i % lockedBonusTypes.size],
                     state = BonusState.Locked,
                     unlockNumber = unlockNumbers[i],
+                    player = null,
                 )
+            }
+
+            val playerBonuses = players.flatMap { player ->
+                val rackCount = racks.count { it.owner == player }
+                buildList {
+                    repeat(rackCount) {
+                        add(Bonus(type = BonusType.Hint, state = BonusState.Ready, unlockNumber = null, player = player))
+                    }
+                    add(Bonus(type = BonusType.OtherDouble, state = BonusState.Ready, unlockNumber = null, player = player))
+                }
             }
 
             return ContactsBoardState(
                 pool = pool,
                 racks = racks,
                 solved = setOf(),
-                bonuses = bonuses,
+                bonuses = playerBonuses + lockedBonuses,
             )
         }
     }
