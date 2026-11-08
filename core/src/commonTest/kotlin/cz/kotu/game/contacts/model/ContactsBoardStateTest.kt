@@ -1,6 +1,9 @@
 package cz.kotu.game.contacts.model
 
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
+import cz.kotu.game.contacts.model.ContactsBoardState.Bonus
+import cz.kotu.game.contacts.model.ContactsBoardState.BonusState
+import cz.kotu.game.contacts.model.ContactsBoardState.BonusType
 import cz.kotu.game.contacts.model.ContactsBoardState.Contact
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactType
@@ -19,6 +22,23 @@ class ContactsBoardStateTest {
         assertEquals(emptyList(), state.racks)
         assertEquals(emptySet(), state.solved)
         assertEquals(0, state.faults)
+        assertEquals(emptyList(), state.bonuses)
+    }
+
+    @Test
+    fun bonusHoldsTypeAndStateAndSupportsTransitions() {
+        val bonus = Bonus(type = BonusType.Hint, state = BonusState.Locked)
+        assertEquals(BonusType.Hint, bonus.type)
+        assertEquals(BonusState.Locked, bonus.state)
+
+        val readyBonus = bonus.copy(state = BonusState.Ready)
+        assertEquals(BonusState.Ready, readyBonus.state)
+
+        val usedBonus = readyBonus.copy(state = BonusState.Used)
+        assertEquals(BonusState.Used, usedBonus.state)
+
+        val board = ContactsBoardState.empty().withBonuses(listOf(bonus, readyBonus, usedBonus))
+        assertEquals(listOf(bonus, readyBonus, usedBonus), board.bonuses)
     }
 
     @Test

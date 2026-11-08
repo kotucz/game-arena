@@ -16,8 +16,29 @@ data class ContactsBoardState internal constructor(
 
     val faults: Int = 0,
 
+    val bonuses: List<Bonus> = emptyList(),
+
     val lastActionResult: ActionResult = ActionResult(),
 ) {
+    @Serializable
+    enum class BonusType {
+        Hint,
+    }
+
+    @Serializable
+    enum class BonusState {
+        Locked,
+        Ready,
+        Used,
+    }
+
+    @Serializable
+    data class Bonus(
+        val type: BonusType,
+        val state: BonusState = BonusState.Locked,
+        val unlockNumber: Int?,
+    )
+
     @Serializable
     @JvmInline
     value class Player(
@@ -299,6 +320,10 @@ data class ContactsBoardState internal constructor(
         return copy(
             racks = racks.toMutableList().also { it[rackIndex] = updatedRack },
         )
+    }
+
+    fun withBonuses(bonuses: List<Bonus>): ContactsBoardState {
+        return copy(bonuses = bonuses)
     }
 
     fun withLastActionResult(actionResult: ActionResult): ContactsBoardState {
