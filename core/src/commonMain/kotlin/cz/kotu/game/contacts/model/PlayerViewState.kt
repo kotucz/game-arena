@@ -12,6 +12,7 @@ data class PlayerViewState(
     val racks: List<Rack>,
     val faults: Int,
     val actions: ContactsGameState.PlayerActions,
+    val bonuses: List<ContactsBoardState.Bonus> = emptyList(),
     val lastActionResult: ContactsBoardState.ActionResult,
 ) {
     @Serializable
@@ -45,6 +46,7 @@ data class PlayerViewState(
             racks = listOf(),
             faults = 0,
             actions = ContactsGameState.PlayerActions(),
+            bonuses = emptyList(),
             lastActionResult = ContactsBoardState.ActionResult(),
         )
     }
@@ -108,6 +110,7 @@ fun ContactsGameState.sanitizedPlayerView(
         racks = racks,
         faults = board.faults,
         actions = actions,
+        bonuses = board.bonuses,
         lastActionResult = board.lastActionResult,
     )
 }

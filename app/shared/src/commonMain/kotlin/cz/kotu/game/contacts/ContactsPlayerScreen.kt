@@ -43,8 +43,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.game.contacts.model.ContactsBoardState
-import cz.kotu.game.contacts.model.ContactsGameOverReason
 import cz.kotu.game.contacts.model.ContactsGameDetails
+import cz.kotu.game.contacts.model.ContactsGameOverReason
 import cz.kotu.game.contacts.model.ContactsGameState
 import cz.kotu.game.contacts.model.ContactsPlayer
 import cz.kotu.game.contacts.model.GameLogEntry
@@ -61,6 +61,14 @@ import gamearena.app.shared.generated.resources.contacts_action_resolve_multi_co
 import gamearena.app.shared.generated.resources.contacts_action_solo_connect_rest
 import gamearena.app.shared.generated.resources.contacts_action_standard_connect
 import gamearena.app.shared.generated.resources.contacts_action_triple_connect
+import gamearena.app.shared.generated.resources.contacts_bonus_hint
+import gamearena.app.shared.generated.resources.contacts_bonus_my_double
+import gamearena.app.shared.generated.resources.contacts_bonus_other_double
+import gamearena.app.shared.generated.resources.contacts_bonus_other_triple
+import gamearena.app.shared.generated.resources.contacts_bonus_state_locked
+import gamearena.app.shared.generated.resources.contacts_bonus_state_ready
+import gamearena.app.shared.generated.resources.contacts_bonus_state_used
+import gamearena.app.shared.generated.resources.contacts_common_bonuses
 import gamearena.app.shared.generated.resources.contacts_confirm_selection
 import gamearena.app.shared.generated.resources.contacts_connecting
 import gamearena.app.shared.generated.resources.contacts_count
@@ -162,6 +170,11 @@ fun ContactsPlayerScreen(
 
                     SolvedContactsPool(gameState.pool)
 
+                    val commonBonuses = gameState.bonuses.filter { it.player == null }
+                    if (commonBonuses.isNotEmpty()) {
+                        CommonBonusesSection(commonBonuses)
+                    }
+
                     Text(
                         text = stringResource(
                             Res.string.contacts_faults,
@@ -178,35 +191,43 @@ fun ContactsPlayerScreen(
                         onExpand = { viewModel.isLogsExpanded = true },
                     )
 
-                    gameState.racks.filter { it.owner != player }.forEach { rack ->
-                        RackView(
-                            gameState = gameState,
-                            gameDetails = gameDetailsState.details,
-                            rack = rack,
-                            isOwner = false,
-                            lastActionResult = gameState.lastActionResult,
-                            hoveredLogs = viewModel.hoveredLogs,
-                            selectedContacts = actionSelectionState.otherContacts,
-                            aiEnabled = viewModel.hasAiPlayer,
-                            onContactClick = { contact ->
-                                viewModel.onOtherContactClick(contact)
-                            },
-                        )
-                    }
+                    gameState.racks.filter { it.owner != player }
+                        .groupBy { it.owner }
+                        .forEach { (owner, racks) ->
+                            PlayerRacksGroup(
+                                player = owner,
+                                gameDetails = gameDetailsState.details,
+                                racks = racks,
+                                bonuses = gameState.bonuses,
+                                isOwner = false,
+                                gameState = gameState,
+                                lastActionResult = gameState.lastActionResult,
+                                hoveredLogs = viewModel.hoveredLogs,
+                                selectedContacts = actionSelectionState.otherContacts,
+                                aiEnabled = viewModel.hasAiPlayer,
+                                onContactClick = { contact ->
+                                    viewModel.onOtherContactClick(contact)
+                                },
+                            )
+                        }
 
-                    gameState.racks.filter { it.owner == player }.forEach { rack ->
-                        RackView(
-                            gameState = gameState,
+                    val yourRacks = gameState.racks.filter { it.owner == player }
+                    if (yourRacks.isNotEmpty()) {
+                        PlayerRacksGroup(
+                            player = player,
                             gameDetails = gameDetailsState.details,
-                            rack = rack,
+                            racks = yourRacks,
+                            bonuses = gameState.bonuses,
                             isOwner = true,
+                            gameState = gameState,
                             lastActionResult = gameState.lastActionResult,
                             hoveredLogs = viewModel.hoveredLogs,
                             selectedContacts = actionSelectionState.playerContacts,
                             aiEnabled = viewModel.hasAiPlayer,
-                        ) { contact ->
-                            viewModel.onPlayerContactClick(contact)
-                        }
+                            onContactClick = { contact ->
+                                viewModel.onPlayerContactClick(contact)
+                            },
+                        )
                     }
                 }
 
@@ -240,7 +261,7 @@ fun ContactsPlayerScreen(
                     val selectedActionType = viewModel.selectedActionType
                     gameState.actions.allowedActionTypes.forEach { actionType ->
                         if (actionType == ContactsBoardState.ActionType.SoloConnectRest) {
-                            gameState.actions.soloConnectRestGroups.forEach groupLoop@ { group ->
+                            gameState.actions.soloConnectRestGroups.forEach groupLoop@{ group ->
                                 val value = group.firstOrNull()?.let { gameState.findContact(it)?.value }
                                     ?: return@groupLoop
                                 val category = if (value.type == ContactsBoardState.ContactType.Yellow) {
@@ -256,8 +277,8 @@ fun ContactsPlayerScreen(
                                 ActionSelectionButton(
                                     text = stringResource(Res.string.contacts_solo_action, category, count),
                                     selected = selectedActionType == actionType &&
-                                        actionSelectionState.playerContacts == group &&
-                                        actionSelectionState.otherContacts.isEmpty(),
+                                            actionSelectionState.playerContacts == group &&
+                                            actionSelectionState.otherContacts.isEmpty(),
                                     enabled = !viewModel.actionInProgress,
                                     onClick = { viewModel.selectSoloConnectRestGroup(group) },
                                 )
@@ -429,9 +450,148 @@ private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
 }
 
 @Composable
+private fun CommonBonusesSection(commonBonuses: List<ContactsBoardState.Bonus>) {
+    Column(
+        modifier = Modifier.padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.contacts_common_bonuses),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+        )
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            commonBonuses.forEach { bonus ->
+                BonusChip(bonus)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerRacksGroup(
+    player: ContactsPlayer,
+    gameDetails: ContactsGameDetails?,
+    racks: List<PlayerViewState.Rack>,
+    bonuses: List<ContactsBoardState.Bonus>,
+    isOwner: Boolean,
+    gameState: PlayerViewState,
+    lastActionResult: ContactsBoardState.ActionResult,
+    hoveredLogs: MutableState<List<LogToken>>,
+    selectedContacts: Set<ContactsBoardState.ContactId>,
+    aiEnabled: Boolean,
+    onContactClick: (ContactsBoardState.ContactId) -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        val profile = gameDetails?.player(player.uid)
+        val profileUsername = profile?.username?.takeIf { it.isNotBlank() }
+        val rawUsername = player.username
+        val playerTitle = if (profileUsername != null && profileUsername != rawUsername) {
+            "$profileUsername ($rawUsername)"
+        } else {
+            profileUsername ?: rawUsername
+        }
+
+        ContactsPlayerIdentity(
+            label = stringResource(Res.string.contacts_owner, playerTitle),
+            username = profileUsername ?: rawUsername,
+            pictureUrl = profile?.pictureUrl,
+        )
+
+        val playerBonuses = bonuses.filter { it.player == player.playerId }
+        if (playerBonuses.isNotEmpty()) {
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                playerBonuses.forEach { bonus ->
+                    BonusChip(bonus)
+                }
+            }
+        }
+
+        racks.forEach { rack ->
+            RackView(
+                gameState = gameState,
+                rack = rack,
+                isOwner = isOwner,
+                lastActionResult = lastActionResult,
+                hoveredLogs = hoveredLogs,
+                selectedContacts = selectedContacts,
+                aiEnabled = aiEnabled,
+                onContactClick = onContactClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BonusChip(bonus: ContactsBoardState.Bonus) {
+    val typeName = stringResource(
+        when (bonus.type) {
+            ContactsBoardState.BonusType.Hint -> Res.string.contacts_bonus_hint
+            ContactsBoardState.BonusType.OtherDouble -> Res.string.contacts_bonus_other_double
+            ContactsBoardState.BonusType.OtherTriple -> Res.string.contacts_bonus_other_triple
+            ContactsBoardState.BonusType.MyDouble -> Res.string.contacts_bonus_my_double
+        },
+    )
+
+    val stateText = when (bonus.state) {
+        ContactsBoardState.BonusState.Locked ->
+            stringResource(
+                Res.string.contacts_bonus_state_locked,
+                bonus.unlockNumber?.toString() ?: "?",
+            )
+
+        ContactsBoardState.BonusState.Ready ->
+            stringResource(Res.string.contacts_bonus_state_ready)
+
+        ContactsBoardState.BonusState.Used ->
+            stringResource(Res.string.contacts_bonus_state_used)
+    }
+
+    val (chipBackground, chipText) = when (bonus.state) {
+        ContactsBoardState.BonusState.Ready ->
+            MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+
+        ContactsBoardState.BonusState.Locked ->
+            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+
+        ContactsBoardState.BonusState.Used ->
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) to MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                alpha = 0.5f,
+            )
+    }
+
+    Box(
+        modifier = Modifier
+            .background(chipBackground, RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = "$typeName: $stateText",
+            color = chipText,
+            fontSize = 12.sp,
+            fontWeight = if (bonus.state == ContactsBoardState.BonusState.Ready) FontWeight.Bold else FontWeight.Normal,
+        )
+    }
+}
+
+@Composable
 private fun RackView(
     gameState: PlayerViewState,
-    gameDetails: ContactsGameDetails?,
     rack: PlayerViewState.Rack,
     isOwner: Boolean,
     lastActionResult: ContactsBoardState.ActionResult,
@@ -440,129 +600,121 @@ private fun RackView(
     aiEnabled: Boolean,
     onContactClick: (ContactsBoardState.ContactId) -> Unit,
 ) {
-    Column {
-        ContactsPlayerIdentity(
-            label = stringResource(Res.string.contacts_owner, rack.owner.username),
-            username = gameDetails?.player(rack.owner.uid)?.username ?: rack.owner.username,
-            pictureUrl = gameDetails?.player(rack.owner.uid)?.pictureUrl,
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val maxContacts = gameState.racks.maxOf { it.contacts.size }
 
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val maxContacts = gameState.racks.maxOf { it.contacts.size }
+        val spacing = 8.dp
+        val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(48.dp)
+        val tileHeight = tileWidth * phi
+        val cornerRadius = tileWidth / 8
+        val cornerShape = RoundedCornerShape(cornerRadius)
 
-            val spacing = 8.dp
-            val tileWidth = ((maxWidth - spacing * maxContacts) / maxContacts).coerceAtMost(48.dp)
-            val tileHeight = tileWidth * phi
-            val cornerRadius = tileWidth / 8
-            val cornerShape = RoundedCornerShape(cornerRadius)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing, alignment = Alignment.CenterHorizontally),
+        ) {
+            rack.contacts.forEach { contact ->
+                Column(
+                    modifier = Modifier.wrapContentSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    val resolveMultiConnectContacts = gameState.actions.resolveMultiConnectContacts
+                    val isResolutionContact = resolveMultiConnectContacts?.contains(contact.id) ?: false
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(spacing, alignment = Alignment.CenterHorizontally),
-            ) {
-                rack.contacts.forEach { contact ->
-                    Column(
-                        modifier = Modifier.wrapContentSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        val resolveMultiConnectContacts = gameState.actions.resolveMultiConnectContacts
-                        val isResolutionContact = resolveMultiConnectContacts?.contains(contact.id) ?: false
+                    val shadowColor = when {
+                        hoveredLogs.value.any { it is LogToken.Contact && it.contactId == contact.id } -> highlightedLogContactColor
+                        isResolutionContact -> highlightedContactColor
+                        lastActionResult.errorContacts.contains(contact.id) -> Color.Red
+                        else -> null
+                    }
 
-                        val shadowColor = when {
-                            hoveredLogs.value.any { it is LogToken.Contact && it.contactId == contact.id } -> highlightedLogContactColor
-                            isResolutionContact -> highlightedContactColor
-                            lastActionResult.errorContacts.contains(contact.id) -> Color.Red
-                            else -> null
-                        }
+                    val shakeOffset = remember { Animatable(0f) }
 
-                        val shakeOffset = remember { Animatable(0f) }
+                    val isError = lastActionResult.errorContacts.contains(contact.id)
 
-                        val isError = lastActionResult.errorContacts.contains(contact.id)
-
-                        LaunchedEffect(isError) {
-                            if (isError) {
-                                shakeOffset.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = keyframes {
-                                        durationMillis = 400
-                                        0f at 0
-                                        -12f at 50
-                                        12f at 100
-                                        -9f at 150
-                                        9f at 200
-                                        -5f at 250
-                                        5f at 300
-                                        0f at 400
-                                    },
-                                )
-                            }
-                        }
-
-                        Box {
-                            FlippableContactTile(
-                                contact = contact.value,
-                                size = DpSize(tileWidth, tileHeight),
-                                isSolved = contact.solved,
-                                isOwned = isOwner,
-                                solvedBackgroundColor = Color(0xFF808080),
-                                unsolvedBackgroundColor = when {
-                                    contact.id in selectedContacts -> selectedContactColor
-                                    isResolutionContact -> highlightedContactColor
-                                    else -> Color(0xFF4A4A4A)
+                    LaunchedEffect(isError) {
+                        if (isError) {
+                            shakeOffset.animateTo(
+                                targetValue = 0f,
+                                animationSpec = keyframes {
+                                    durationMillis = 400
+                                    0f at 0
+                                    -12f at 50
+                                    12f at 100
+                                    -9f at 150
+                                    9f at 200
+                                    -5f at 250
+                                    5f at 300
+                                    0f at 400
                                 },
-                                modifier = Modifier
-                                    .graphicsLayer {
-                                        translationX = shakeOffset.value
-                                    }
-                                    .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
-                                    .shadow(
-                                        elevation = if (shadowColor != null) 8.dp else 0.dp,
-                                        shape = cornerShape,
-                                        ambientColor = shadowColor ?: DefaultShadowColor,
-                                        spotColor = shadowColor ?: DefaultShadowColor,
-                                    )
-                                    .clickable(
-                                        enabled = !contact.solved &&
-                                                (resolveMultiConnectContacts == null || isResolutionContact),
-                                        onClick = { onContactClick(contact.id) },
-                                    ),
                             )
-                            if (aiEnabled) {
-                                Text(
-                                    text = "#" + contact.id.value,
-                                    modifier = Modifier.align(Alignment.BottomCenter),
-                                    color = Color.White,
-                                    fontSize = (tileHeight / 6.dp).sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
                         }
+                    }
 
-                        Box(
+                    Box {
+                        FlippableContactTile(
+                            contact = contact.value,
+                            size = DpSize(tileWidth, tileHeight),
+                            isSolved = contact.solved,
+                            isOwned = isOwner,
+                            solvedBackgroundColor = Color(0xFF808080),
+                            unsolvedBackgroundColor = when {
+                                contact.id in selectedContacts -> selectedContactColor
+                                isResolutionContact -> highlightedContactColor
+                                else -> Color(0xFF4A4A4A)
+                            },
                             modifier = Modifier
-                                .size(width = tileWidth, height = tileWidth / phi),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            contact.hint?.let { hint ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.secondaryContainer, cornerShape)
-                                        .border(1.dp, color = MaterialTheme.colorScheme.outline, cornerShape),
+                                .graphicsLayer {
+                                    translationX = shakeOffset.value
+                                }
+                                .border(1.dp, color = shadowColor ?: Color.Transparent, cornerShape)
+                                .shadow(
+                                    elevation = if (shadowColor != null) 8.dp else 0.dp,
+                                    shape = cornerShape,
+                                    ambientColor = shadowColor ?: DefaultShadowColor,
+                                    spotColor = shadowColor ?: DefaultShadowColor,
                                 )
-                                Text(
-                                    text = hint,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    fontSize = (tileHeight / 4.dp).sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                )
-                            }
+                                .clickable(
+                                    enabled = !contact.solved &&
+                                            (resolveMultiConnectContacts == null || isResolutionContact),
+                                    onClick = { onContactClick(contact.id) },
+                                ),
+                        )
+                        if (aiEnabled) {
+                            Text(
+                                text = "#" + contact.id.value,
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                                color = Color.White,
+                                fontSize = (tileHeight / 6.dp).sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(width = tileWidth, height = tileWidth / phi),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        contact.hint?.let { hint ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.secondaryContainer, cornerShape)
+                                    .border(1.dp, color = MaterialTheme.colorScheme.outline, cornerShape),
+                            )
+                            Text(
+                                text = hint,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontSize = (tileHeight / 4.dp).sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                            )
                         }
                     }
                 }
@@ -618,7 +770,10 @@ private fun ContactsPlayerIdentity(
     username: String,
     pictureUrl: String?,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         PlayerAvatar(
             pictureUrl = pictureUrl,
             username = username,

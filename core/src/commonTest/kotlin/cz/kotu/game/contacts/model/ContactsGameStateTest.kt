@@ -277,10 +277,15 @@ class ContactsGameStateTest {
                 Rack(bob, listOf(teammateBlue.id)),
             ),
             solved = setOf(solvedBlue.id),
+            bonuses = listOf(
+                ContactsBoardState.Bonus(ContactsBoardState.BonusType.Hint, ContactsBoardState.BonusState.Ready, player = alice),
+                ContactsBoardState.Bonus(ContactsBoardState.BonusType.OtherDouble, ContactsBoardState.BonusState.Locked, unlockNumber = 5),
+            ),
         )
         val state = createBaseState(board)
         val actions = state.getAvailablePlayerActions(alice)
         val view = state.sanitizedPlayerView(alice, actions)
+        assertEquals(board.bonuses, view.bonuses)
         val expectedGroups = setOf(setOf(blue.id, matchingBlue.id), setOf(otherBlue.id), setOf(yellow.id, otherYellow.id))
 
         assertEquals(expectedGroups, view.actions.soloConnectRestGroups.toSet())
