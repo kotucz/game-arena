@@ -81,13 +81,21 @@ data class ContactsGameState(
                                 if (board.canStandardConnect(player)) {
                                     add(ActionType.StandardConnect)
                                 }
-                                add(ActionType.DoubleConnect)
-                                add(ActionType.TripleConnect)
-                                add(ActionType.MyDoubleConnect)
+                                if (board.hasAvailableOtherDoubleBonus(player)) {
+                                    add(ActionType.DoubleConnect)
+                                }
+                                if (board.hasAvailableOtherTripleBonus(player)) {
+                                    add(ActionType.TripleConnect)
+                                }
+                                if (board.hasAvailableMyDoubleBonus(player)) {
+                                    add(ActionType.MyDoubleConnect)
+                                }
                                 if (soloConnectRestGroups.isNotEmpty()) {
                                     add(ActionType.SoloConnectRest)
                                 }
-                                add(ActionType.AddHint)
+                                if (board.hasAvailableHintBonus(player)) {
+                                    add(ActionType.AddHint)
+                                }
                             }
                         },
                         soloConnectRestGroups = soloConnectRestGroups,

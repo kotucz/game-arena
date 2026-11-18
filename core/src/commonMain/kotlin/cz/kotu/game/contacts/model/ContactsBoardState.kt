@@ -348,6 +348,40 @@ data class ContactsBoardState internal constructor(
         )
     }
 
+    /** Returns true if the player has at least one Ready bonus of [type] they can use.
+     *  A bonus is usable if it is owned by [player] or is common (player == null). */
+    fun hasAvailableBonus(player: Player, type: BonusType): Boolean {
+        return bonuses.any {
+            it.type == type &&
+                it.state == BonusState.Ready &&
+                (it.player == null || it.player == player)
+        }
+    }
+
+    /** Consumes the first eligible Ready bonus of [type] for [player] (own or common),
+     *  transitioning it to [BonusState.Used]. */
+    fun withConsumedBonus(player: Player, type: BonusType): ContactsBoardState {
+        val idx = bonuses.indexOfFirst {
+            it.type == type &&
+                it.state == BonusState.Ready &&
+                (it.player == null || it.player == player)
+        }
+        if (idx < 0) return this
+        val updated = bonuses.toMutableList()
+        updated[idx] = updated[idx].copy(state = BonusState.Used)
+        return copy(bonuses = updated)
+    }
+
+    fun hasAvailableHintBonus(player: Player) = hasAvailableBonus(player, BonusType.Hint)
+    fun hasAvailableOtherDoubleBonus(player: Player) = hasAvailableBonus(player, BonusType.OtherDouble)
+    fun hasAvailableOtherTripleBonus(player: Player) = hasAvailableBonus(player, BonusType.OtherTriple)
+    fun hasAvailableMyDoubleBonus(player: Player) = hasAvailableBonus(player, BonusType.MyDouble)
+
+    fun withConsumedHintBonus(player: Player) = withConsumedBonus(player, BonusType.Hint)
+    fun withConsumedOtherDoubleBonus(player: Player) = withConsumedBonus(player, BonusType.OtherDouble)
+    fun withConsumedOtherTripleBonus(player: Player) = withConsumedBonus(player, BonusType.OtherTriple)
+    fun withConsumedMyDoubleBonus(player: Player) = withConsumedBonus(player, BonusType.MyDouble)
+
     fun withBonuses(bonuses: List<Bonus>): ContactsBoardState {
         return copy(bonuses = bonuses)
     }

@@ -14,7 +14,9 @@ fun ContactsBoardState.handleAddHint(
         )
     ) throw InvalidActionException("Player does not own the selected contact")
     if (isSolved(playerContact)) throw InvalidActionException("Selected contact is already solved")
-    val newState = this.withHintFor(playerContact)
+    if (!hasAvailableHintBonus(player)) throw InvalidActionException("No Hint bonus available")
+    val newState = this.withConsumedHintBonus(player)
+        .withHintFor(playerContact)
         .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState, Next.EndOfTurn(player)) {
         player(player)
@@ -103,10 +105,17 @@ fun ContactsBoardState.handleMultiConnect(
         }) throw InvalidActionException("Selected opposing contact is not owned by another player")
     if (playerContact.run { isSolved(this) } || otherContacts.any(::isSolved)) throw InvalidActionException("Selected contact is already solved")
 
+    val bonusType = when (actionType) {
+        ContactsBoardState.ActionType.DoubleConnect -> ContactsBoardState.BonusType.OtherDouble
+        ContactsBoardState.ActionType.TripleConnect -> ContactsBoardState.BonusType.OtherTriple
+        else -> throw InvalidActionException("Unsupported multi-connect action type: $actionType")
+    }
+    if (!hasAvailableBonus(player, bonusType)) throw InvalidActionException("No ${bonusType.name} bonus available")
+
     val targetRack = racks.singleOrNull { rack -> otherContacts.all { it.id in rack.contactIds } }
         ?: throw InvalidActionException("Selected opposing contacts must belong to one rack")
 
-    val newState = this // no change
+    val newState = withConsumedBonus(player, bonusType)
     return ActionExecutionResult.Success(
         newState,
         next = Next.ResolveMultiConnect(
@@ -150,10 +159,11 @@ fun ContactsBoardState.handleMyDoubleConnect(
         )
     ) throw InvalidActionException("Selected opposing contact is not owned by another player")
     if (playerContacts.any(::isSolved) || isSolved(otherContact)) throw InvalidActionException("Selected contact is already solved")
+    if (!hasAvailableMyDoubleBonus(player)) throw InvalidActionException("No MyDouble bonus available")
 
     val playerContact = playerContacts.firstOrNull { contactsMatch(it, otherContact) } ?: playerContacts.first()
-    // Delegate to standard connect handler
-    return handleStandardConnect(player, playerContact, otherContact)
+    // Consume bonus then delegate to standard connect handler
+    return withConsumedMyDoubleBonus(player).handleStandardConnect(player, playerContact, otherContact)
 }
 
 fun ContactsBoardState.handleSoloConnectRest(
