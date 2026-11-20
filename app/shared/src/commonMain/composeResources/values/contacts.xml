@@ -39,10 +39,10 @@
     <string name="contacts_bonus_other_double">Other Double</string>
     <string name="contacts_bonus_other_triple">Other Triple</string>
     <string name="contacts_bonus_my_double">My Double</string>
-    <string name="contacts_bonus_state_locked">Locked (%1$s)</string>
+    <string name="contacts_bonus_state_locked">Locked</string>
     <string name="contacts_bonus_state_ready">Ready</string>
     <string name="contacts_bonus_state_used">Used</string>
-    <string name="contacts_bonus_unlock_hint">Connect %1$s to unlock</string>
+    <string name="contacts_bonus_unlock_hint">Connect %1$ss to unlock</string>
     <string name="contacts_bonus_connect_prefix">Connect %1$ss: </string>
     <string name="contacts_sending">Sending…</string>
     <string name="contacts_send">Send</string>
