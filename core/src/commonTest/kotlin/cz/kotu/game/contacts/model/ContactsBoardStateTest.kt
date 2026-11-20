@@ -292,6 +292,9 @@ class ContactsBoardStateTest {
                 ContactsBoardState.Rack(bob, listOf(bobContact.id)),
             ),
             solved = emptySet(),
+            bonuses = listOf(
+                Bonus(type = BonusType.MyDouble, state = BonusState.Ready, player = alice),
+            ),
         )
 
         val result = state.applyAction(
@@ -320,6 +323,9 @@ class ContactsBoardStateTest {
                 ContactsBoardState.Rack(bob, listOf(bobOtherContact.id)),
             ),
             solved = emptySet(),
+            bonuses = listOf(
+                Bonus(type = BonusType.MyDouble, state = BonusState.Ready, player = alice),
+            ),
         )
 
         val result = state.applyAction(
@@ -349,6 +355,9 @@ class ContactsBoardStateTest {
                 ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
             ),
             solved = emptySet(),
+            bonuses = listOf(
+                Bonus(type = BonusType.OtherDouble, state = BonusState.Ready, player = alice),
+            ),
         )
 
         val first = state.applyAction(
@@ -379,6 +388,9 @@ class ContactsBoardStateTest {
                 ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
             ),
             solved = emptySet(),
+            bonuses = listOf(
+                Bonus(type = BonusType.OtherDouble, state = BonusState.Ready, player = alice),
+            ),
         )
 
         val first = state.applyAction(
@@ -411,6 +423,9 @@ class ContactsBoardStateTest {
                 ContactsBoardState.Rack(bob, listOf(bobContact.id, bobOtherContact.id)),
             ),
             solved = emptySet(),
+            bonuses = listOf(
+                Bonus(type = BonusType.OtherDouble, state = BonusState.Ready, player = alice),
+            ),
         )
 
         val first = state.applyAction(
@@ -508,6 +523,101 @@ class ContactsBoardStateTest {
         }
 
         assertEquals("All other contacts must be solved", result.message)
+    }
+
+    @Test
+    fun connectingBlueContactsUnlocksLockedBonusWithMatchingUnlockNumber() {
+        val lockedBonus5 = Bonus(type = BonusType.OtherDouble, state = BonusState.Locked, unlockNumber = 5)
+        val lockedBonus8 = Bonus(type = BonusType.Hint, state = BonusState.Locked, unlockNumber = 8)
+        val blue5A = Contact(ContactId(1), number = 5, type = ContactType.Blue)
+        val blue5B = Contact(ContactId(2), number = 5, type = ContactType.Blue)
+
+        val board = ContactsBoardState.empty().withBonuses(listOf(lockedBonus5, lockedBonus8))
+        val nextBoard = board.withSolvedContacts(blue5A, blue5B)
+
+        assertEquals(BonusState.Ready, nextBoard.bonuses[0].state)
+        assertEquals(5, nextBoard.bonuses[0].unlockNumber)
+        assertEquals(BonusState.Locked, nextBoard.bonuses[1].state)
+        assertEquals(8, nextBoard.bonuses[1].unlockNumber)
+    }
+
+    @Test
+    fun secondTimeConnectingSameNumberDoesNotRestoreUsedBonus() {
+        val alice = Player("alice")
+        val lockedBonus5 = Bonus(type = BonusType.OtherDouble, state = BonusState.Locked, unlockNumber = 5)
+        val blue5A = Contact(ContactId(1), number = 5, type = ContactType.Blue)
+        val blue5B = Contact(ContactId(2), number = 5, type = ContactType.Blue)
+        val blue5C = Contact(ContactId(3), number = 5, type = ContactType.Blue)
+        val blue5D = Contact(ContactId(4), number = 5, type = ContactType.Blue)
+
+        val board = ContactsBoardState.empty().withBonuses(listOf(lockedBonus5))
+
+        // First connection: unlocks bonus
+        val afterFirstConnect = board.withSolvedContacts(blue5A, blue5B)
+        assertEquals(BonusState.Ready, afterFirstConnect.bonuses.single().state)
+
+        // Bonus is used
+        val afterUsed = afterFirstConnect.withConsumedOtherDoubleBonus(alice)
+        assertEquals(BonusState.Used, afterUsed.bonuses.single().state)
+
+        // Second connection with same number: should NOT restore bonus
+        val afterSecondConnect = afterUsed.withSolvedContacts(blue5C, blue5D)
+        assertEquals(BonusState.Used, afterSecondConnect.bonuses.single().state)
+    }
+
+    @Test
+    fun secondTimeConnectingSameNumberLeavesUnusedReadyBonusAsReady() {
+        val lockedBonus5 = Bonus(type = BonusType.OtherDouble, state = BonusState.Locked, unlockNumber = 5)
+        val blue5A = Contact(ContactId(1), number = 5, type = ContactType.Blue)
+        val blue5B = Contact(ContactId(2), number = 5, type = ContactType.Blue)
+        val blue5C = Contact(ContactId(3), number = 5, type = ContactType.Blue)
+        val blue5D = Contact(ContactId(4), number = 5, type = ContactType.Blue)
+
+        val board = ContactsBoardState.empty().withBonuses(listOf(lockedBonus5))
+
+        val afterFirstConnect = board.withSolvedContacts(blue5A, blue5B)
+        assertEquals(BonusState.Ready, afterFirstConnect.bonuses.single().state)
+
+        val afterSecondConnect = afterFirstConnect.withSolvedContacts(blue5C, blue5D)
+        assertEquals(BonusState.Ready, afterSecondConnect.bonuses.single().state)
+    }
+
+    @Test
+    fun connectingYellowOrRedContactsDoesNotUnlockBonus() {
+        val lockedBonus5 = Bonus(type = BonusType.OtherDouble, state = BonusState.Locked, unlockNumber = 5)
+        val yellow5 = Contact(ContactId(1), number = 5, type = ContactType.Yellow)
+        val red5 = Contact(ContactId(2), number = 5, type = ContactType.Red)
+
+        val board = ContactsBoardState.empty().withBonuses(listOf(lockedBonus5))
+
+        val afterYellow = board.withSolvedContacts(yellow5)
+        assertEquals(BonusState.Locked, afterYellow.bonuses.single().state)
+
+        val afterRed = afterYellow.withSolvedContacts(red5)
+        assertEquals(BonusState.Locked, afterRed.bonuses.single().state)
+    }
+
+    @Test
+    fun standardConnectActionUnlocksMatchingBonus() {
+        val alice = Player("alice")
+        val bob = Player("bob")
+        val alice5 = Contact(ContactId(1), number = 5, type = ContactType.Blue)
+        val bob5 = Contact(ContactId(2), number = 5, type = ContactType.Blue)
+        val lockedBonus5 = Bonus(type = BonusType.OtherDouble, state = BonusState.Locked, unlockNumber = 5)
+
+        val state = ContactsBoardState(
+            pool = listOf(alice5, bob5),
+            racks = listOf(
+                ContactsBoardState.Rack(alice, listOf(alice5.id)),
+                ContactsBoardState.Rack(bob, listOf(bob5.id)),
+            ),
+            solved = emptySet(),
+            bonuses = listOf(lockedBonus5),
+        )
+
+        val result = state.applyAction(alice, ActionType.StandardConnect, setOf(alice5), setOf(bob5))
+        assertIs<ActionExecutionResult.Success>(result)
+        assertEquals(BonusState.Ready, result.state.bonuses.single().state)
     }
 
     private fun validationState(): ValidationState {

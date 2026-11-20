@@ -83,7 +83,7 @@ class GamesManagerTest {
             playerUids,
             manager.notificationRecipientUids(
                 game,
-                ContactsGameState.GamePhase.GameOver("finished"),
+                ContactsGameState.GamePhase.GameOver(ContactsGameOverReason.EmptyGame),
             ),
         )
     }

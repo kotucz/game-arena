@@ -324,8 +324,31 @@ data class ContactsBoardState internal constructor(
     }
 
     fun withSolvedContacts(vararg contacts: Contact): ContactsBoardState {
+        return withSolvedContacts(contacts.asList())
+    }
+
+    fun withSolvedContacts(contacts: Collection<Contact>): ContactsBoardState {
+        val newlySolved = contacts.filter { it.id !in solved }
+        val newlyConnectedBlueNumbers = newlySolved
+            .filter { it.type == ContactType.Blue }
+            .map { it.number }
+            .toSet()
+
+        val updatedBonuses = if (newlyConnectedBlueNumbers.isEmpty()) {
+            bonuses
+        } else {
+            bonuses.map { bonus ->
+                if (bonus.state == BonusState.Locked && bonus.unlockNumber != null && bonus.unlockNumber in newlyConnectedBlueNumbers) {
+                    bonus.copy(state = BonusState.Ready)
+                } else {
+                    bonus
+                }
+            }
+        }
+
         return this.copy(
             solved = solved + contacts.map { it.id },
+            bonuses = updatedBonuses,
         )
     }
 

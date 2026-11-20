@@ -188,7 +188,7 @@ fun ContactsBoardState.handleSoloConnectRest(
     }
     if (playerContacts != remainingOwnedContacts) throw InvalidActionException("All remaining contacts with the number must be selected")
 
-    val newState = withSolvedContacts(*playerContacts.toTypedArray())
+    val newState = withSolvedContacts(playerContacts)
         .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState, Next.EndOfTurn(player)) {
         player(player)
@@ -213,7 +213,7 @@ fun ContactsBoardState.handleFinishReds(
     if (!canFinishReds(player)) throw InvalidActionException("All other contacts must be solved")
     if (playerContacts != unsolvedContacts(player).toSet()) throw InvalidActionException("All remaining red contacts must be selected")
 
-    val newState = withSolvedContacts(*playerContacts.toTypedArray())
+    val newState = withSolvedContacts(playerContacts)
         .withLastActionResult(ContactsBoardState.ActionResult())
     return ActionExecutionResult.Success(newState, Next.EndOfTurn(player)) {
         player(player)

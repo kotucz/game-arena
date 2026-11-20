@@ -1,6 +1,8 @@
 package cz.kotu.game.contacts.model
 
 import cz.kotu.game.contacts.model.ContactsBoardState.ActionType
+import cz.kotu.game.contacts.model.ContactsBoardState.BonusState
+import cz.kotu.game.contacts.model.ContactsBoardState.BonusType
 import cz.kotu.game.contacts.model.ContactsBoardState.Contact
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactId
 import cz.kotu.game.contacts.model.ContactsBoardState.ContactType
@@ -35,6 +37,12 @@ class ContactsGameStateTest {
                 Rack(bob, listOf(ContactId(2))),
             ),
             solved = emptySet(),
+            bonuses = listOf(
+                ContactsBoardState.Bonus(BonusType.Hint, BonusState.Ready, player = alice),
+                ContactsBoardState.Bonus(BonusType.OtherDouble, BonusState.Ready, player = alice),
+                ContactsBoardState.Bonus(BonusType.OtherTriple, BonusState.Ready, player = alice),
+                ContactsBoardState.Bonus(BonusType.MyDouble, BonusState.Ready, player = alice),
+            ),
         ),
         activePlayer: Player = alice,
     ): ContactsGameState {
@@ -278,8 +286,8 @@ class ContactsGameStateTest {
             ),
             solved = setOf(solvedBlue.id),
             bonuses = listOf(
-                ContactsBoardState.Bonus(ContactsBoardState.BonusType.Hint, ContactsBoardState.BonusState.Ready, player = alice),
-                ContactsBoardState.Bonus(ContactsBoardState.BonusType.OtherDouble, ContactsBoardState.BonusState.Locked, unlockNumber = 5),
+                ContactsBoardState.Bonus(BonusType.Hint, BonusState.Ready, player = alice),
+                ContactsBoardState.Bonus(BonusType.OtherDouble, BonusState.Locked, unlockNumber = 5),
             ),
         )
         val state = createBaseState(board)
