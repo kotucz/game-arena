@@ -20,10 +20,15 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +43,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.DefaultShadowColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -68,6 +75,8 @@ import gamearena.app.shared.generated.resources.contacts_bonus_other_triple
 import gamearena.app.shared.generated.resources.contacts_bonus_state_locked
 import gamearena.app.shared.generated.resources.contacts_bonus_state_ready
 import gamearena.app.shared.generated.resources.contacts_bonus_state_used
+import gamearena.app.shared.generated.resources.contacts_bonus_connect_prefix
+import gamearena.app.shared.generated.resources.contacts_bonus_unlock_hint
 import gamearena.app.shared.generated.resources.contacts_common_bonuses
 import gamearena.app.shared.generated.resources.contacts_confirm_selection
 import gamearena.app.shared.generated.resources.contacts_connecting
@@ -547,7 +556,7 @@ private fun BonusChip(bonus: ContactsBoardState.Bonus) {
         },
     )
 
-    val stateText = when (bonus.state) {
+    val stateDescription = when (bonus.state) {
         ContactsBoardState.BonusState.Locked ->
             stringResource(
                 Res.string.contacts_bonus_state_locked,
@@ -561,16 +570,18 @@ private fun BonusChip(bonus: ContactsBoardState.Bonus) {
             stringResource(Res.string.contacts_bonus_state_used)
     }
 
-    val (chipBackground, chipText) = when (bonus.state) {
+    val (chipBackground, chipText, icon) = when (bonus.state) {
         ContactsBoardState.BonusState.Ready ->
-            MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+            Triple(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, Icons.Filled.CheckCircle)
 
         ContactsBoardState.BonusState.Locked ->
-            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+            Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, Icons.Filled.Lock)
 
         ContactsBoardState.BonusState.Used ->
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) to MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                alpha = 0.5f,
+            Triple(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                Icons.Filled.Check,
             )
     }
 
@@ -580,12 +591,34 @@ private fun BonusChip(bonus: ContactsBoardState.Bonus) {
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(
-            text = "$typeName: $stateText",
-            color = chipText,
-            fontSize = 12.sp,
-            fontWeight = if (bonus.state == ContactsBoardState.BonusState.Ready) FontWeight.Bold else FontWeight.Normal,
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            bonus.unlockNumber?.let { num ->
+                val unlockHint = stringResource(Res.string.contacts_bonus_unlock_hint, num.toString())
+                Text(
+                    text = stringResource(Res.string.contacts_bonus_connect_prefix, num.toString()),
+                    color = chipText,
+                    fontSize = 12.sp,
+                    modifier = Modifier.semantics { contentDescription = unlockHint },
+                )
+            }
+
+            Text(
+                text = typeName,
+                color = chipText,
+                fontSize = 12.sp,
+                fontWeight = if (bonus.state == ContactsBoardState.BonusState.Ready) FontWeight.Bold else FontWeight.Normal,
+            )
+
+            Icon(
+                imageVector = icon,
+                contentDescription = stateDescription,
+                tint = chipText,
+                modifier = Modifier.size(16.dp),
+            )
+        }
     }
 }
 
