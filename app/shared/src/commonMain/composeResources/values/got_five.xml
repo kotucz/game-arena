@@ -1,0 +1,20 @@
+<resources>
+    <string name="got_five_check_solution">Check solution</string>
+    <string name="got_five_result_not_checked">Confirm solution in notes when ready</string>
+    <string name="got_five_result_five_tiles">Solution must contain 5 tiles:</string>
+    <string name="got_five_result_each_color">Solution must contain one tile of each color</string>
+    <string name="got_five_result_correct">Correct solution. Good job</string>
+    <string name="got_five_result_incorrect">Sorry. Incorrect solution</string>
+    <string name="got_five_notes">Notes</string>
+    <string name="got_five_notes_instructions">Tap or drag across tiles to mark your solution.</string>
+    <string name="got_five_pool">Pool</string>
+    <string name="got_five_offer">Offer</string>
+    <string name="got_five_next_move">Next move</string>
+    <string name="got_five_pick_pool">Pick new tile color from the pool</string>
+    <string name="got_five_pick_offer">Pick new tile from offer for number sort or dots compare</string>
+    <string name="got_five_use_sorting">Use %1$d for sorting</string>
+    <string name="got_five_or">or</string>
+    <string name="got_five_compare_dots">Pick a secret tile to compare dots: %1$s</string>
+    <string name="got_five_secret_tiles">Secret tiles</string>
+    <string name="got_five_secret_instructions">Find the values in ascending order from left to right.</string>
+</resources>
