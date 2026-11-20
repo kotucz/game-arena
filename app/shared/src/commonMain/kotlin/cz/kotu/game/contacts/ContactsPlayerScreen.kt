@@ -433,7 +433,7 @@ private fun SolvedContactsPool(pool: List<PlayerViewState.PoolContact>) {
                                     Text(
                                         text = hint,
                                         modifier = Modifier.align(Alignment.BottomCenter),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = Color.Black,
                                         fontSize = (poolTileHeight / 5.dp).sp,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center,
