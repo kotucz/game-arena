@@ -1,11 +1,15 @@
 package cz.kotu.game.tricks
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,6 +22,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,10 +37,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +68,7 @@ import gamearena.app.shared.generated.resources.tricks_tricks_won
 import gamearena.app.shared.generated.resources.tricks_trump
 import gamearena.app.shared.generated.resources.tricks_waiting_for_turn
 import gamearena.app.shared.generated.resources.tricks_your_turn
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -67,12 +78,17 @@ fun TricksPlayerScreen(
 ) {
     val viewState by viewModel.viewState.collectAsState()
     val errorMessage = viewModel.errorMessage
+    val verticalScrollState = rememberScrollState()
+    var lastAvailableState by remember { mutableStateOf<TricksPlayerViewState?>(null) }
+    LaunchedEffect(viewState) {
+        if (viewState != null) lastAvailableState = viewState
+    }
+    val state = viewState ?: lastAvailableState
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        val state = viewState
         if (state == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Loading game state…", style = MaterialTheme.typography.bodyLarge)
@@ -80,77 +96,121 @@ fun TricksPlayerScreen(
             return@Surface
         }
 
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val historyFillsAvailableSpace = maxHeight >= 680.dp
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (historyFillsAvailableSpace) Modifier
-                        else Modifier.verticalScroll(rememberScrollState()),
+        SharedTransitionLayout {
+            val sharedTransitionScope = this
+            var previousState by remember { mutableStateOf(state) }
+            var displayedState by remember { mutableStateOf(state) }
+            LaunchedEffect(state) {
+                val oldState = previousState
+                previousState = state
+
+                val justCompletedTrick = state.completedTricks.lastOrNull()?.takeIf { completed ->
+                    state.currentTrick.plays.isEmpty() &&
+                            completed !in oldState.completedTricks
+                }
+                if (justCompletedTrick != null) {
+                    displayedState = state.copy(
+                        currentTrick = justCompletedTrick.trick,
+                        completedTricks = oldState.completedTricks,
                     )
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                // Header: Player identity, turn status, trump indicator, tricks won
-                HeaderSection(state = state)
-
-                // Opponents summary
-                if (state.opponents.isNotEmpty()) {
-                    OpponentsSection(state = state)
-                }
-
-                HorizontalDivider()
-
-                if (historyFillsAvailableSpace) {
-                    if (state.completedTricks.isEmpty()) {
-                        Spacer(Modifier.weight(1f))
-                    } else {
-                        TrickHistorySection(
-                            state = state,
-                            modifier = Modifier.weight(1f),
-                            scrollToLatest = true,
-                        )
-                    }
+                    delay(600)
+                    displayedState = state
                 } else {
-                    TrickHistorySection(state = state)
+                    displayedState = state
                 }
-
-                // Active Trick Area
-                CurrentTrickSection(state = state)
-
-                // Error display
-                if (errorMessage != null) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text(
-                                text = errorMessage,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                style = MaterialTheme.typography.bodyMedium,
+            }
+            AnimatedContent(
+                targetState = displayedState,
+                transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+                label = "tricks card play",
+            ) { contentState ->
+                val visibilityScope = this
+                val state = contentState
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val historyFillsAvailableSpace = maxHeight >= 680.dp
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (historyFillsAvailableSpace) Modifier
+                                else Modifier.verticalScroll(verticalScrollState),
                             )
-                            TextButton(onClick = viewModel::clearError) {
-                                Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        // Header: Player identity, turn status, trump indicator, tricks won
+                        HeaderSection(state = state)
+
+                        // Opponents summary
+                        if (state.opponents.isNotEmpty()) {
+                            OpponentsSection(state = state)
+                        }
+
+                        HorizontalDivider()
+
+                        if (historyFillsAvailableSpace) {
+                            if (state.completedTricks.isEmpty()) {
+                                Spacer(Modifier.weight(1f))
+                            } else {
+                                TrickHistorySection(
+                                    state = state,
+                                    modifier = Modifier.weight(1f),
+                                    scrollToLatest = true,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = visibilityScope,
+                                )
+                            }
+                        } else {
+                            TrickHistorySection(
+                                state = state,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = visibilityScope,
+                            )
+                        }
+
+                        // Active Trick Area
+                        CurrentTrickSection(
+                            state = state,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = visibilityScope,
+                        )
+
+                        // Error display
+                        if (errorMessage != null) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = errorMessage,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    TextButton(onClick = viewModel::clearError) {
+                                        Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
+                                    }
+                                }
                             }
                         }
+
+                        HorizontalDivider()
+
+                        // Player's Hand
+                        PlayerHandSection(
+                            state = state,
+                            actionInProgress = viewModel.actionInProgress,
+                            onCardClick = viewModel::playCard,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = visibilityScope,
+                        )
                     }
                 }
-
-                HorizontalDivider()
-
-                // Player's Hand
-                PlayerHandSection(
-                    state = state,
-                    actionInProgress = viewModel.actionInProgress,
-                    onCardClick = viewModel::playCard,
-                )
             }
         }
     }
@@ -230,11 +290,13 @@ private fun HeaderSection(
                         if (phase.activePlayer == state.myPlayer.id) {
                             stringResource(Res.string.tricks_your_turn)
                         } else {
-                            val activeName = state.opponents.firstOrNull { it.player.id == phase.activePlayer }?.player?.username
-                                ?: phase.activePlayer.value
+                            val activeName =
+                                state.opponents.firstOrNull { it.player.id == phase.activePlayer }?.player?.username
+                                    ?: phase.activePlayer.value
                             stringResource(Res.string.tricks_waiting_for_turn, activeName)
                         }
                     }
+
                     is TricksGamePhase.GameOver -> stringResource(Res.string.tricks_game_over)
                 }
 
@@ -257,7 +319,9 @@ private fun HeaderSection(
 }
 
 @Composable
-private fun OpponentsSection(state: TricksPlayerViewState) {
+private fun OpponentsSection(
+    state: TricksPlayerViewState,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -304,7 +368,11 @@ private fun OpponentsSection(state: TricksPlayerViewState) {
 }
 
 @Composable
-private fun CurrentTrickSection(state: TricksPlayerViewState) {
+private fun CurrentTrickSection(
+    state: TricksPlayerViewState,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -364,7 +432,16 @@ private fun CurrentTrickSection(state: TricksPlayerViewState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 state.currentTrick.plays.forEach { play ->
-                    PlayedCardItem(play = play, state = state)
+                    PlayedCardItem(
+                        play = play,
+                        state = state,
+                        modifier = with(sharedTransitionScope) {
+                            Modifier.sharedElement(
+                                sharedContentState = rememberSharedContentState(play.card),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            )
+                        },
+                    )
                 }
             }
         }
@@ -376,13 +453,15 @@ private fun TrickHistorySection(
     state: TricksPlayerViewState,
     modifier: Modifier = Modifier,
     scrollToLatest: Boolean = false,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     if (state.completedTricks.isEmpty()) return
 
     if (scrollToLatest) {
         val listState = rememberLazyListState()
         LaunchedEffect(state.completedTricks.size) {
-            listState.scrollToItem(state.completedTricks.lastIndex)
+            listState.animateScrollToItem(state.completedTricks.lastIndex)
         }
 
         Column(
@@ -401,7 +480,13 @@ private fun TrickHistorySection(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 itemsIndexed(state.completedTricks) { index, completedTrick ->
-                    CompletedTrickItem(index = index, trick = completedTrick, state = state)
+                    CompletedTrickItem(
+                        index = index,
+                        trick = completedTrick,
+                        state = state,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
                 }
             }
         }
@@ -419,7 +504,13 @@ private fun TrickHistorySection(
         )
 
         state.completedTricks.forEachIndexed { index, completedTrick ->
-            CompletedTrickItem(index = index, trick = completedTrick, state = state)
+            CompletedTrickItem(
+                index = index,
+                trick = completedTrick,
+                state = state,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
         }
     }
 }
@@ -429,6 +520,8 @@ private fun CompletedTrickItem(
     index: Int,
     trick: CompletedTrick,
     state: TricksPlayerViewState,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     Column(
         modifier = Modifier
@@ -455,7 +548,16 @@ private fun CompletedTrickItem(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             trick.trick.plays.forEach { play ->
-                PlayedCardItem(play = play, state = state)
+                PlayedCardItem(
+                    play = play,
+                    state = state,
+                    modifier = with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(play.card),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    },
+                )
             }
         }
     }
@@ -465,6 +567,7 @@ private fun CompletedTrickItem(
 private fun PlayedCardItem(
     play: PlayedCard,
     state: TricksPlayerViewState,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -477,6 +580,7 @@ private fun PlayedCardItem(
         )
         TricksCardView(
             card = play.card,
+            modifier = modifier,
             isPlayable = false,
         )
     }
@@ -497,6 +601,8 @@ private fun PlayerHandSection(
     state: TricksPlayerViewState,
     actionInProgress: Boolean,
     onCardClick: (Card) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -520,6 +626,12 @@ private fun PlayerHandSection(
 
                 TricksCardView(
                     card = card,
+                    modifier = with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(card),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    },
                     isPlayable = isPlayable,
                     onClick = if (isPlayable) {
                         { onCardClick(card) }
