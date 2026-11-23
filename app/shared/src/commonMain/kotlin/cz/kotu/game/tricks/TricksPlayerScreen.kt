@@ -3,11 +3,16 @@ package cz.kotu.game.tricks
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,8 +40,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cz.kotu.game.tricks.model.Card
+import cz.kotu.game.tricks.model.CompletedTrick
 import cz.kotu.game.tricks.model.PlayedCard
 import cz.kotu.game.tricks.model.TricksGamePhase
+import cz.kotu.game.tricks.model.TricksPlayerId
 import cz.kotu.game.tricks.model.TricksPlayerViewState
 import gamearena.app.shared.generated.resources.Res
 import gamearena.app.shared.generated.resources.tricks_cards_in_hand
@@ -44,6 +52,8 @@ import gamearena.app.shared.generated.resources.tricks_empty_trick
 import gamearena.app.shared.generated.resources.tricks_game_over
 import gamearena.app.shared.generated.resources.tricks_lead_suit
 import gamearena.app.shared.generated.resources.tricks_no_trump
+import gamearena.app.shared.generated.resources.tricks_trick_history
+import gamearena.app.shared.generated.resources.tricks_trick_won_by
 import gamearena.app.shared.generated.resources.tricks_tricks_won
 import gamearena.app.shared.generated.resources.tricks_trump
 import gamearena.app.shared.generated.resources.tricks_waiting_for_turn
@@ -70,58 +80,78 @@ fun TricksPlayerScreen(
             return@Surface
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // Header: Player identity, turn status, trump indicator, tricks won
-            HeaderSection(state = state)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val historyFillsAvailableSpace = maxHeight >= 680.dp
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (historyFillsAvailableSpace) Modifier
+                        else Modifier.verticalScroll(rememberScrollState()),
+                    )
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Header: Player identity, turn status, trump indicator, tricks won
+                HeaderSection(state = state)
 
-            // Opponents summary
-            if (state.opponents.isNotEmpty()) {
-                OpponentsSection(state = state)
-            }
+                // Opponents summary
+                if (state.opponents.isNotEmpty()) {
+                    OpponentsSection(state = state)
+                }
 
-            HorizontalDivider()
+                HorizontalDivider()
 
-            // Active Trick Area
-            CurrentTrickSection(state = state)
-
-            // Error display
-            if (errorMessage != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = errorMessage,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodyMedium,
+                if (historyFillsAvailableSpace) {
+                    if (state.completedTricks.isEmpty()) {
+                        Spacer(Modifier.weight(1f))
+                    } else {
+                        TrickHistorySection(
+                            state = state,
+                            modifier = Modifier.weight(1f),
+                            scrollToLatest = true,
                         )
-                        TextButton(onClick = viewModel::clearError) {
-                            Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                } else {
+                    TrickHistorySection(state = state)
+                }
+
+                // Active Trick Area
+                CurrentTrickSection(state = state)
+
+                // Error display
+                if (errorMessage != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            TextButton(onClick = viewModel::clearError) {
+                                Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
+                            }
                         }
                     }
                 }
+
+                HorizontalDivider()
+
+                // Player's Hand
+                PlayerHandSection(
+                    state = state,
+                    actionInProgress = viewModel.actionInProgress,
+                    onCardClick = viewModel::playCard,
+                )
             }
-
-            HorizontalDivider()
-
-            // Player's Hand
-            PlayerHandSection(
-                state = state,
-                actionInProgress = viewModel.actionInProgress,
-                onCardClick = viewModel::playCard,
-            )
         }
     }
 }
@@ -342,23 +372,106 @@ private fun CurrentTrickSection(state: TricksPlayerViewState) {
 }
 
 @Composable
+private fun TrickHistorySection(
+    state: TricksPlayerViewState,
+    modifier: Modifier = Modifier,
+    scrollToLatest: Boolean = false,
+) {
+    if (state.completedTricks.isEmpty()) return
+
+    if (scrollToLatest) {
+        val listState = rememberLazyListState()
+        LaunchedEffect(state.completedTricks.size) {
+            listState.scrollToItem(state.completedTricks.lastIndex)
+        }
+
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(Res.string.tricks_trick_history),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                itemsIndexed(state.completedTricks) { index, completedTrick ->
+                    CompletedTrickItem(index = index, trick = completedTrick, state = state)
+                }
+            }
+        }
+        return
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.tricks_trick_history),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        state.completedTricks.forEachIndexed { index, completedTrick ->
+            CompletedTrickItem(index = index, trick = completedTrick, state = state)
+        }
+    }
+}
+
+@Composable
+private fun CompletedTrickItem(
+    index: Int,
+    trick: CompletedTrick,
+    state: TricksPlayerViewState,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        val winnerName = playerName(trick.winner, state)
+        Text(
+            text = stringResource(
+                Res.string.tricks_trick_won_by,
+                index + 1,
+                winnerName,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            trick.trick.plays.forEach { play ->
+                PlayedCardItem(play = play, state = state)
+            }
+        }
+    }
+}
+
+@Composable
 private fun PlayedCardItem(
     play: PlayedCard,
     state: TricksPlayerViewState,
 ) {
-    val playerName = if (play.player == state.myPlayer.id) {
-        state.myPlayer.username
-    } else {
-        state.opponents.firstOrNull { it.player.id == play.player }?.player?.username
-            ?: play.player.value
-    }
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = playerName,
+            text = playerName(play.player, state),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
         )
@@ -367,6 +480,16 @@ private fun PlayedCardItem(
             isPlayable = false,
         )
     }
+}
+
+private fun playerName(
+    playerId: TricksPlayerId,
+    state: TricksPlayerViewState,
+): String = if (playerId == state.myPlayer.id) {
+    state.myPlayer.username
+} else {
+    state.opponents.firstOrNull { it.player.id == playerId }?.player?.username
+        ?: playerId.value
 }
 
 @Composable

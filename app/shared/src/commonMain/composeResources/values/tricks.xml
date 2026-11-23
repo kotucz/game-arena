@@ -10,6 +10,8 @@
     <string name="tricks_lead_suit">Lead suit: %1$s</string>
     <string name="tricks_empty_trick">Lead a card to start the trick</string>
     <string name="tricks_current_trick">Trick %1$d</string>
+    <string name="tricks_trick_history">Trick History</string>
+    <string name="tricks_trick_won_by">Trick %1$d · Won by %2$s</string>
     <string name="tricks_new_game">New Game</string>
     <string name="tricks_start_local">Start Tricks (Local)</string>
     <string name="tricks_local_title">Tricks · Local Multiplayer</string>
