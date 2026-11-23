@@ -1,8 +1,8 @@
 package cz.kotu.gamearena
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -49,9 +49,11 @@ import gamearena.app.shared.generated.resources.arena_created
 import gamearena.app.shared.generated.resources.arena_debug
 import gamearena.app.shared.generated.resources.arena_filter_all_games
 import gamearena.app.shared.generated.resources.arena_filter_my_games
+import gamearena.app.shared.generated.resources.arena_local_games
+import gamearena.app.shared.generated.resources.arena_logout
 import gamearena.app.shared.generated.resources.arena_no_running_games
 import gamearena.app.shared.generated.resources.arena_not_logged_in
-import gamearena.app.shared.generated.resources.arena_logout
+import gamearena.app.shared.generated.resources.arena_online_games
 import gamearena.app.shared.generated.resources.arena_running_games
 import gamearena.app.shared.generated.resources.arena_start_got_five
 import gamearena.app.shared.generated.resources.arena_status
@@ -60,13 +62,13 @@ import gamearena.app.shared.generated.resources.arena_theme
 import gamearena.app.shared.generated.resources.arena_theme_dark
 import gamearena.app.shared.generated.resources.arena_theme_light
 import gamearena.app.shared.generated.resources.arena_theme_system
+import gamearena.app.shared.generated.resources.arena_try_again
+import gamearena.app.shared.generated.resources.contacts_game_name
 import gamearena.app.shared.generated.resources.contacts_status_empty_game
 import gamearena.app.shared.generated.resources.contacts_status_game_over_all_contacts_solved
 import gamearena.app.shared.generated.resources.contacts_status_game_over_red_connected
 import gamearena.app.shared.generated.resources.contacts_status_player_turn
 import gamearena.app.shared.generated.resources.contacts_status_waiting_for_multi_connect
-import gamearena.app.shared.generated.resources.arena_try_again
-import gamearena.app.shared.generated.resources.contacts_game_name
 import gamearena.app.shared.generated.resources.tricks_start_local
 import org.jetbrains.compose.resources.stringResource
 
@@ -84,6 +86,7 @@ fun GamesScreen(
     val error by viewModel.error.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
     val username = currentUser?.username
+    var gamesTab by remember { mutableStateOf(GamesTab.Online) }
 
     LaunchedEffect(Unit) {
         viewModel.observeLobby()
@@ -133,61 +136,96 @@ fun GamesScreen(
             }
         }
 
-        Button(onClick = onStartGotFive, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(Res.string.arena_start_got_five))
-        }
+        GamesTabSelector(
+            selectedTab = gamesTab,
+            onTabSelected = { gamesTab = it },
+        )
 
-        Button(onClick = onStartTricksLocal, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(Res.string.tricks_start_local))
-        }
+        when (gamesTab) {
+            GamesTab.Local -> {
+                Button(onClick = onStartGotFive, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.arena_start_got_five))
+                }
+                Button(onClick = onStartTricksLocal, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.tricks_start_local))
+                }
+            }
 
-        Button(
-            onClick = { viewModel.createGameDialogVisible.value = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(Res.string.arena_create_contacts_game))
-        }
+            GamesTab.Online -> {
+                Button(
+                    onClick = { viewModel.createGameDialogVisible.value = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(Res.string.arena_create_contacts_game))
+                }
 
-        Button(onClick = onDebugClick, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(Res.string.arena_debug))
+                HorizontalDivider()
+                Text(stringResource(Res.string.arena_running_games))
+                GameFilterSegmentedButton(
+                    selectedTab = viewModel.gameFilterMyAll.value,
+                    onTabSelected = { viewModel.gameFilterMyAll.value = it },
+                )
+
+                when {
+                    games == null && error == null -> CircularProgressIndicator()
+                    error != null -> {
+                        Text(error!!)
+                        Button(onClick = viewModel::loadGames) {
+                            Text(stringResource(Res.string.arena_try_again))
+                        }
+                    }
+
+                    games!!.isEmpty() -> Text(stringResource(Res.string.arena_no_running_games))
+                    else -> games!!
+                        .filter {
+                            viewModel.gameFilterMyAll.value == GameFilterTab.All ||
+                                    currentUser?.uid?.let { uid -> it.players.any { player -> player.uid == uid } } == true
+                        }
+                        .sortedByDescending { it.createdAt }
+                        .forEach { game ->
+                            RunningGameCard(
+                                game = game,
+                                onClick = { onGameClick(game) },
+                            )
+                        }
+                }
+            }
         }
 
         HorizontalDivider()
-
-        Text(stringResource(Res.string.arena_running_games))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.End),
-            verticalAlignment = CenterVertically,
-        ) {
-
-            GameFilterSegmentedButton(
-                selectedTab = viewModel.gameFilterMyAll.value,
-                onTabSelected = { viewModel.gameFilterMyAll.value = it },
-            )
+        Button(onClick = onDebugClick, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.arena_debug))
         }
+    }
+}
 
-        when {
-            games == null && error == null -> CircularProgressIndicator()
-            error != null -> {
-                Text(error!!)
-                Button(onClick = viewModel::loadGames) { Text(stringResource(Res.string.arena_try_again)) }
+private enum class GamesTab {
+    Online,
+    Local,
+}
+
+@Composable
+private fun GamesTabSelector(
+    selectedTab: GamesTab,
+    onTabSelected: (GamesTab) -> Unit,
+) {
+    val tabs = GamesTab.entries
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        tabs.forEachIndexed { index, tab ->
+            SegmentedButton(
+                selected = selectedTab == tab,
+                onClick = { onTabSelected(tab) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
+            ) {
+                Text(
+                    stringResource(
+                        when (tab) {
+                            GamesTab.Online -> Res.string.arena_online_games
+                            GamesTab.Local -> Res.string.arena_local_games
+                        },
+                    ),
+                )
             }
-
-            games!!.isEmpty() -> Text(stringResource(Res.string.arena_no_running_games))
-            else -> games!!
-                .filter {
-                    viewModel.gameFilterMyAll.value == GameFilterTab.All ||
-                        currentUser?.uid?.let { uid -> it.players.any { player -> player.uid == uid } } == true
-                }
-                .sortedByDescending { it.createdAt }
-                .forEach { game ->
-                    RunningGameCard(
-                        game = game,
-                        onClick = { onGameClick(game) },
-                    )
-                }
         }
     }
 }

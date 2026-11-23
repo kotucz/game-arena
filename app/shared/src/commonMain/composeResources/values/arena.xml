@@ -9,6 +9,8 @@
     <string name="arena_create_contacts_game">Create Contacts game</string>
     <string name="arena_debug">Debug</string>
     <string name="arena_running_games">Running games</string>
+    <string name="arena_online_games">Online games</string>
+    <string name="arena_local_games">Local games</string>
     <string name="arena_try_again">Try again</string>
     <string name="arena_no_running_games">There are no running multiplayer games.</string>
     <string name="arena_theme">Theme: %1$s</string>

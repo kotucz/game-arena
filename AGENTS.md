@@ -141,6 +141,11 @@ If a command invocation or project-specific command fails, document the
 corrected command or the cause in this file or the README when it is useful for
 future agents. Notify the user about it
 
+## Git changes
+
+- When creating new project files for a task, stage those files with `git add`
+  before finishing. Do not stage unrelated user changes.
+
 ## Gemini CLI
 
 # Private Project Memory - Manual File Update Workflow
