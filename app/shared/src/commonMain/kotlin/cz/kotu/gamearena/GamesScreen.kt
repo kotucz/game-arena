@@ -67,6 +67,7 @@ import gamearena.app.shared.generated.resources.contacts_status_player_turn
 import gamearena.app.shared.generated.resources.contacts_status_waiting_for_multi_connect
 import gamearena.app.shared.generated.resources.arena_try_again
 import gamearena.app.shared.generated.resources.contacts_game_name
+import gamearena.app.shared.generated.resources.tricks_start_local
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -75,6 +76,7 @@ fun GamesScreen(
     themeMode: AppThemeMode,
     onThemeModeChange: (AppThemeMode) -> Unit,
     onStartGotFive: () -> Unit,
+    onStartTricksLocal: () -> Unit,
     onDebugClick: () -> Unit,
     onGameClick: (RunningGame) -> Unit,
 ) {
@@ -133,6 +135,10 @@ fun GamesScreen(
 
         Button(onClick = onStartGotFive, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(Res.string.arena_start_got_five))
+        }
+
+        Button(onClick = onStartTricksLocal, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.tricks_start_local))
         }
 
         Button(

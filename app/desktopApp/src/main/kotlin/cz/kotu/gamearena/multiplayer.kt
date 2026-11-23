@@ -11,8 +11,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import cz.kotu.tools.DebugHttpClientFactory
-import cz.kotu.tools.MultiPlayerScreen
+import cz.kotu.game.tricks.TricksMultiPlayerScreen
 import java.util.prefs.Preferences
 
 fun main() = application {
@@ -23,14 +22,10 @@ fun main() = application {
             defaultPosition = WindowPosition(Alignment.TopStart)
         ),
         onCloseRequest = ::exitApplication,
-        title = "Game Arena - Multiplayer Debug",
+        title = "Game Arena - Tricks Local Multiplayer",
     ) {
-        val debugHttpClientFactory: DebugHttpClientFactory = { username ->
-            createInMemoryAuthHttpClient(tokenProvider = { "test-token:uid-$username" })
-        }
-        MultiPlayerScreen(
-            remoteGameId = "", // empty = local play - fill game id to join remote game
-            debugHttpClientFactory,
+        TricksMultiPlayerScreen(
+            onBack = {},
         )
     }
 }

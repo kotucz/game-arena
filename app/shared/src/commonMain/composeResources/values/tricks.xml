@@ -1,0 +1,18 @@
+<resources>
+    <string name="tricks_game_name">Tricks</string>
+    <string name="tricks_your_turn">Your turn to play a card</string>
+    <string name="tricks_waiting_for_turn">Waiting for %1$s…</string>
+    <string name="tricks_game_over">Game Over</string>
+    <string name="tricks_tricks_won">Tricks won: %1$d</string>
+    <string name="tricks_trump">Trump: %1$s</string>
+    <string name="tricks_no_trump">Trump: None</string>
+    <string name="tricks_cards_in_hand">%1$d cards</string>
+    <string name="tricks_lead_suit">Lead suit: %1$s</string>
+    <string name="tricks_empty_trick">Lead a card to start the trick</string>
+    <string name="tricks_current_trick">Trick %1$d</string>
+    <string name="tricks_new_game">New Game</string>
+    <string name="tricks_start_local">Start Tricks (Local)</string>
+    <string name="tricks_local_title">Tricks · Local Multiplayer</string>
+    <string name="tricks_player_count">Number of players</string>
+    <string name="tricks_viewing_as">Viewing as</string>
+</resources>

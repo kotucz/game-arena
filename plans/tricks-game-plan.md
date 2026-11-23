@@ -61,12 +61,12 @@ flowchart TD
   - Opponent hand sanitization.
 
 ### Phase 2: Local Multi-Player UI & Interactive Testbed (`app/shared`)
-- [ ] Create `TricksPlayerScreen`:
+- [x] Create `TricksPlayerScreen`:
   - Active trick area displaying cards on table.
   - Player's hand with clear visual cards (colored suit + rank number) and clickable interaction for legal cards.
   - Status header: active turn, trump suit indicator, trick counter.
-- [ ] Create `TricksPlayerViewModel` backed by `TricksPlayerFacade`.
-- [ ] Create `TricksMultiPlayerScreen` / debug entry:
+- [x] Create `TricksPlayerViewModel` backed by `TricksPlayerFacade`.
+- [x] Create `TricksMultiPlayerScreen` / debug entry:
   - Renders 2–4 player views side-by-side or switchable locally on one screen.
   - Allows full interactive play without server, network, or auth dependencies.
 - [ ] User testing & feedback on card feel, layout, and gameplay flow.

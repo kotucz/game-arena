@@ -35,6 +35,7 @@ import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
 import cz.kotu.game.gotfive.GameViewModel
 import cz.kotu.game.gotfive.Table
+import cz.kotu.game.tricks.TricksMultiPlayerScreen
 import gamearena.app.shared.generated.resources.Res
 import gamearena.app.shared.generated.resources.arena_back_to_games
 import gamearena.app.shared.generated.resources.arena_enable_notifications
@@ -45,6 +46,7 @@ import kotlin.String
 
 internal const val GAMES_ROUTE = "games"
 internal const val GOT_FIVE_ROUTE = "got-five"
+internal const val TRICKS_LOCAL_ROUTE = "tricks-local"
 internal const val DEBUG_ROUTE = "debug"
 internal const val CONTACTS_GAME_ROUTE = "game/{gameId}"
 internal const val CONTACTS_GAME_ID_ARGUMENT = "gameId"
@@ -121,6 +123,7 @@ fun App(
                                 settings.putString(THEME_MODE_KEY, mode.name)
                             },
                             onStartGotFive = { navController.navigate(GOT_FIVE_ROUTE) },
+                            onStartTricksLocal = { navController.navigate(TRICKS_LOCAL_ROUTE) },
                             onDebugClick = { navController.navigate(DEBUG_ROUTE) },
                             onGameClick = { game -> navController.navigate("game/${game.id}") },
                         )
@@ -131,6 +134,10 @@ fun App(
                             appComponent = appComponent,
                             onBack = { navController.popBackStack() },
                         )
+                    }
+
+                    composable(TRICKS_LOCAL_ROUTE) {
+                        TricksMultiPlayerScreen(onBack = { navController.popBackStack() })
                     }
 
                     composable(DEBUG_ROUTE) {
