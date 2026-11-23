@@ -14,6 +14,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.tricks.model.TricksGameConfig
 import cz.kotu.game.tricks.model.TricksGameFacadeImpl
+import cz.kotu.game.tricks.model.TricksGamePhase
 import cz.kotu.game.tricks.model.TricksPlayer
 import cz.kotu.game.tricks.model.TricksPlayerGameAdapter
 import cz.kotu.game.tricks.model.TricksPlayerId
@@ -67,6 +70,14 @@ fun TricksMultiPlayerScreen(
             )
         },
     )
+    val playerViewState by playerViewModel.viewState.collectAsState()
+
+    LaunchedEffect(game.generation, playerViewState?.phase) {
+        val phase = playerViewState?.phase
+        if (phase is TricksGamePhase.PlayerTurn) {
+            selectedPlayerId = phase.activePlayer
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
