@@ -43,6 +43,7 @@ import gamearena.app.shared.generated.resources.tricks_player_count
 import gamearena.app.shared.generated.resources.tricks_viewing_as
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 private data class LocalTricksGame(
     val generation: Int,
@@ -54,6 +55,7 @@ private data class LocalTricksGame(
 fun TricksMultiPlayerScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    animationDurationScale: Float = 1f,
 ) {
     var game by remember { mutableStateOf(createLocalGame(generation = 0, playerCount = 4)) }
     var selectedPlayerId by remember { mutableStateOf(game.players.first().id) }
@@ -85,9 +87,9 @@ fun TricksMultiPlayerScreen(
             val justCompletedTrick = playerViewState?.completedTricks?.isNotEmpty() == true &&
                     playerViewState?.currentTrick?.plays?.isEmpty() == true
             if (justCompletedTrick) {
-                delay(1300)
+                delay(animationDurationMillis(1300, animationDurationScale).milliseconds)
             } else {
-                delay(700)
+                delay(animationDurationMillis(700, animationDurationScale).milliseconds)
             }
             selectedPlayerId = phase.activePlayer
         }
@@ -151,7 +153,11 @@ fun TricksMultiPlayerScreen(
                 itemKey = { "${game.generation}:${it.id.value}" },
                 modifier = Modifier.weight(1f),
             ) { player ->
-                TricksPlayerPanel(game = game, player = player)
+                TricksPlayerPanel(
+                    game = game,
+                    player = player,
+                    animationDurationScale = animationDurationScale,
+                )
             }
         } else {
             Text(stringResource(Res.string.tricks_viewing_as))
@@ -171,6 +177,7 @@ fun TricksMultiPlayerScreen(
                 TricksPlayerPanel(
                     game = game,
                     player = selectedPlayer,
+                    animationDurationScale = animationDurationScale,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -183,6 +190,7 @@ private fun TricksPlayerPanel(
     game: LocalTricksGame,
     player: TricksPlayer,
     modifier: Modifier = Modifier,
+    animationDurationScale: Float,
 ) {
     val playerViewModel: TricksPlayerViewModel = viewModel(
         key = "${game.generation}:${player.id.value}",
@@ -195,7 +203,11 @@ private fun TricksPlayerPanel(
             )
         },
     )
-    TricksPlayerScreen(viewModel = playerViewModel, modifier = modifier)
+    TricksPlayerScreen(
+        viewModel = playerViewModel,
+        modifier = modifier,
+        animationDurationScale = animationDurationScale,
+    )
 }
 
 private fun createLocalGame(generation: Int, playerCount: Int): LocalTricksGame {

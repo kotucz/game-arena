@@ -2,7 +2,9 @@ package cz.kotu.game.tricks
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SharedTransitionDefaults
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
@@ -71,6 +73,7 @@ import gamearena.app.shared.generated.resources.tricks_waiting_for_turn
 import gamearena.app.shared.generated.resources.tricks_your_turn
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 private class TricksCardTracker {
     private val opponentHandTokens = mutableMapOf<TricksPlayerId, MutableList<String>>()
@@ -110,11 +113,19 @@ private class TricksCardTracker {
     }
 }
 
+/**
+ * @param animationDurationScale multiplier for animation durations; values above 1 slow them down for debugging.
+ */
 @Composable
 fun TricksPlayerScreen(
     viewModel: TricksPlayerViewModel,
     modifier: Modifier = Modifier,
+    animationDurationScale: Float = 1f,
 ) {
+    require(animationDurationScale.isFinite() && animationDurationScale >= 1f) {
+        "animationDurationScale must be finite and at least 1"
+    }
+
     val viewState by viewModel.viewState.collectAsState()
     val errorMessage = viewModel.errorMessage
     var lastAvailableState by remember { mutableStateOf<TricksPlayerViewState?>(null) }
@@ -154,7 +165,7 @@ fun TricksPlayerScreen(
                         currentTrick = justCompletedTrick.trick,
                         completedTricks = oldState.completedTricks,
                     )
-                    delay(750)
+                    delay(animationDurationMillis(750, animationDurationScale).toLong())
                     displayedState = state
                 } else {
                     displayedState = state
@@ -163,7 +174,14 @@ fun TricksPlayerScreen(
             AnimatedContent(
                 targetState = displayedState,
                 transitionSpec = {
-                    (fadeIn(animationSpec = tween(350)) togetherWith ExitTransition.KeepUntilTransitionsFinished)
+                    (fadeIn(
+                        animationSpec = tween(
+                            animationDurationMillis(
+                                350,
+                                animationDurationScale,
+                            ),
+                        ),
+                    ) togetherWith ExitTransition.KeepUntilTransitionsFinished)
                         .apply { targetContentZIndex = 1f }
                 },
                 label = "tricks card play",
@@ -186,6 +204,7 @@ fun TricksPlayerScreen(
                             cardTracker = cardTracker,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = visibilityScope,
+                            animationDurationScale = animationDurationScale,
                         )
                     }
 
@@ -197,6 +216,7 @@ fun TricksPlayerScreen(
                         cardTracker = cardTracker,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = visibilityScope,
+                        animationDurationScale = animationDurationScale,
                         modifier = Modifier.weight(1f),
                     )
 
@@ -234,6 +254,7 @@ fun TricksPlayerScreen(
                         onCardClick = viewModel::playCard,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = visibilityScope,
+                        animationDurationScale = animationDurationScale,
                     )
                 }
             }
@@ -349,6 +370,7 @@ private fun OpponentsSection(
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    animationDurationScale: Float,
 ) {
     Row(
         modifier = Modifier
@@ -386,6 +408,7 @@ private fun OpponentsSection(
                         cardTracker = cardTracker,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
+                        animationDurationScale = animationDurationScale,
                     )
                     Text(
                         text = "(${opponent.cardCount})",
@@ -409,6 +432,7 @@ private fun OpponentMiniHand(
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    animationDurationScale: Float,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -424,6 +448,7 @@ private fun OpponentMiniHand(
                         modifier = Modifier.sharedElement(
                             sharedContentState = rememberSharedContentState(token),
                             animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = scaledBoundsTransform(animationDurationScale),
                         ),
                         width = 18.dp,
                         height = 26.dp,
@@ -486,6 +511,7 @@ private fun TricksFeedSection(
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    animationDurationScale: Float,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -515,6 +541,7 @@ private fun TricksFeedSection(
                 cardTracker = cardTracker,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
+                animationDurationScale = animationDurationScale,
             )
         }
 
@@ -533,6 +560,7 @@ private fun TricksFeedSection(
                     cardTracker = cardTracker,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
+                    animationDurationScale = animationDurationScale,
                 )
             }
         }
@@ -546,6 +574,7 @@ private fun ActiveTrickItem(
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    animationDurationScale: Float,
 ) {
     val allPlayersPlayed = state.currentTrick.plays.size >= state.opponents.size + 1
     val winnerPlay = if (allPlayersPlayed) state.currentTrick.evaluateWinner(state.trumpSuit) else null
@@ -657,10 +686,12 @@ private fun ActiveTrickItem(
                             state = state,
                             isWinningCard = isWinnerCard,
                             animateFlip = !isMyCard,
+                            animationDurationScale = animationDurationScale,
                             modifier = with(sharedTransitionScope) {
                                 Modifier.sharedElement(
                                     sharedContentState = rememberSharedContentState(cardToken),
                                     animatedVisibilityScope = animatedVisibilityScope,
+                                    boundsTransform = scaledBoundsTransform(animationDurationScale),
                                 )
                             },
                         )
@@ -679,6 +710,7 @@ private fun CompletedTrickItem(
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    animationDurationScale: Float,
 ) {
     Surface(
         shape = RoundedCornerShape(10.dp),
@@ -726,12 +758,14 @@ private fun CompletedTrickItem(
                         state = state,
                         isWinningCard = isWinningCard,
                         animateFlip = false,
+                        animationDurationScale = animationDurationScale,
                         width = 50.dp,
                         height = 70.dp,
                         modifier = with(sharedTransitionScope) {
                             Modifier.sharedElement(
                                 sharedContentState = rememberSharedContentState(cardToken),
                                 animatedVisibilityScope = animatedVisibilityScope,
+                                boundsTransform = scaledBoundsTransform(animationDurationScale),
                             )
                         },
                     )
@@ -784,6 +818,7 @@ private fun PlayedCardItem(
     modifier: Modifier = Modifier,
     isWinningCard: Boolean = false,
     animateFlip: Boolean = false,
+    animationDurationScale: Float,
     width: Dp = 64.dp,
     height: Dp = 90.dp,
 ) {
@@ -828,7 +863,7 @@ private fun PlayedCardItem(
                     )
                 },
                 modifier = modifier,
-                durationMillis = 350,
+                durationMillis = animationDurationMillis(350, animationDurationScale),
             )
         } else {
             TricksCardView(
@@ -861,6 +896,7 @@ private fun PlayerHandSection(
     onCardClick: (Card) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    animationDurationScale: Float,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -890,6 +926,7 @@ private fun PlayerHandSection(
                             Modifier.sharedElement(
                                 sharedContentState = rememberSharedContentState(cardToken),
                                 animatedVisibilityScope = animatedVisibilityScope,
+                                boundsTransform = scaledBoundsTransform(animationDurationScale),
                             )
                         },
                         isPlayable = isPlayable,
@@ -902,3 +939,15 @@ private fun PlayerHandSection(
         }
     }
 }
+
+internal fun animationDurationMillis(durationMillis: Int, scale: Float): Int =
+    (durationMillis * scale).roundToInt().coerceAtLeast(1)
+
+private fun scaledBoundsTransform(scale: Float) =
+    if (scale == 1f) {
+        SharedTransitionDefaults.BoundsTransform
+    } else {
+        BoundsTransform { _, _ ->
+            tween(durationMillis = animationDurationMillis(500, scale))
+        }
+    }
