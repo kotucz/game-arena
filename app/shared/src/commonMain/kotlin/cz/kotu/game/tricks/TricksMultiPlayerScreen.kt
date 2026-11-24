@@ -25,19 +25,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 import cz.kotu.game.tricks.model.TricksGameConfig
 import cz.kotu.game.tricks.model.TricksGameFacadeImpl
 import cz.kotu.game.tricks.model.TricksGamePhase
 import cz.kotu.game.tricks.model.TricksPlayer
 import cz.kotu.game.tricks.model.TricksPlayerGameAdapter
 import cz.kotu.game.tricks.model.TricksPlayerId
+import cz.kotu.tools.SideBySideScreens
 import gamearena.app.shared.generated.resources.Res
 import gamearena.app.shared.generated.resources.arena_back_to_games
+import gamearena.app.shared.generated.resources.arena_one_at_a_time
+import gamearena.app.shared.generated.resources.arena_player_screen_layout
+import gamearena.app.shared.generated.resources.arena_side_by_side
 import gamearena.app.shared.generated.resources.tricks_local_title
 import gamearena.app.shared.generated.resources.tricks_new_game
 import gamearena.app.shared.generated.resources.tricks_player_count
 import gamearena.app.shared.generated.resources.tricks_viewing_as
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 private data class LocalTricksGame(
@@ -53,6 +57,7 @@ fun TricksMultiPlayerScreen(
 ) {
     var game by remember { mutableStateOf(createLocalGame(generation = 0, playerCount = 4)) }
     var selectedPlayerId by remember { mutableStateOf(game.players.first().id) }
+    var showSideBySide by remember { mutableStateOf(false) }
 
     fun startNewGame(playerCount: Int) {
         val nextGame = createLocalGame(game.generation + 1, playerCount)
@@ -122,25 +127,75 @@ fun TricksMultiPlayerScreen(
             }
         }
 
-        Text(stringResource(Res.string.tricks_viewing_as))
+        Text(stringResource(Res.string.arena_player_screen_layout))
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            game.players.forEachIndexed { index, player ->
+            listOf(false, true).forEachIndexed { index, sideBySide ->
                 SegmentedButton(
-                    selected = player.id == selectedPlayer.id,
-                    onClick = { selectedPlayerId = player.id },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = game.players.size),
+                    selected = sideBySide == showSideBySide,
+                    onClick = { showSideBySide = sideBySide },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
                 ) {
-                    Text(player.username)
+                    Text(
+                        stringResource(
+                            if (sideBySide) Res.string.arena_side_by_side
+                            else Res.string.arena_one_at_a_time,
+                        ),
+                    )
                 }
             }
         }
 
-        key(selectedPlayerId) {
-            TricksPlayerScreen(
-                viewModel = playerViewModel,
-            )
+        if (showSideBySide) {
+            SideBySideScreens(
+                items = game.players,
+                itemKey = { "${game.generation}:${it.id.value}" },
+                modifier = Modifier.weight(1f),
+            ) { player ->
+                TricksPlayerPanel(game = game, player = player)
+            }
+        } else {
+            Text(stringResource(Res.string.tricks_viewing_as))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                game.players.forEachIndexed { index, player ->
+                    SegmentedButton(
+                        selected = player.id == selectedPlayer.id,
+                        onClick = { selectedPlayerId = player.id },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = game.players.size),
+                    ) {
+                        Text(player.username)
+                    }
+                }
+            }
+
+            key(selectedPlayerId) {
+                TricksPlayerPanel(
+                    game = game,
+                    player = selectedPlayer,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun TricksPlayerPanel(
+    game: LocalTricksGame,
+    player: TricksPlayer,
+    modifier: Modifier = Modifier,
+) {
+    val playerViewModel: TricksPlayerViewModel = viewModel(
+        key = "${game.generation}:${player.id.value}",
+        initializer = {
+            TricksPlayerViewModel(
+                TricksPlayerGameAdapter(
+                    player = player,
+                    gameFacade = game.facade,
+                ),
+            )
+        },
+    )
+    TricksPlayerScreen(viewModel = playerViewModel, modifier = modifier)
 }
 
 private fun createLocalGame(generation: Int, playerCount: Int): LocalTricksGame {

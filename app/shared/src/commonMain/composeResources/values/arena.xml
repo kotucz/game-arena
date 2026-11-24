@@ -55,4 +55,7 @@
     <string name="arena_no_users_match">No users match this filter.</string>
     <string name="arena_added">(added)</string>
     <string name="arena_close">Close</string>
+    <string name="arena_player_screen_layout">Player screen layout</string>
+    <string name="arena_one_at_a_time">One at a time</string>
+    <string name="arena_side_by_side">Side by side</string>
 </resources>

@@ -1,14 +1,7 @@
 package cz.kotu.tools
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.kotu.game.contacts.ContactsPlayerScreen
 import cz.kotu.game.contacts.ContactsPlayerViewModel
@@ -29,31 +22,26 @@ fun MultiPlayerScreen(
         },
     )
 
-    Row(modifier = Modifier.fillMaxSize()) {
-        viewModel.players.forEach { player ->
-            val playerViewModel: ContactsPlayerViewModel = viewModel(
-                key = player.username,
-                initializer = {
-                    ContactsPlayerViewModel(
-                        gameFacade = viewModel.gameFacadeForPlayer(player.username),
-                        aiPlayerAdapter = remoteGameId.takeIf(String::isNotBlank)?.let { gameId ->
-                            AiPlayerAdapter(
-                                aiClient = appComponent.aiClient,
-                                gameId = gameId,
-                                aiPlayerId = AiPlayerAdapter.GEMINI_AI_PLAYER_USERNAME,
-                            )
-                        },
-                    )
-                },
-            )
+    SideBySideScreens(
+        items = viewModel.players,
+        itemKey = { it.username },
+    ) { player ->
+        val playerViewModel: ContactsPlayerViewModel = viewModel(
+            key = player.username,
+            initializer = {
+                ContactsPlayerViewModel(
+                    gameFacade = viewModel.gameFacadeForPlayer(player.username),
+                    aiPlayerAdapter = remoteGameId.takeIf(String::isNotBlank)?.let { gameId ->
+                        AiPlayerAdapter(
+                            aiClient = appComponent.aiClient,
+                            gameId = gameId,
+                            aiPlayerId = AiPlayerAdapter.GEMINI_AI_PLAYER_USERNAME,
+                        )
+                    },
+                )
+            },
+        )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, MaterialTheme.colorScheme.outline),
-            ) {
-                ContactsPlayerScreen(playerViewModel)
-            }
-        }
+        ContactsPlayerScreen(playerViewModel)
     }
 }
