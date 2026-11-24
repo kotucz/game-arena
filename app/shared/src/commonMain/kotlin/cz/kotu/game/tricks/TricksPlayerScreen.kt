@@ -2,7 +2,6 @@ package cz.kotu.game.tricks
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
@@ -41,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,7 +48,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import cz.kotu.common.Flippable
 import cz.kotu.game.tricks.model.Card
 import cz.kotu.game.tricks.model.CompletedTrick
 import cz.kotu.game.tricks.model.PlayedCard
@@ -56,13 +59,11 @@ import cz.kotu.game.tricks.model.TricksGamePhase
 import cz.kotu.game.tricks.model.TricksPlayerId
 import cz.kotu.game.tricks.model.TricksPlayerViewState
 import gamearena.app.shared.generated.resources.Res
-import gamearena.app.shared.generated.resources.tricks_cards_in_hand
 import gamearena.app.shared.generated.resources.tricks_current_trick
 import gamearena.app.shared.generated.resources.tricks_empty_trick
 import gamearena.app.shared.generated.resources.tricks_game_over
 import gamearena.app.shared.generated.resources.tricks_lead_suit
 import gamearena.app.shared.generated.resources.tricks_no_trump
-import gamearena.app.shared.generated.resources.tricks_trick_history
 import gamearena.app.shared.generated.resources.tricks_trick_won_by
 import gamearena.app.shared.generated.resources.tricks_tricks_won
 import gamearena.app.shared.generated.resources.tricks_trump
@@ -70,6 +71,44 @@ import gamearena.app.shared.generated.resources.tricks_waiting_for_turn
 import gamearena.app.shared.generated.resources.tricks_your_turn
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+
+private class TricksCardTracker {
+    private val opponentHandTokens = mutableMapOf<TricksPlayerId, MutableList<String>>()
+    private val playedCardTokens = mutableMapOf<Card, String>()
+    private val nextTokenIndex = mutableMapOf<TricksPlayerId, Int>()
+
+    fun sync(completedTricksCount: Int, activePlaysCount: Int) {
+        if (completedTricksCount == 0 && activePlaysCount == 0 && playedCardTokens.isNotEmpty()) {
+            opponentHandTokens.clear()
+            playedCardTokens.clear()
+            nextTokenIndex.clear()
+        }
+    }
+
+    fun tokenForHandCard(player: TricksPlayerId, slotIndex: Int): String {
+        val list = opponentHandTokens.getOrPut(player) { mutableListOf() }
+        while (list.size <= slotIndex) {
+            val idx = nextTokenIndex.getOrPut(player) { 0 }
+            nextTokenIndex[player] = idx + 1
+            list.add("opp_${player.value}_c$idx")
+        }
+        return list[slotIndex]
+    }
+
+    fun tokenForPlayedCard(player: TricksPlayerId, card: Card, isMyPlayer: Boolean): String {
+        if (isMyPlayer) return card.toString()
+        return playedCardTokens.getOrPut(card) {
+            val list = opponentHandTokens[player]
+            if (!list.isNullOrEmpty()) {
+                list.removeLast()
+            } else {
+                val idx = nextTokenIndex.getOrPut(player) { 0 }
+                nextTokenIndex[player] = idx + 1
+                "opp_${player.value}_c$idx"
+            }
+        }
+    }
+}
 
 @Composable
 fun TricksPlayerScreen(
@@ -97,6 +136,9 @@ fun TricksPlayerScreen(
 
         SharedTransitionLayout {
             val sharedTransitionScope = this
+            val cardTracker = remember(state.myPlayer.id) { TricksCardTracker() }
+            cardTracker.sync(state.completedTricks.size, state.currentTrick.plays.size)
+
             var previousState by remember(state.myPlayer.id) { mutableStateOf(state) }
             var displayedState by remember(state.myPlayer.id) { mutableStateOf(state) }
             LaunchedEffect(state) {
@@ -139,7 +181,12 @@ fun TricksPlayerScreen(
 
                     // Opponents summary
                     if (state.opponents.isNotEmpty()) {
-                        OpponentsSection(state = state)
+                        OpponentsSection(
+                            state = state,
+                            cardTracker = cardTracker,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = visibilityScope,
+                        )
                     }
 
                     HorizontalDivider()
@@ -147,6 +194,7 @@ fun TricksPlayerScreen(
                     // Unified chat-like stream of tricks
                     TricksFeedSection(
                         state = state,
+                        cardTracker = cardTracker,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = visibilityScope,
                         modifier = Modifier.weight(1f),
@@ -181,6 +229,7 @@ fun TricksPlayerScreen(
                     // Player's Hand
                     PlayerHandSection(
                         state = state,
+                        cardTracker = cardTracker,
                         actionInProgress = viewModel.actionInProgress,
                         onCardClick = viewModel::playCard,
                         sharedTransitionScope = sharedTransitionScope,
@@ -297,6 +346,9 @@ private fun HeaderSection(
 @Composable
 private fun OpponentsSection(
     state: TricksPlayerViewState,
+    cardTracker: TricksCardTracker,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     Row(
         modifier = Modifier
@@ -328,8 +380,15 @@ private fun OpponentsSection(
                         fontWeight = if (isOpponentTurn) FontWeight.Bold else FontWeight.Medium,
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    OpponentMiniHand(
+                        playerId = opponent.player.id,
+                        cardCount = opponent.cardCount,
+                        cardTracker = cardTracker,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
                     Text(
-                        text = stringResource(Res.string.tricks_cards_in_hand, opponent.cardCount),
+                        text = "(${opponent.cardCount})",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -344,8 +403,87 @@ private fun OpponentsSection(
 }
 
 @Composable
+private fun OpponentMiniHand(
+    playerId: TricksPlayerId,
+    cardCount: Int,
+    cardTracker: TricksCardTracker,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy((-11).dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (i in 0 until cardCount) {
+            val token = cardTracker.tokenForHandCard(playerId, i)
+            key(token) {
+                with(sharedTransitionScope) {
+                    MiniCardBack(
+                        modifier = Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(token),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        ),
+                        width = 18.dp,
+                        height = 26.dp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniCardBack(
+    modifier: Modifier = Modifier,
+    width: Dp = 18.dp,
+    height: Dp = 26.dp,
+) {
+    val isMini = width < 30.dp
+    val shape = RoundedCornerShape(if (isMini) 3.dp else 8.dp)
+    Card(
+        modifier = modifier
+            .size(width = width, height = height)
+            .border(
+                width = if (isMini) 0.5.dp else 1.5.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                shape = shape,
+            ),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isMini) 1.dp else 3.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(if (isMini) 2.dp else 4.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(if (isMini) 2.dp else 6.dp),
+                )
+                .border(
+                    width = if (isMini) 0.5.dp else 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(if (isMini) 2.dp else 6.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "🂠",
+                fontSize = if (isMini) 10.sp else 26.sp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
 private fun TricksFeedSection(
     state: TricksPlayerViewState,
+    cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
@@ -374,6 +512,7 @@ private fun TricksFeedSection(
                 index = index,
                 trick = completedTrick,
                 state = state,
+                cardTracker = cardTracker,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
             )
@@ -391,6 +530,7 @@ private fun TricksFeedSection(
                 ActiveTrickItem(
                     trickNumber = activeTrickNumber,
                     state = state,
+                    cardTracker = cardTracker,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                 )
@@ -403,6 +543,7 @@ private fun TricksFeedSection(
 private fun ActiveTrickItem(
     trickNumber: Int,
     state: TricksPlayerViewState,
+    cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
@@ -509,13 +650,16 @@ private fun ActiveTrickItem(
                 ) {
                     state.currentTrick.plays.forEach { play ->
                         val isWinnerCard = winnerPlay?.card == play.card
+                        val isMyCard = play.player == state.myPlayer.id
+                        val cardToken = cardTracker.tokenForPlayedCard(play.player, play.card, isMyPlayer = isMyCard)
                         PlayedCardItem(
                             play = play,
                             state = state,
                             isWinningCard = isWinnerCard,
+                            animateFlip = !isMyCard,
                             modifier = with(sharedTransitionScope) {
                                 Modifier.sharedElement(
-                                    sharedContentState = rememberSharedContentState(play.card),
+                                    sharedContentState = rememberSharedContentState(cardToken),
                                     animatedVisibilityScope = animatedVisibilityScope,
                                 )
                             },
@@ -532,6 +676,7 @@ private fun CompletedTrickItem(
     index: Int,
     trick: CompletedTrick,
     state: TricksPlayerViewState,
+    cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
@@ -574,15 +719,18 @@ private fun CompletedTrickItem(
             ) {
                 trick.trick.plays.forEach { play ->
                     val isWinningCard = play.player == trick.winner
+                    val isMyCard = play.player == state.myPlayer.id
+                    val cardToken = cardTracker.tokenForPlayedCard(play.player, play.card, isMyPlayer = isMyCard)
                     PlayedCardItem(
                         play = play,
                         state = state,
                         isWinningCard = isWinningCard,
+                        animateFlip = false,
                         width = 50.dp,
                         height = 70.dp,
                         modifier = with(sharedTransitionScope) {
                             Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState(play.card),
+                                sharedContentState = rememberSharedContentState(cardToken),
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )
                         },
@@ -635,8 +783,9 @@ private fun PlayedCardItem(
     state: TricksPlayerViewState,
     modifier: Modifier = Modifier,
     isWinningCard: Boolean = false,
-    width: androidx.compose.ui.unit.Dp = 64.dp,
-    height: androidx.compose.ui.unit.Dp = 90.dp,
+    animateFlip: Boolean = false,
+    width: Dp = 64.dp,
+    height: Dp = 90.dp,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -656,14 +805,41 @@ private fun PlayedCardItem(
                 Text("👑", style = MaterialTheme.typography.labelSmall)
             }
         }
-        TricksCardView(
-            card = play.card,
-            modifier = modifier,
-            isPlayable = false,
-            isSelected = isWinningCard,
-            width = width,
-            height = height,
-        )
+        if (animateFlip) {
+            var isFlipped by remember(play.card) { mutableStateOf(false) }
+            LaunchedEffect(play.card) {
+                isFlipped = true
+            }
+            Flippable(
+                isFlipped = isFlipped,
+                front = {
+                    MiniCardBack(
+                        width = width,
+                        height = height,
+                    )
+                },
+                back = {
+                    TricksCardView(
+                        card = play.card,
+                        isPlayable = false,
+                        isSelected = isWinningCard,
+                        width = width,
+                        height = height,
+                    )
+                },
+                modifier = modifier,
+                durationMillis = 350,
+            )
+        } else {
+            TricksCardView(
+                card = play.card,
+                modifier = modifier,
+                isPlayable = false,
+                isSelected = isWinningCard,
+                width = width,
+                height = height,
+            )
+        }
     }
 }
 
@@ -680,6 +856,7 @@ private fun playerName(
 @Composable
 private fun PlayerHandSection(
     state: TricksPlayerViewState,
+    cardTracker: TricksCardTracker,
     actionInProgress: Boolean,
     onCardClick: (Card) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
@@ -704,20 +881,23 @@ private fun PlayerHandSection(
                 val isPlayable = state.isMyTurn &&
                         !actionInProgress &&
                         state.legalPlays.contains(card)
+                val cardToken = cardTracker.tokenForPlayedCard(state.myPlayer.id, card, isMyPlayer = true)
 
-                TricksCardView(
-                    card = card,
-                    modifier = with(sharedTransitionScope) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(card),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        )
-                    },
-                    isPlayable = isPlayable,
-                    onClick = if (isPlayable) {
-                        { onCardClick(card) }
-                    } else null,
-                )
+                key(cardToken) {
+                    TricksCardView(
+                        card = card,
+                        modifier = with(sharedTransitionScope) {
+                            Modifier.sharedElement(
+                                sharedContentState = rememberSharedContentState(cardToken),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            )
+                        },
+                        isPlayable = isPlayable,
+                        onClick = if (isPlayable) {
+                            { onCardClick(card) }
+                        } else null,
+                    )
+                }
             }
         }
     }
