@@ -9,16 +9,15 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +29,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -80,7 +78,6 @@ fun TricksPlayerScreen(
 ) {
     val viewState by viewModel.viewState.collectAsState()
     val errorMessage = viewModel.errorMessage
-    val verticalScrollState = rememberScrollState()
     var lastAvailableState by remember { mutableStateOf<TricksPlayerViewState?>(null) }
     LaunchedEffect(viewState) {
         if (viewState != null) lastAvailableState = viewState
@@ -131,86 +128,64 @@ fun TricksPlayerScreen(
             ) { contentState ->
                 val visibilityScope = this
                 val state = contentState
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val historyFillsAvailableSpace = maxHeight >= 680.dp
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(
-                                if (historyFillsAvailableSpace) Modifier
-                                else Modifier.verticalScroll(verticalScrollState),
-                            )
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        // Header: Player identity, turn status, trump indicator, tricks won
-                        HeaderSection(state = state)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // Header: Player identity, turn status, trump indicator, tricks won
+                    HeaderSection(state = state)
 
-                        // Opponents summary
-                        if (state.opponents.isNotEmpty()) {
-                            OpponentsSection(state = state)
-                        }
+                    // Opponents summary
+                    if (state.opponents.isNotEmpty()) {
+                        OpponentsSection(state = state)
+                    }
 
-                        HorizontalDivider()
+                    HorizontalDivider()
 
-                        if (historyFillsAvailableSpace) {
-                            TrickHistorySection(
-                                state = state,
-                                modifier = Modifier.weight(1f),
-                                scrollToLatest = true,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = visibilityScope,
-                            )
-                        } else {
-                            TrickHistorySection(
-                                state = state,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = visibilityScope,
-                            )
-                        }
+                    // Unified chat-like stream of tricks
+                    TricksFeedSection(
+                        state = state,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = visibilityScope,
+                        modifier = Modifier.weight(1f),
+                    )
 
-                        // Active Trick Area
-                        CurrentTrickSection(
-                            state = state,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = visibilityScope,
-                        )
-
-                        // Error display
-                        if (errorMessage != null) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth(),
+                    // Error display
+                    if (errorMessage != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(
-                                        text = errorMessage,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    TextButton(onClick = viewModel::clearError) {
-                                        Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
-                                    }
+                                Text(
+                                    text = errorMessage,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                TextButton(onClick = viewModel::clearError) {
+                                    Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
                                 }
                             }
                         }
-
-                        HorizontalDivider()
-
-                        // Player's Hand
-                        PlayerHandSection(
-                            state = state,
-                            actionInProgress = viewModel.actionInProgress,
-                            onCardClick = viewModel::playCard,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = visibilityScope,
-                        )
                     }
+
+                    HorizontalDivider()
+
+                    // Player's Hand
+                    PlayerHandSection(
+                        state = state,
+                        actionInProgress = viewModel.actionInProgress,
+                        onCardClick = viewModel::playCard,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = visibilityScope,
+                    )
                 }
             }
         }
@@ -369,73 +344,242 @@ private fun OpponentsSection(
 }
 
 @Composable
-private fun CurrentTrickSection(
+private fun TricksFeedSection(
+    state: TricksPlayerViewState,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    val isGameOver = state.phase is TricksGamePhase.GameOver
+    val activeTrickNumber = state.completedTricks.size + 1
+
+    LaunchedEffect(state.completedTricks.size, state.currentTrick.plays.size, isGameOver) {
+        val totalCount = state.completedTricks.size + 1
+        if (totalCount > 0) {
+            listState.animateScrollToItem(totalCount - 1)
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Bottom),
+    ) {
+        itemsIndexed(
+            items = state.completedTricks,
+            key = { index, trick -> "completed_trick_${index}_${trick.winner.value}" },
+        ) { index, completedTrick ->
+            CompletedTrickItem(
+                index = index,
+                trick = completedTrick,
+                state = state,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        }
+
+        if (isGameOver) {
+            item(key = "game_over_card") {
+                GameOverSummaryCard(
+                    phase = state.phase as TricksGamePhase.GameOver,
+                    state = state,
+                )
+            }
+        } else {
+            item(key = "active_trick_$activeTrickNumber") {
+                ActiveTrickItem(
+                    trickNumber = activeTrickNumber,
+                    state = state,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveTrickItem(
+    trickNumber: Int,
     state: TricksPlayerViewState,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(
-                    Res.string.tricks_current_trick,
-                    state.completedTricks.size + if (state.phase is TricksGamePhase.GameOver) 0 else 1,
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
+    val allPlayersPlayed = state.currentTrick.plays.size >= state.opponents.size + 1
+    val winnerPlay = if (allPlayersPlayed) state.currentTrick.evaluateWinner(state.trumpSuit) else null
 
-            state.currentTrick.leadSuit?.let { lead ->
-                Text(
-                    text = stringResource(Res.string.tricks_lead_suit, lead.label),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = suitColor(lead),
-                    fontWeight = FontWeight.Bold,
-                )
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (winnerPlay != null) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        },
+        border = BorderStroke(
+            width = if (winnerPlay != null) 2.dp else 1.5.dp,
+            color = if (winnerPlay != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(Res.string.tricks_current_trick, trickNumber),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (winnerPlay != null) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ) {
+                            Text(
+                                text = "🏆 Won by ${playerName(winnerPlay.player, state)}",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    } else {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ) {
+                            Text(
+                                text = "Current",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+
+                state.currentTrick.leadSuit?.let { lead ->
+                    Text(
+                        text = stringResource(Res.string.tricks_lead_suit, lead.label),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = suitColor(lead),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            if (state.currentTrick.plays.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(90.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(8.dp),
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(8.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.tricks_empty_trick),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    state.currentTrick.plays.forEach { play ->
+                        val isWinnerCard = winnerPlay?.card == play.card
+                        PlayedCardItem(
+                            play = play,
+                            state = state,
+                            isWinningCard = isWinnerCard,
+                            modifier = with(sharedTransitionScope) {
+                                Modifier.sharedElement(
+                                    sharedContentState = rememberSharedContentState(play.card),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                )
+                            },
+                        )
+                    }
+                }
             }
         }
+    }
+}
 
-        if (state.currentTrick.plays.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(12.dp),
-                    ),
-                contentAlignment = Alignment.Center,
+@Composable
+private fun CompletedTrickItem(
+    index: Int,
+    trick: CompletedTrick,
+    state: TricksPlayerViewState,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            val winnerName = playerName(trick.winner, state)
+            val isMyWin = trick.winner == state.myPlayer.id
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(Res.string.tricks_empty_trick),
+                    text = stringResource(
+                        Res.string.tricks_trick_won_by,
+                        index + 1,
+                        winnerName,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (isMyWin) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isMyWin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )
             }
-        } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                state.currentTrick.plays.forEach { play ->
+                trick.trick.plays.forEach { play ->
+                    val isWinningCard = play.player == trick.winner
                     PlayedCardItem(
                         play = play,
                         state = state,
+                        isWinningCard = isWinningCard,
+                        width = 50.dp,
+                        height = 70.dp,
                         modifier = with(sharedTransitionScope) {
                             Modifier.sharedElement(
                                 sharedContentState = rememberSharedContentState(play.card),
@@ -450,134 +594,35 @@ private fun CurrentTrickSection(
 }
 
 @Composable
-private fun TrickHistorySection(
+private fun GameOverSummaryCard(
+    phase: TricksGamePhase.GameOver,
     state: TricksPlayerViewState,
-    modifier: Modifier = Modifier,
-    scrollToLatest: Boolean = false,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    if (scrollToLatest) {
-        val listState = rememberLazyListState()
-        if (state.completedTricks.isNotEmpty()) {
-            LaunchedEffect(state.completedTricks.size) {
-                listState.animateScrollToItem(state.completedTricks.lastIndex)
-            }
-        }
-
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
         Column(
-            modifier = modifier.fillMaxWidth(),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringResource(Res.string.tricks_trick_history),
+                text = "🏁 ${stringResource(Res.string.tricks_game_over)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
-
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (state.completedTricks.isEmpty()) {
-                    item(key = "empty_history_placeholder") {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "No completed tricks yet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            )
-                        }
-                    }
-                } else {
-                    itemsIndexed(
-                        items = state.completedTricks,
-                        key = { index, trick -> "trick_${index}_${trick.winner.value}" },
-                    ) { index, completedTrick ->
-                        CompletedTrickItem(
-                            index = index,
-                            trick = completedTrick,
-                            state = state,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        )
-                    }
-                }
-            }
-        }
-        return
-    }
-
-    if (state.completedTricks.isEmpty()) return
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringResource(Res.string.tricks_trick_history),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        state.completedTricks.forEachIndexed { index, completedTrick ->
-            CompletedTrickItem(
-                index = index,
-                trick = completedTrick,
-                state = state,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CompletedTrickItem(
-    index: Int,
-    trick: CompletedTrick,
-    state: TricksPlayerViewState,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                shape = RoundedCornerShape(8.dp),
-            )
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        val winnerName = playerName(trick.winner, state)
-        Text(
-            text = stringResource(
-                Res.string.tricks_trick_won_by,
-                index + 1,
-                winnerName,
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-        )
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            trick.trick.plays.forEach { play ->
-                PlayedCardItem(
-                    play = play,
-                    state = state,
-                    modifier = with(sharedTransitionScope) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(play.card),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        )
-                    },
+            val winnerEntry = phase.tricksWon.maxByOrNull { it.value }
+            if (winnerEntry != null) {
+                val winnerName = playerName(winnerEntry.key, state)
+                Text(
+                    text = "Winner: $winnerName (${winnerEntry.value} tricks) 🏆",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -589,20 +634,35 @@ private fun PlayedCardItem(
     play: PlayedCard,
     state: TricksPlayerViewState,
     modifier: Modifier = Modifier,
+    isWinningCard: Boolean = false,
+    width: androidx.compose.ui.unit.Dp = 64.dp,
+    height: androidx.compose.ui.unit.Dp = 90.dp,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(
-            text = playerName(play.player, state),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = playerName(play.player, state),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (isWinningCard) FontWeight.Bold else FontWeight.Normal,
+                color = if (isWinningCard) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+            if (isWinningCard) {
+                Text("👑", style = MaterialTheme.typography.labelSmall)
+            }
+        }
         TricksCardView(
             card = play.card,
             modifier = modifier,
             isPlayable = false,
+            isSelected = isWinningCard,
+            width = width,
+            height = height,
         )
     }
 }
