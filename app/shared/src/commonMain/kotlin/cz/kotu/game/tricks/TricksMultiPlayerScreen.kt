@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import cz.kotu.game.tricks.model.TricksGameConfig
 import cz.kotu.game.tricks.model.TricksGameFacadeImpl
 import cz.kotu.game.tricks.model.TricksGamePhase
@@ -74,7 +76,14 @@ fun TricksMultiPlayerScreen(
 
     LaunchedEffect(game.generation, playerViewState?.phase) {
         val phase = playerViewState?.phase
-        if (phase is TricksGamePhase.PlayerTurn) {
+        if (phase is TricksGamePhase.PlayerTurn && phase.activePlayer != selectedPlayerId) {
+            val justCompletedTrick = playerViewState?.completedTricks?.isNotEmpty() == true &&
+                    playerViewState?.currentTrick?.plays?.isEmpty() == true
+            if (justCompletedTrick) {
+                delay(1300)
+            } else {
+                delay(700)
+            }
             selectedPlayerId = phase.activePlayer
         }
     }
@@ -126,9 +135,11 @@ fun TricksMultiPlayerScreen(
             }
         }
 
-        TricksPlayerScreen(
-            viewModel = playerViewModel,
-        )
+        key(selectedPlayerId) {
+            TricksPlayerScreen(
+                viewModel = playerViewModel,
+            )
+        }
     }
 }
 

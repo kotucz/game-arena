@@ -6,6 +6,8 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -98,8 +100,8 @@ fun TricksPlayerScreen(
 
         SharedTransitionLayout {
             val sharedTransitionScope = this
-            var previousState by remember { mutableStateOf(state) }
-            var displayedState by remember { mutableStateOf(state) }
+            var previousState by remember(state.myPlayer.id) { mutableStateOf(state) }
+            var displayedState by remember(state.myPlayer.id) { mutableStateOf(state) }
             LaunchedEffect(state) {
                 val oldState = previousState
                 previousState = state
@@ -113,7 +115,7 @@ fun TricksPlayerScreen(
                         currentTrick = justCompletedTrick.trick,
                         completedTricks = oldState.completedTricks,
                     )
-                    delay(600)
+                    delay(750)
                     displayedState = state
                 } else {
                     displayedState = state
@@ -121,7 +123,10 @@ fun TricksPlayerScreen(
             }
             AnimatedContent(
                 targetState = displayedState,
-                transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(350)) togetherWith ExitTransition.KeepUntilTransitionsFinished)
+                        .apply { targetContentZIndex = 1f }
+                },
                 label = "tricks card play",
             ) { contentState ->
                 val visibilityScope = this
@@ -149,17 +154,13 @@ fun TricksPlayerScreen(
                         HorizontalDivider()
 
                         if (historyFillsAvailableSpace) {
-                            if (state.completedTricks.isEmpty()) {
-                                Spacer(Modifier.weight(1f))
-                            } else {
-                                TrickHistorySection(
-                                    state = state,
-                                    modifier = Modifier.weight(1f),
-                                    scrollToLatest = true,
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = visibilityScope,
-                                )
-                            }
+                            TrickHistorySection(
+                                state = state,
+                                modifier = Modifier.weight(1f),
+                                scrollToLatest = true,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = visibilityScope,
+                            )
                         } else {
                             TrickHistorySection(
                                 state = state,
@@ -456,12 +457,12 @@ private fun TrickHistorySection(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    if (state.completedTricks.isEmpty()) return
-
     if (scrollToLatest) {
         val listState = rememberLazyListState()
-        LaunchedEffect(state.completedTricks.size) {
-            listState.animateScrollToItem(state.completedTricks.lastIndex)
+        if (state.completedTricks.isNotEmpty()) {
+            LaunchedEffect(state.completedTricks.size) {
+                listState.animateScrollToItem(state.completedTricks.lastIndex)
+            }
         }
 
         Column(
@@ -479,19 +480,39 @@ private fun TrickHistorySection(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                itemsIndexed(state.completedTricks) { index, completedTrick ->
-                    CompletedTrickItem(
-                        index = index,
-                        trick = completedTrick,
-                        state = state,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope,
-                    )
+                if (state.completedTricks.isEmpty()) {
+                    item(key = "empty_history_placeholder") {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "No completed tricks yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(
+                        items = state.completedTricks,
+                        key = { index, trick -> "trick_${index}_${trick.winner.value}" },
+                    ) { index, completedTrick ->
+                        CompletedTrickItem(
+                            index = index,
+                            trick = completedTrick,
+                            state = state,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    }
                 }
             }
         }
         return
     }
+
+    if (state.completedTricks.isEmpty()) return
 
     Column(
         modifier = modifier.fillMaxWidth(),
