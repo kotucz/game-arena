@@ -1,4 +1,4 @@
-package cz.kotu.game.contacts
+package cz.kotu.common
 
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.core.animateFloat
