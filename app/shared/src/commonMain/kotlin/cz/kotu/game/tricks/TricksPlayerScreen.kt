@@ -48,13 +48,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.MotionDurationScale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import cz.kotu.common.Flippable
 import cz.kotu.game.tricks.model.Card
 import cz.kotu.game.tricks.model.PlayedCard
 import cz.kotu.game.tricks.model.Trick
@@ -68,12 +66,12 @@ import gamearena.app.shared.generated.resources.tricks_game_over
 import gamearena.app.shared.generated.resources.tricks_lead_suit
 import gamearena.app.shared.generated.resources.tricks_no_trump
 import gamearena.app.shared.generated.resources.tricks_trick_won_by
-import kotlinx.coroutines.withContext
 import gamearena.app.shared.generated.resources.tricks_tricks_won
 import gamearena.app.shared.generated.resources.tricks_trump
 import gamearena.app.shared.generated.resources.tricks_waiting_for_turn
 import gamearena.app.shared.generated.resources.tricks_your_turn
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -440,63 +438,19 @@ private fun OpponentMiniHand(
             val token = cardTracker.tokenForHandCard(playerId, i)
             key(token) {
                 with(sharedTransitionScope) {
-                    MiniCardBack(
+                    TricksCardView(
+                        card = null,
                         modifier = Modifier.sharedElement(
                             sharedContentState = rememberSharedContentState(token),
                             animatedVisibilityScope = animatedVisibilityScope,
                             boundsTransform = scaledBoundsTransform(animationDurationScale),
                         ),
+                        isFaceUp = false,
                         width = 18.dp,
                         height = 26.dp,
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MiniCardBack(
-    modifier: Modifier = Modifier,
-    width: Dp = 18.dp,
-    height: Dp = 26.dp,
-) {
-    val isMini = width < 30.dp
-    val shape = RoundedCornerShape(if (isMini) 3.dp else 8.dp)
-    Card(
-        modifier = modifier
-            .size(width = width, height = height)
-            .border(
-                width = if (isMini) 0.5.dp else 1.5.dp,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                shape = shape,
-            ),
-        shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isMini) 1.dp else 3.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(if (isMini) 2.dp else 4.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(if (isMini) 2.dp else 6.dp),
-                )
-                .border(
-                    width = if (isMini) 0.5.dp else 1.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(if (isMini) 2.dp else 6.dp),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "🂠",
-                fontSize = if (isMini) 10.sp else 26.sp,
-                color = MaterialTheme.colorScheme.primary,
-            )
         }
     }
 }
@@ -800,41 +754,17 @@ private fun PlayedCardItem(
                 Text("👑", style = MaterialTheme.typography.labelSmall)
             }
         }
-        if (animateFlip) {
-            var isFlipped by remember(play.card) { mutableStateOf(false) }
-            LaunchedEffect(play.card) {
-                isFlipped = true
-            }
-            Flippable(
-                isFlipped = isFlipped,
-                front = {
-                    MiniCardBack(
-                        width = width,
-                        height = height,
-                    )
-                },
-                back = {
-                    TricksCardView(
-                        card = play.card,
-                        isPlayable = false,
-                        isSelected = isWinningCard,
-                        width = width,
-                        height = height,
-                    )
-                },
-                modifier = modifier,
-                durationMillis = animationDurationMillis(350, animationDurationScale),
-            )
-        } else {
-            TricksCardView(
-                card = play.card,
-                modifier = modifier,
-                isPlayable = false,
-                isSelected = isWinningCard,
-                width = width,
-                height = height,
-            )
-        }
+        TricksCardView(
+            card = play.card,
+            modifier = modifier,
+            isFaceUp = true,
+            animateFlip = animateFlip,
+            isPlayable = false,
+            isSelected = isWinningCard,
+            width = width,
+            height = height,
+            flipDurationMillis = animationDurationMillis(350, animationDurationScale),
+        )
     }
 }
 
