@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cz.kotu.game.tricks.model.Card
 import cz.kotu.game.tricks.model.PlayedCard
+import cz.kotu.game.tricks.model.Suit
 import cz.kotu.game.tricks.model.Trick
 import cz.kotu.game.tricks.model.TricksGamePhase
 import cz.kotu.game.tricks.model.TricksPlayerId
@@ -626,7 +627,7 @@ private fun TrickItem(
                 }
             }
 
-            if (trick.plays.isEmpty()) {
+            if (trick.plays.isEmpty() && !isActive) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -662,24 +663,47 @@ private fun TrickItem(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        plays.forEach { play ->
-                            val isWinnerCard = winnerId == play.player
-                            val isMyCard = play.player == state.myPlayer.id
-                            val cardToken =
-                                cardTracker.tokenForPlayedCard(play.player, play.card, isMyPlayer = isMyCard)
-                            PlayedCardItem(
-                                play = play,
-                                state = state,
-                                isWinningCard = isWinnerCard,
-                                animateFlip = isActive && !isMyCard && play == trick.plays.lastOrNull(),
-                                animationDurationScale = animationDurationScale,
-                                modifier = with(sharedTransitionScope) {
+                        val firstPlayer = if (isActive) {
+                            plays.firstOrNull()?.player
+                                ?: (state.phase as? TricksGamePhase.PlayerTurn)?.activePlayer
+                                ?: state.playerOrder.first()
+                        } else {
+                            plays.firstOrNull()?.player
+                        }
+                        val playerOrder = if (isActive) {
+                            state.playerOrder.rotateFrom(firstPlayer ?: state.playerOrder.first())
+                        } else {
+                            plays.map { it.player }
+                        }
+                        val activePlayer = (state.phase as? TricksGamePhase.PlayerTurn)?.activePlayer
+
+                        playerOrder.forEach { playerId ->
+                            val play = plays.firstOrNull { it.player == playerId }
+                            val cardModifier = play?.let {
+                                val cardToken = cardTracker.tokenForPlayedCard(
+                                    play.player,
+                                    play.card,
+                                    isMyPlayer = play.player == state.myPlayer.id,
+                                )
+                                with(sharedTransitionScope) {
                                     Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState(cardToken),
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         boundsTransform = scaledBoundsTransform(animationDurationScale),
                                     )
-                                },
+                                }
+                            }
+                            TrickPlayerItem(
+                                playerId = playerId,
+                                play = play,
+                                state = state,
+                                modifier = cardModifier ?: Modifier,
+                                isWinner = winnerId == playerId,
+                                isActivePlayer = isActive && play == null && playerId == activePlayer,
+                                leadSuit = trick.leadSuit,
+                                animateFlip = isActive && play != null && play.player != state.myPlayer.id &&
+                                        play == trick.plays.lastOrNull(),
+                                animationDurationScale = animationDurationScale,
                             )
                         }
                     }
@@ -726,11 +750,14 @@ private fun GameOverSummaryCard(
 }
 
 @Composable
-private fun PlayedCardItem(
-    play: PlayedCard,
+private fun TrickPlayerItem(
+    playerId: TricksPlayerId,
+    play: PlayedCard?,
     state: TricksPlayerViewState,
     modifier: Modifier = Modifier,
-    isWinningCard: Boolean = false,
+    isWinner: Boolean,
+    isActivePlayer: Boolean,
+    leadSuit: Suit?,
     animateFlip: Boolean = false,
     animationDurationScale: Float,
     width: Dp = 64.dp,
@@ -745,27 +772,54 @@ private fun PlayedCardItem(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = playerName(play.player, state),
+                text = playerName(playerId, state),
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isWinningCard) FontWeight.Bold else FontWeight.Normal,
-                color = if (isWinningCard) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isWinner || isActivePlayer) FontWeight.Bold else FontWeight.Normal,
+                color = if (isWinner || isActivePlayer) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (isWinningCard) {
+            if (isWinner) {
                 Text("👑", style = MaterialTheme.typography.labelSmall)
             }
         }
-        TricksCardView(
-            card = play.card,
-            modifier = modifier,
-            isFaceUp = true,
-            animateFlip = animateFlip,
-            isPlayable = false,
-            isSelected = isWinningCard,
-            width = width,
-            height = height,
-            flipDurationMillis = animationDurationMillis(350, animationDurationScale),
-        )
+        if (play != null) {
+            TricksCardView(
+                card = play.card,
+                modifier = modifier,
+                isFaceUp = true,
+                animateFlip = animateFlip,
+                isPlayable = false,
+                isSelected = isWinner,
+                width = width,
+                height = height,
+                flipDurationMillis = animationDurationMillis(350, animationDurationScale),
+            )
+        } else {
+            val leadColor = leadSuit?.let(::suitColor)
+            Box(
+                modifier = Modifier
+                    .size(width = width, height = height)
+                    .background(
+                        color = (leadColor ?: MaterialTheme.colorScheme.surface).copy(
+                            alpha = if (leadColor == null) 0.25f else if (isActivePlayer) 0.2f else 0.1f,
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    .border(
+                        width = if (isActivePlayer) 2.dp else 1.dp,
+                        color = if (isActivePlayer) MaterialTheme.colorScheme.primary
+                        else leadColor?.copy(alpha = 0.7f)
+                            ?: MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp),
+                    ),
+            )
+        }
     }
+}
+
+private fun <T> List<T>.rotateFrom(first: T): List<T> {
+    val startIndex = indexOf(first).takeIf { it >= 0 } ?: return this
+    return drop(startIndex) + take(startIndex)
 }
 
 private fun playerName(

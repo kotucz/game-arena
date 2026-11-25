@@ -14,6 +14,7 @@ data class TricksPlayerViewState(
     val myPlayer: TricksPlayer,
     val myHand: List<Card>,
     val opponents: List<OpponentPlayerView>,
+    val playerOrder: List<TricksPlayerId>,
     val currentTrick: Trick,
     val completedTricks: List<CompletedTrick>,
     val trumpSuit: Suit?,

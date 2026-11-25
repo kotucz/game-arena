@@ -32,7 +32,7 @@ class TricksGameRulesTest {
                 p2.id to listOf(Card(Suit.Blue, Rank(7)), Card(Suit.Yellow, Rank(2))),
             ),
             currentTrick = Trick(
-                listOf(PlayedCard(p1.id, Card(Suit.Blue, Rank(3))))
+                listOf(PlayedCard(p1.id, Card(Suit.Blue, Rank(3)))),
             ),
             trumpSuit = Suit.Trump,
             phase = TricksGamePhase.PlayerTurn(p2.id),
@@ -62,7 +62,7 @@ class TricksGameRulesTest {
                 p2.id to listOf(Card(Suit.Green, Rank(7)), Card(Suit.Trump, Rank(1))),
             ),
             currentTrick = Trick(
-                listOf(PlayedCard(p1.id, Card(Suit.Blue, Rank(3))))
+                listOf(PlayedCard(p1.id, Card(Suit.Blue, Rank(3)))),
             ),
             trumpSuit = Suit.Trump,
             phase = TricksGamePhase.PlayerTurn(p2.id),
@@ -134,6 +134,7 @@ class TricksGameRulesTest {
         val p1View = TricksGameRules.toPlayerViewState(state, p1.id)
         // P1 sees their own hand
         assertEquals(listOf(Card(Suit.Blue, Rank(5)), Card(Suit.Pink, Rank(2))), p1View.myHand)
+        assertEquals(players.map { it.id }, p1View.playerOrder)
         assertTrue(p1View.isMyTurn)
 
         // P1 only sees Bob's card count (2), NOT Bob's actual cards!

@@ -179,6 +179,7 @@ object TricksGameRules {
             myPlayer = me,
             myHand = myHand,
             opponents = opponents,
+            playerOrder = state.players.map { it.id },
             currentTrick = state.currentTrick,
             completedTricks = state.completedTricks,
             trumpSuit = state.trumpSuit,
