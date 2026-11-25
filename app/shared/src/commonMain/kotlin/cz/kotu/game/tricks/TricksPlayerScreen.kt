@@ -3,12 +3,12 @@ package cz.kotu.game.tricks
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionDefaults
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -49,14 +49,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.kotu.common.Flippable
 import cz.kotu.game.tricks.model.Card
-import cz.kotu.game.tricks.model.CompletedTrick
 import cz.kotu.game.tricks.model.PlayedCard
+import cz.kotu.game.tricks.model.Trick
 import cz.kotu.game.tricks.model.TricksGamePhase
 import cz.kotu.game.tricks.model.TricksPlayerId
 import cz.kotu.game.tricks.model.TricksPlayerViewState
@@ -67,6 +68,7 @@ import gamearena.app.shared.generated.resources.tricks_game_over
 import gamearena.app.shared.generated.resources.tricks_lead_suit
 import gamearena.app.shared.generated.resources.tricks_no_trump
 import gamearena.app.shared.generated.resources.tricks_trick_won_by
+import kotlinx.coroutines.withContext
 import gamearena.app.shared.generated.resources.tricks_tricks_won
 import gamearena.app.shared.generated.resources.tricks_trump
 import gamearena.app.shared.generated.resources.tricks_waiting_for_turn
@@ -171,89 +173,83 @@ fun TricksPlayerScreen(
                     displayedState = state
                 }
             }
-            AnimatedContent(
-                targetState = displayedState,
-                transitionSpec = {
-                    (fadeIn(
-                        animationSpec = tween(
-                            animationDurationMillis(
-                                350,
-                                animationDurationScale,
-                            ),
-                        ),
-                    ) togetherWith ExitTransition.KeepUntilTransitionsFinished)
-                        .apply { targetContentZIndex = 1f }
-                },
-                label = "tricks card play",
-            ) { contentState ->
-                val visibilityScope = this
-                val state = contentState
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    // Header: Player identity, turn status, trump indicator, tricks won
-                    HeaderSection(state = state)
+            val state = displayedState
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Header: Player identity, turn status, trump indicator, tricks won
+                HeaderSection(state = state)
 
-                    // Opponents summary
-                    if (state.opponents.isNotEmpty()) {
+                // Opponents summary
+                if (state.opponents.isNotEmpty()) {
+                    AnimatedContent(
+                        targetState = state.opponents,
+                        transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+                        label = "opponent cards",
+                    ) { opponents ->
                         OpponentsSection(
-                            state = state,
+                            state = state.copy(opponents = opponents),
                             cardTracker = cardTracker,
                             sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = visibilityScope,
+                            animatedVisibilityScope = this,
                             animationDurationScale = animationDurationScale,
                         )
                     }
+                }
 
-                    HorizontalDivider()
+                HorizontalDivider()
 
-                    // Unified chat-like stream of tricks
-                    TricksFeedSection(
-                        state = state,
-                        cardTracker = cardTracker,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = visibilityScope,
-                        animationDurationScale = animationDurationScale,
-                        modifier = Modifier.weight(1f),
-                    )
+                // Unified chat-like stream of tricks
+                TricksFeedSection(
+                    state = state,
+                    cardTracker = cardTracker,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animationDurationScale = animationDurationScale,
+                    modifier = Modifier.weight(1f),
+                )
 
-                    // Error display
-                    if (errorMessage != null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                // Error display
+                if (errorMessage != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    text = errorMessage,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                                TextButton(onClick = viewModel::clearError) {
-                                    Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
-                                }
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            TextButton(onClick = viewModel::clearError) {
+                                Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
                             }
                         }
                     }
+                }
 
-                    HorizontalDivider()
+                HorizontalDivider()
 
-                    // Player's Hand
+                // Player's Hand
+                AnimatedContent(
+                    targetState = state.myHand,
+                    transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+                    label = "player hand cards",
+                ) { myHand ->
                     PlayerHandSection(
-                        state = state,
+                        state = state.copy(myHand = myHand),
                         cardTracker = cardTracker,
                         actionInProgress = viewModel.actionInProgress,
                         onCardClick = viewModel::playCard,
                         sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = visibilityScope,
+                        animatedVisibilityScope = this,
                         animationDurationScale = animationDurationScale,
                     )
                 }
@@ -510,7 +506,6 @@ private fun TricksFeedSection(
     state: TricksPlayerViewState,
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     animationDurationScale: Float,
     modifier: Modifier = Modifier,
 ) {
@@ -521,7 +516,13 @@ private fun TricksFeedSection(
     LaunchedEffect(state.completedTricks.size, state.currentTrick.plays.size, isGameOver) {
         val totalCount = state.completedTricks.size + 1
         if (totalCount > 0) {
-            listState.animateScrollToItem(totalCount - 1)
+            withContext(
+                object : MotionDurationScale {
+                    override val scaleFactor = animationDurationScale
+                },
+            ) {
+                listState.animateScrollToItem(totalCount - 1)
+            }
         }
     }
 
@@ -532,16 +533,18 @@ private fun TricksFeedSection(
     ) {
         itemsIndexed(
             items = state.completedTricks,
-            key = { index, trick -> "completed_trick_${index}_${trick.winner.value}" },
+            key = { index, _ -> "trick_${index + 1}" },
         ) { index, completedTrick ->
-            CompletedTrickItem(
-                index = index,
-                trick = completedTrick,
+            TrickItem(
+                trickNumber = index + 1,
+                trick = completedTrick.trick,
+                winner = completedTrick.winner,
+                isActive = false,
                 state = state,
                 cardTracker = cardTracker,
                 sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
                 animationDurationScale = animationDurationScale,
+                modifier = Modifier.animateItem(),
             )
         }
 
@@ -553,14 +556,21 @@ private fun TricksFeedSection(
                 )
             }
         } else {
-            item(key = "active_trick_$activeTrickNumber") {
-                ActiveTrickItem(
+            item(key = "trick_$activeTrickNumber") {
+                TrickItem(
                     trickNumber = activeTrickNumber,
+                    trick = state.currentTrick,
+                    winner = null,
+                    isActive = true,
                     state = state,
                     cardTracker = cardTracker,
                     sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
                     animationDurationScale = animationDurationScale,
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = tween(
+                            durationMillis = animationDurationMillis(350, animationDurationScale),
+                        ),
+                    ),
                 )
             }
         }
@@ -568,16 +578,21 @@ private fun TricksFeedSection(
 }
 
 @Composable
-private fun ActiveTrickItem(
+private fun TrickItem(
     trickNumber: Int,
+    trick: Trick,
+    winner: TricksPlayerId?,
+    isActive: Boolean,
     state: TricksPlayerViewState,
     cardTracker: TricksCardTracker,
     sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     animationDurationScale: Float,
+    modifier: Modifier = Modifier,
 ) {
-    val allPlayersPlayed = state.currentTrick.plays.size >= state.opponents.size + 1
-    val winnerPlay = if (allPlayersPlayed) state.currentTrick.evaluateWinner(state.trumpSuit) else null
+    val allPlayersPlayed = trick.plays.size >= state.opponents.size + 1
+    val winnerPlay = winner?.let { winnerId -> trick.plays.firstOrNull { it.player == winnerId } }
+        ?: if (isActive && allPlayersPlayed) trick.evaluateWinner(state.trumpSuit) else null
+    val winnerId = winner ?: winnerPlay?.player
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -588,9 +603,11 @@ private fun ActiveTrickItem(
         },
         border = BorderStroke(
             width = if (winnerPlay != null) 2.dp else 1.5.dp,
-            color = if (winnerPlay != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+            color = if (winnerPlay != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                alpha = 0.4f,
+            ),
         ),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -606,11 +623,19 @@ private fun ActiveTrickItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = stringResource(Res.string.tricks_current_trick, trickNumber),
+                        text = if (isActive) {
+                            stringResource(Res.string.tricks_current_trick, trickNumber)
+                        } else {
+                            stringResource(
+                                Res.string.tricks_trick_won_by,
+                                trickNumber,
+                                winnerId?.let { playerName(it, state) }.orEmpty(),
+                            )
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    if (winnerPlay != null) {
+                    if (isActive && winnerPlay != null) {
                         Badge(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -622,7 +647,7 @@ private fun ActiveTrickItem(
                                 fontWeight = FontWeight.Bold,
                             )
                         }
-                    } else {
+                    } else if (isActive) {
                         Badge(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -637,7 +662,7 @@ private fun ActiveTrickItem(
                     }
                 }
 
-                state.currentTrick.leadSuit?.let { lead ->
+                trick.leadSuit?.let { lead ->
                     Text(
                         text = stringResource(Res.string.tricks_lead_suit, lead.label),
                         style = MaterialTheme.typography.bodySmall,
@@ -647,7 +672,7 @@ private fun ActiveTrickItem(
                 }
             }
 
-            if (state.currentTrick.plays.isEmpty()) {
+            if (trick.plays.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -670,105 +695,40 @@ private fun ActiveTrickItem(
                     )
                 }
             } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    state.currentTrick.plays.forEach { play ->
-                        val isWinnerCard = winnerPlay?.card == play.card
-                        val isMyCard = play.player == state.myPlayer.id
-                        val cardToken = cardTracker.tokenForPlayedCard(play.player, play.card, isMyPlayer = isMyCard)
-                        PlayedCardItem(
-                            play = play,
-                            state = state,
-                            isWinningCard = isWinnerCard,
-                            animateFlip = !isMyCard,
-                            animationDurationScale = animationDurationScale,
-                            modifier = with(sharedTransitionScope) {
-                                Modifier.sharedElement(
-                                    sharedContentState = rememberSharedContentState(cardToken),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    boundsTransform = scaledBoundsTransform(animationDurationScale),
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompletedTrickItem(
-    index: Int,
-    trick: CompletedTrick,
-    state: TricksPlayerViewState,
-    cardTracker: TricksCardTracker,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    animationDurationScale: Float,
-) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            val winnerName = playerName(trick.winner, state)
-            val isMyWin = trick.winner == state.myPlayer.id
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(
-                        Res.string.tricks_trick_won_by,
-                        index + 1,
-                        winnerName,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isMyWin) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isMyWin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                trick.trick.plays.forEach { play ->
-                    val isWinningCard = play.player == trick.winner
-                    val isMyCard = play.player == state.myPlayer.id
-                    val cardToken = cardTracker.tokenForPlayedCard(play.player, play.card, isMyPlayer = isMyCard)
-                    PlayedCardItem(
-                        play = play,
-                        state = state,
-                        isWinningCard = isWinningCard,
-                        animateFlip = false,
-                        animationDurationScale = animationDurationScale,
-                        width = 50.dp,
-                        height = 70.dp,
-                        modifier = with(sharedTransitionScope) {
-                            Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState(cardToken),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                boundsTransform = scaledBoundsTransform(animationDurationScale),
+                AnimatedContent(
+                    targetState = trick.plays,
+                    transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+                    label = "trick cards",
+                ) { plays ->
+                    val animatedVisibilityScope = this
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        plays.forEach { play ->
+                            val isWinnerCard = winnerId == play.player
+                            val isMyCard = play.player == state.myPlayer.id
+                            val cardToken =
+                                cardTracker.tokenForPlayedCard(play.player, play.card, isMyPlayer = isMyCard)
+                            PlayedCardItem(
+                                play = play,
+                                state = state,
+                                isWinningCard = isWinnerCard,
+                                animateFlip = isActive && !isMyCard,
+                                animationDurationScale = animationDurationScale,
+                                modifier = with(sharedTransitionScope) {
+                                    Modifier.sharedElement(
+                                        sharedContentState = rememberSharedContentState(cardToken),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        boundsTransform = scaledBoundsTransform(animationDurationScale),
+                                    )
+                                },
                             )
-                        },
-                    )
+                        }
+                    }
                 }
             }
         }
