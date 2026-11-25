@@ -717,7 +717,7 @@ private fun TrickItem(
                                 play = play,
                                 state = state,
                                 isWinningCard = isWinnerCard,
-                                animateFlip = isActive && !isMyCard,
+                                animateFlip = isActive && !isMyCard && play == trick.plays.lastOrNull(),
                                 animationDurationScale = animationDurationScale,
                                 modifier = with(sharedTransitionScope) {
                                     Modifier.sharedElement(
